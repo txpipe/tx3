@@ -1,0 +1,10 @@
+[package]
+name = "tx3-lang"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+miette = { version = "7.4.0", features = ["fancy"] }
+pest = { version = "2.7.15", features = ["miette-error", "pretty-print"] }
+pest_derive = "2.7.15"
+thiserror = "2.0.11"
