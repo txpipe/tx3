@@ -1,126 +1,157 @@
-#[derive(Debug, Clone)]
-pub struct TemplateData {
+use serde::{Deserialize, Serialize};
+
+pub type Identifier = String;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Program {
+    pub txs: Vec<TxDef>,
+    pub datums: Vec<DatumDef>,
+    pub assets: Vec<AssetDef>,
+    pub parties: Vec<PartyDef>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TxDef {
     pub name: String,
     pub parameters: Vec<Parameter>,
-    pub body: Vec<TxComponent>,
+    pub inputs: Vec<InputBlock>,
+    pub outputs: Vec<OutputBlock>,
+    pub burns: Option<BurnBlock>,
+    pub mints: Option<MintBlock>,
 }
 
-#[derive(Debug, Clone)]
-pub enum TxComponent {
-    Input(InputData),
-    Output(OutputData),
-}
-
-#[derive(Debug, Clone)]
-pub struct InputData {
-    pub name: String,
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct InputBlock {
+    pub name: Identifier,
     pub is_many: bool,
-    pub from: Option<String>,
-    pub datum_is: Option<String>,
-    pub min_amount: Option<Box<Expr>>,
-    pub redeemer: Option<Box<Expr>>,
+    pub from: Option<Identifier>,
+    pub datum_is: Option<Type>,
+    pub min_amount: Option<Box<AssetExpr>>,
+    pub redeemer: Option<Box<DataExpr>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct OutputData {
-    pub to: String,
-    pub amount: Option<Box<Expr>>,
-    pub datum: Option<Box<Expr>>,
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct OutputBlock {
+    pub to: Identifier,
+    pub amount: Option<Box<AssetExpr>>,
+    pub datum: Option<Box<DataExpr>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct DatumDef {
-    pub name: String,
-    pub fields: Vec<DatumField>,
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct BurnBlock {
+    pub amount: Box<AssetExpr>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MintBlock {
+    pub amount: Box<AssetExpr>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DatumField {
     pub name: String,
     pub typ: Type,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PartyDef {
     pub name: String,
-    pub fields: Vec<PartyField>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PartyField {
     pub name: String,
     pub party_type: String,
 }
 
-#[derive(Debug, Clone)]
-pub enum Expr {
-    // Literals
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AssetConstructor {
+    pub r#type: Identifier,
+    pub amount: Box<DataExpr>,
+    pub token_name: Option<Box<DataExpr>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AssetBinaryOp {
+    pub left: Box<AssetExpr>,
+    pub operator: BinaryOperator,
+    pub right: Box<AssetExpr>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum AssetExpr {
+    Constructor(AssetConstructor),
+    BinaryOp(AssetBinaryOp),
+    PropertyAccess(PropertyAccess),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PropertyAccess {
+    pub object: Box<Identifier>,
+    pub property: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DatumConstructor {
+    pub r#type: String,
+    pub variant: String,
+    pub fields: Vec<(String, Box<DataExpr>)>,
+    pub spread: Option<Box<DataExpr>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DataBinaryOp {
+    pub left: Box<DataExpr>,
+    pub operator: BinaryOperator,
+    pub right: Box<DataExpr>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum DataExpr {
+    None,
     Number(i64),
     String(String),
-    None,
-
-    // Template definition
-    Template(TemplateData),
-
-    // Datum definition
-    Datum(DatumDef),
-
-    // Party definition
-    Party(PartyDef),
-
-    // Field access (for supporting sub_field rule)
-    SubField {
-        base: Box<Expr>,
-        fields: Vec<String>,
-    },
-
-    // Object/Datum construction
-    DatumConstructor {
-        name: String,
-        fields: Vec<(String, Box<Expr>)>,
-        spread: Option<Box<Expr>>,
-    },
-
-    // Binary operations
-    BinaryOp {
-        left: Box<Expr>,
-        operator: BinaryOperator,
-        right: Box<Expr>,
-    },
-
-    // Property access
-    PropertyAccess {
-        object: Box<Expr>,
-        property: String,
-    },
-
-    // Variables and function calls
+    HexString(String),
+    DatumConstructor(DatumConstructor),
     Identifier(String),
-    Call(CallData),
+    PropertyAccess(PropertyAccess),
+    BinaryOp(DataBinaryOp),
 }
 
-#[derive(Debug, Clone)]
-pub struct CallData {
-    pub function: Box<Expr>,
-    pub arguments: Vec<Expr>,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum BinaryOperator {
     Add,
     Subtract,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Type {
     Int,
-    Token,
-    Datum,
+    Bytes,
     Custom(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Parameter {
     pub name: String,
     pub typ: Type,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DatumDef {
+    pub name: String,
+    pub variants: Vec<DatumVariant>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DatumVariant {
+    pub name: String,
+    pub fields: Vec<DatumField>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AssetDef {
+    pub name: String,
+    pub policy: String,
+    pub asset_name: Option<String>,
 }

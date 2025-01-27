@@ -1,86 +1,162 @@
 WHITESPACE = _{ " " | "\t" | "\n" | "\r" }
-COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
+COMMENT = _{ "//" ~ (!"\n" ~ ANY)* | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 
-// Identifiers and literals
+// Identifiers and basic types
 identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
-number = @{ ASCII_DIGIT+ }
+number = @{ "-"? ~ ASCII_DIGIT+ }
+string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+hex_string = @{ "0x" ~ ASCII_HEX_DIGIT+ }
+wildcard = @{ "*" }
 
-// Types
-primitive_type = { "Int" | "Token" | "Datum" }
-type = { primitive_type | identifier }
+// Type definitions
+type = { "Int" | "Bytes" | identifier }
 
 // Parameters
 parameter = { identifier ~ ":" ~ type }
-parameter_list = { parameter ~ ("," ~ parameter)* }
+parameter_list = { "(" ~ (parameter ~ ("," ~ parameter)*)? ~ ")" }
 
-// Tx Template definition
-tx_template = {
-    "tx" ~ identifier ~ "(" ~ parameter_list? ~ ")" ~
-    "{" ~ (input | output)* ~ "}"
+// Asset definitions
+asset_def = {
+    "asset" ~ identifier ~ "=" ~ hex_string ~ ("." ~ (identifier | hex_string | wildcard))? ~ ";"
 }
 
-value_deconstructor = { "..." ~ expr }
-sub_field = { identifier ~ ("." ~ identifier)+ }
+// Party definitions
+party_def = {
+    "party" ~ identifier ~ ";"
+}
 
-// Input and output blocks
-address_field = { "address" ~ ":" ~ expr ~ ("," | NEWLINE | WHITESPACE+)? }
-datum_field = { "datum" ~ ":" ~ expr ~ ("," | NEWLINE | WHITESPACE+)? }
-redeemer_field = { "redeemer" ~ ":" ~ expr ~ ("," | NEWLINE | WHITESPACE+)? }
-from_field = { "from" ~ ":" ~ identifier ~ ("," | NEWLINE | WHITESPACE+)? }
-datum_is_field = { "datum_is" ~ ":" ~ identifier ~ ("," | NEWLINE | WHITESPACE+)? }
-min_amount_field = { "min_amount" ~ ":" ~ expr ~ ("," | NEWLINE | WHITESPACE+)? }
-to_field = { "to" ~ ":" ~ identifier ~ ("," | NEWLINE | WHITESPACE+)? }
-amount_field = { "amount" ~ ":" ~ expr ~ ("," | NEWLINE | WHITESPACE+)? }
+// Datum definitions
+datum_field = { identifier ~ ":" ~ type }
 
-field_def = { identifier ~ ":" ~ type ~ ("," | NEWLINE | WHITESPACE+)? }
+datum_variant_struct = {
+    identifier ~ "{" ~
+    (datum_field ~ ",")* ~
+    "}"
+}
 
-// Add datum definition
+datum_variant_tuple = {
+    identifier ~ "(" ~
+    (type ~ ",")* ~
+    ")"
+}
+
+datum_variant_unit = {
+    identifier
+}
+
+datum_variant = {
+    datum_variant_struct |
+    datum_variant_tuple |
+    datum_variant_unit
+}
+
 datum_def = {
     "datum" ~ identifier ~ "{" ~
-    (field_def)* ~
+    datum_variant+ ~
     "}"
 }
 
-// Add datum definition
+// Expressions
+property_access = { identifier ~ "." ~ identifier ~ ("." ~ identifier)* }
+
+asset_expr = { asset_term ~ (binary_operator ~ asset_term)* }
+asset_term = _{ asset_constructor | property_access | identifier }
+
+asset_constructor = {
+    identifier ~ "(" ~ data_expr ~ ("," ~ data_expr)? ~ ")"
+}
+
+asset_binary_op = {
+    asset_expr ~ binary_operator ~ asset_expr
+}
+
+binary_operator = { "+" | "-" }
+
+data_expr = { data_term ~ (binary_operator ~ data_term)* }
+data_term = _{
+    "none" |
+    number |
+    string |
+    hex_string |
+    datum_constructor |
+    property_access |
+    identifier
+}
+
 datum_constructor = {
-    identifier ~ "{" ~
-    (identifier ~ ":" ~ expr ~ ("," | NEWLINE | WHITESPACE+))* ~
-    value_deconstructor? ~
+    identifier ~ "::" ~ identifier ~ "{" ~
+    (identifier ~ ":" ~ data_expr ~ ",")* ~
+    ("..." ~ data_expr)? ~
     "}"
 }
 
-// Add party definition
-party_def = {
-    "party" ~ identifier ~ (("{" ~
-    (identifier ~ ":" ~ identifier ~ ("," | NEWLINE | WHITESPACE+))* ~
-    "}") | ";")
+data_binary_op = {
+    data_expr ~ binary_operator ~ data_expr
 }
 
-// Input blocks need more variants and fields
-input = {
-    "input" ~ ("*")? ~ identifier ~ "{" ~
-    from_field? ~
-    datum_is_field? ~
-    min_amount_field? ~
-    redeemer_field? ~
+input_block_from = { "from" ~ ":" ~ identifier }
+input_block_datum_is = { "datum_is" ~ ":" ~ type }
+input_block_min_amount = { "min_amount" ~ ":" ~ asset_expr }
+input_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
+
+input_block_field = { 
+    input_block_from |
+    input_block_datum_is |
+    input_block_min_amount |
+    input_block_redeemer
+}
+
+input_block = {
+    "input" ~ identifier ~ ("*")? ~ "{" ~
+    (input_block_field ~ ",")* ~
     "}"
 }
 
-// Output blocks need datum field support
-output = {
+output_block_to = { "to" ~ ":" ~ identifier }
+output_block_amount = { "amount" ~ ":" ~ asset_expr }
+output_block_datum = { "datum" ~ ":" ~ data_expr }
+
+output_block_field = { 
+    output_block_to |
+    output_block_amount |
+    output_block_datum
+}
+
+output_block = {
     "output" ~ "{" ~
-    to_field ~
-    amount_field? ~
-    datum_field? ~
+    (output_block_field ~ ",")* ~
     "}"
 }
 
-// Change the expr rule to use pratt parser notation
-expr = { term ~ (infix ~ term)* }
-term = _{ 
-    number | sub_field | datum_constructor | identifier
-}
-infix = { "+" | "-" }
+burn_block_amount = { "amount" ~ ":" ~ asset_expr }
 
-// The main program rule
-program = { SOI ~ (datum_def | party_def | tx_template)* ~ EOI } 
+burn_block = {
+    "burn" ~ "{" ~
+    burn_block_amount ~ "," ~
+    "}"
+}
+
+mint_block_amount = { "amount" ~ ":" ~ asset_expr }
+
+mint_block = {
+    "mint" ~ "{" ~
+    mint_block_amount ~ "," ~
+    "}"
+}
+
+// Transaction definition
+tx_def = {
+    "tx" ~ identifier ~ parameter_list ~ "{" ~
+    input_block* ~
+    burn_block? ~
+    mint_block? ~
+    output_block* ~
+    "}"
+}
+
+// Program
+program = {
+    SOI ~
+    (asset_def | party_def | datum_def | tx_def)* ~
+    EOI
+}

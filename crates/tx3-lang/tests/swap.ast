@@ -1,0 +1,225 @@
+[
+  {
+    "Datum": {
+      "name": "PoolState",
+      "fields": [
+        {
+          "name": "pair_a",
+          "typ": "Token"
+        },
+        {
+          "name": "pair_b",
+          "typ": "Token"
+        }
+      ]
+    }
+  },
+  {
+    "Datum": {
+      "name": "SwapParams",
+      "fields": [
+        {
+          "name": "amount",
+          "typ": "Int"
+        },
+        {
+          "name": "ratio",
+          "typ": "Int"
+        }
+      ]
+    }
+  },
+  {
+    "Party": {
+      "name": "Buyer",
+      "fields": []
+    }
+  },
+  {
+    "Party": {
+      "name": "Dex",
+      "fields": []
+    }
+  },
+  {
+    "Template": {
+      "name": "swap",
+      "parameters": [
+        {
+          "name": "buyer",
+          "typ": {
+            "Custom": "Buyer"
+          }
+        },
+        {
+          "name": "ask",
+          "typ": "Token"
+        },
+        {
+          "name": "bid",
+          "typ": "Token"
+        }
+      ],
+      "body": [
+        {
+          "Input": {
+            "name": "from: dex,",
+            "is_many": false,
+            "from": null,
+            "datum_is": "PoolState",
+            "min_amount": null,
+            "redeemer": {
+              "DatumConstructor": {
+                "name": "SwapParams",
+                "fields": [
+                  [
+                    "ask",
+                    {
+                      "Identifier": "ask"
+                    }
+                  ],
+                  [
+                    "bid",
+                    {
+                      "Identifier": "ask"
+                    }
+                  ]
+                ],
+                "spread": null
+              }
+            }
+          }
+        },
+        {
+          "Input": {
+            "name": "from: buyer,",
+            "is_many": false,
+            "from": null,
+            "datum_is": null,
+            "min_amount": {
+              "BinaryOp": {
+                "left": {
+                  "Identifier": "fees"
+                },
+                "operator": "Add",
+                "right": {
+                  "Identifier": "bid"
+                }
+              }
+            },
+            "redeemer": null
+          }
+        },
+        {
+          "Output": {
+            "to": "pool",
+            "amount": null,
+            "datum": {
+              "DatumConstructor": {
+                "name": "PoolState",
+                "fields": [
+                  [
+                    "pair_a",
+                    {
+                      "BinaryOp": {
+                        "left": {
+                          "SubField": {
+                            "base": {
+                              "Identifier": "inputs"
+                            },
+                            "fields": [
+                              "pool",
+                              "pair_a"
+                            ]
+                          }
+                        },
+                        "operator": "Subtract",
+                        "right": {
+                          "Identifier": "ask"
+                        }
+                      }
+                    }
+                  ],
+                  [
+                    "pair_b",
+                    {
+                      "BinaryOp": {
+                        "left": {
+                          "SubField": {
+                            "base": {
+                              "Identifier": "inputs"
+                            },
+                            "fields": [
+                              "pool",
+                              "pair_b"
+                            ]
+                          }
+                        },
+                        "operator": "Add",
+                        "right": {
+                          "Identifier": "bid"
+                        }
+                      }
+                    }
+                  ]
+                ],
+                "spread": {
+                  "SubField": {
+                    "base": {
+                      "Identifier": "inputs"
+                    },
+                    "fields": [
+                      "pool",
+                      "datum"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "Output": {
+            "to": "buyer",
+            "amount": {
+              "BinaryOp": {
+                "left": {
+                  "BinaryOp": {
+                    "left": {
+                      "BinaryOp": {
+                        "left": {
+                          "SubField": {
+                            "base": {
+                              "Identifier": "inputs"
+                            },
+                            "fields": [
+                              "payment",
+                              "amount"
+                            ]
+                          }
+                        },
+                        "operator": "Add",
+                        "right": {
+                          "Identifier": "ask"
+                        }
+                      }
+                    },
+                    "operator": "Subtract",
+                    "right": {
+                      "Identifier": "bid"
+                    }
+                  }
+                },
+                "operator": "Subtract",
+                "right": {
+                  "Identifier": "fees"
+                }
+              }
+            },
+            "datum": null
+          }
+        }
+      ]
+    }
+  }
+]

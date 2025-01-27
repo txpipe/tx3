@@ -1,0 +1,77 @@
+party Player;
+
+party Game;
+
+asset Pilot = 0x11111.*;
+
+asset Fuel = 0x22222.FUEL;
+
+datum ShipState {
+    Playing {
+        pos_x: Int,
+        pos_y: Int,
+        ship_token_name: AssetName,
+        pilot_token_name: AssetName,
+        last_move_latest_time: PosixTime,
+    }
+}
+
+datum ShipCommand {
+    MoveShip { 
+        delta_x: Int,
+        delta_y: Int,
+    }
+    GatherFuel {
+        amount: Int,
+    }
+    MineAsteria
+    Quit
+}
+
+tx move_ship(
+    ship_name: AssetName,
+    delta_x: Int,
+    delta_y: Int,
+    required_fuel: Int
+) {
+    input ship {
+        from: Game,
+        datum_is: ShipState,
+        min_amount: Fuel(required_fuel),
+
+        redeemer: ShipCommand::MoveShip {
+            delta_x: delta_x,
+            delta_y: delta_y,
+        },
+    }
+
+    input pilot {
+        from: Player,
+        min_amount: Pilot(ship_name, 1),
+    }
+    
+    input fees {
+        from: Player,
+        min_amount: fee,
+    }
+
+    burn {
+        amount: Fuel(required_fuel),
+    }
+    
+    output {
+        to: Game,
+        amount: inputs.ship.amount - Fuel(required_fuel),
+        
+        datum: ShipState::Playing {
+            pos_x: inputs.ship.pos_x + delta_x,
+            pos_y: inputs.ship.pos_y + delta_y,
+            ...inputs.ship.datum
+        },
+    }
+
+    output {
+        to: Player,
+        amount: inputs.pilot.amount +  inputs.fees.amount - fee,
+    }
+}

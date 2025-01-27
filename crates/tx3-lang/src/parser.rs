@@ -1,6 +1,6 @@
 use crate::ast::{
-    BinaryOperator, DatumDef, DatumField, Expr, InputData, OutputData, Parameter, PartyDef,
-    PartyField, TemplateData, TxComponent, Type,
+    AssetBinaryOp, AssetDef, AssetExpr, BinaryOperator, DataExpr, DatumDef, DatumField,
+    DatumVariant, InputBlock, OutputBlock, Parameter, PartyDef, Program, TxDef, Type,
 };
 use pest::Parser;
 use pest_derive::Parser;
@@ -17,22 +17,30 @@ pub enum ParseError {
     InvalidType(String),
     #[error("Missing required field: {0}")]
     MissingRequiredField(String),
-    // Add more error variants as needed
+    #[error("Invalid binary operator: {0}")]
+    InvalidBinaryOperator(String),
 }
 
 impl Tx3Parser {
-    pub fn parse_program(input: &str) -> Result<Vec<Expr>, ParseError> {
+    pub fn parse_program(input: &str) -> Result<Program, ParseError> {
         let pairs = Self::parse(Rule::program, input)?;
-        let mut definitions = Vec::new();
+
+        let mut program = Program {
+            txs: Vec::new(),
+            assets: Vec::new(),
+            datums: Vec::new(),
+            parties: Vec::new(),
+        };
 
         for pair in pairs.into_iter() {
             match pair.as_rule() {
                 Rule::program => {
                     for item in pair.into_inner() {
                         match item.as_rule() {
-                            Rule::datum_def => definitions.push(Self::parse_datum_def(item)?),
-                            Rule::party_def => definitions.push(Self::parse_party_def(item)?),
-                            Rule::tx_template => definitions.push(Self::parse_template(item)?),
+                            Rule::tx_def => program.txs.push(Self::parse_tx_def(item)?),
+                            Rule::asset_def => program.assets.push(Self::parse_asset_def(item)?),
+                            Rule::datum_def => program.datums.push(Self::parse_datum_def(item)?),
+                            Rule::party_def => program.parties.push(Self::parse_party_def(item)?),
                             Rule::EOI => break,
                             x => unreachable!("Unexpected rule in program: {:?}", x),
                         }
@@ -43,223 +51,77 @@ impl Tx3Parser {
             }
         }
 
-        Ok(definitions)
+        Ok(program)
     }
 
-    fn parse_datum_def(pair: pest::iterators::Pair<Rule>) -> Result<Expr, ParseError> {
+    fn parse_asset_def(pair: pest::iterators::Pair<Rule>) -> Result<AssetDef, ParseError> {
         let mut inner = pair.into_inner();
-        let name = inner.next().unwrap().as_str().to_string();
+        let identifier = inner.next().unwrap().as_str().to_string();
+        let policy = inner.next().unwrap().as_str().to_string();
+        let asset_name = inner.next().map(|x| x.as_str().to_string());
+
+        Ok(AssetDef {
+            name: identifier,
+            policy,
+            asset_name,
+        })
+    }
+
+    fn parse_datum_def(pair: pest::iterators::Pair<Rule>) -> Result<DatumDef, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let identifier = inner.next().unwrap().as_str().to_string();
+
+        let mut variants = Vec::new();
+
+        for variant in inner {
+            variants.push(Self::parse_datum_variant(variant)?);
+        }
+
+        Ok(DatumDef {
+            name: identifier,
+            variants,
+        })
+    }
+
+    fn parse_datum_variant(pair: pest::iterators::Pair<Rule>) -> Result<DatumVariant, ParseError> {
+        let mut inner = pair.into_inner();
+        let identifier = inner.next().unwrap().as_str().to_string();
 
         let mut fields = Vec::new();
 
         for field in inner {
-            let mut field_inner = field.into_inner();
-            let field_name = field_inner.next().unwrap().as_str().to_string();
-            let field_type = Self::parse_type(field_inner.next().unwrap())?;
-            fields.push(DatumField {
-                name: field_name,
-                typ: field_type,
-            });
+            fields.push(Self::parse_datum_field(field)?);
         }
 
-        Ok(Expr::Datum(DatumDef { name, fields }))
+        Ok(DatumVariant {
+            name: identifier,
+            fields,
+        })
     }
 
-    fn parse_party_def(pair: pest::iterators::Pair<Rule>) -> Result<Expr, ParseError> {
+    fn parse_datum_field(pair: pest::iterators::Pair<Rule>) -> Result<DatumField, ParseError> {
         let mut inner = pair.into_inner();
-        let name = inner.next().unwrap().as_str().to_string();
-        let mut fields = Vec::new();
+        let identifier = inner.next().unwrap().as_str().to_string();
+        let typ = Self::parse_type(inner.next().unwrap())?;
 
-        if let Some(field_list) = inner.next() {
-            for field in field_list.into_inner() {
-                let mut field_inner = field.into_inner();
-                let field_name = field_inner.next().unwrap().as_str().to_string();
-                let party_type = field_inner.next().unwrap().as_str().to_string();
-                fields.push(PartyField {
-                    name: field_name,
-                    party_type,
-                });
-            }
-        }
-
-        Ok(Expr::Party(PartyDef { name, fields }))
+        Ok(DatumField {
+            name: identifier,
+            typ,
+        })
     }
 
-    fn parse_template(pair: pest::iterators::Pair<Rule>) -> Result<Expr, ParseError> {
+    fn parse_party_def(pair: pest::iterators::Pair<Rule>) -> Result<PartyDef, ParseError> {
         let mut inner = pair.into_inner();
-        let name = inner.next().unwrap().as_str().to_string();
+        let identifier = inner.next().unwrap().as_str().to_string();
 
-        let parameters = if let Some(param_list) = inner.next() {
-            if param_list.as_rule() == Rule::parameter_list {
-                Self::parse_parameters(param_list)?
-            } else {
-                Vec::new()
-            }
-        } else {
-            Vec::new()
-        };
-
-        let mut body = Vec::new();
-        for component in inner {
-            match component.as_rule() {
-                Rule::input => body.push(TxComponent::Input(Self::parse_input(component)?)),
-                Rule::output => body.push(TxComponent::Output(Self::parse_output(component)?)),
-                x => unreachable!("Unexpected rule in template body: {:?}", x),
-            }
-        }
-
-        Ok(Expr::Template(TemplateData {
-            name,
-            parameters,
-            body,
-        }))
-    }
-
-    fn parse_input(pair: pest::iterators::Pair<Rule>) -> Result<InputData, ParseError> {
-        let mut inner = pair.into_inner();
-        let is_many = inner.next().unwrap().as_str().contains("*");
-        let name = inner.next().unwrap().as_str().to_string();
-
-        let mut input = InputData {
-            name,
-            is_many,
-            from: None,
-            datum_is: None,
-            min_amount: None,
-            redeemer: None,
-        };
-
-        while let Some(field) = inner.next() {
-            match field.as_rule() {
-                Rule::from_field => {
-                    input.from = Some(field.into_inner().next().unwrap().as_str().to_string());
-                }
-                Rule::datum_is_field => {
-                    input.datum_is = Some(field.into_inner().next().unwrap().as_str().to_string());
-                }
-                Rule::min_amount_field => {
-                    let expr = field.into_inner().next().unwrap();
-                    input.min_amount = Some(Box::new(Self::parse_expr(expr)?));
-                }
-                Rule::redeemer_field => {
-                    let expr = field.into_inner().next().unwrap();
-                    input.redeemer = Some(Box::new(Self::parse_expr(expr)?));
-                }
-                x => unreachable!("Unexpected rule in input: {:?}", x),
-            }
-        }
-
-        Ok(input)
-    }
-
-    fn parse_output(pair: pest::iterators::Pair<Rule>) -> Result<OutputData, ParseError> {
-        let mut inner = pair.into_inner();
-
-        let mut output = OutputData {
-            to: String::new(),
-            amount: None,
-            datum: None,
-        };
-
-        while let Some(field) = inner.next() {
-            match field.as_rule() {
-                Rule::to_field => {
-                    output.to = field.into_inner().next().unwrap().as_str().to_string();
-                }
-                Rule::amount_field => {
-                    let expr = field.into_inner().next().unwrap();
-                    output.amount = Some(Box::new(Self::parse_expr(expr)?));
-                }
-                Rule::datum_field => {
-                    let expr = field.into_inner().next().unwrap();
-                    output.datum = Some(Box::new(Self::parse_expr(expr)?));
-                }
-                x => unreachable!("Unexpected rule in output: {:?}", x),
-            }
-        }
-
-        if output.to.is_empty() {
-            return Err(ParseError::MissingRequiredField("to".to_string()));
-        }
-
-        Ok(output)
-    }
-
-    fn parse_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, ParseError> {
-        match pair.as_rule() {
-            Rule::number => Ok(Expr::Number(pair.as_str().parse().unwrap())),
-            Rule::identifier => Ok(Expr::Identifier(pair.as_str().to_string())),
-            Rule::sub_field => {
-                let mut parts = pair.into_inner();
-                let base = parts.next().unwrap();
-                let mut fields = Vec::new();
-
-                for field in parts {
-                    fields.push(field.as_str().to_string());
-                }
-
-                Ok(Expr::SubField {
-                    base: Box::new(Self::parse_expr(base)?),
-                    fields,
-                })
-            }
-            Rule::datum_constructor => {
-                let mut inner = pair.into_inner();
-                let name = inner.next().unwrap().as_str().to_string();
-                let mut fields = Vec::new();
-                let mut spread = None;
-
-                while let Some(field) = inner.next() {
-                    if field.as_rule() == Rule::value_deconstructor {
-                        let expr = field.into_inner().next().unwrap();
-                        spread = Some(Box::new(Self::parse_expr(expr)?));
-                        break;
-                    }
-
-                    let name = field.as_str().to_string();
-                    let expr = inner.next().unwrap();
-                    fields.push((name, Box::new(Self::parse_expr(expr)?)));
-                }
-
-                Ok(Expr::DatumConstructor {
-                    name,
-                    fields,
-                    spread,
-                })
-            }
-            Rule::expr => {
-                let mut inner = pair.into_inner();
-                let first = inner.next().unwrap();
-
-                let mut result = Self::parse_expr(first)?;
-                dbg!(&result);
-                // Process any infix operators
-                while let Some(op) = inner.next() {
-                    dbg!(&op);
-                    let right = inner.next().unwrap();
-                    let operator = match op.as_str() {
-                        "+" => BinaryOperator::Add,
-                        "-" => BinaryOperator::Subtract,
-                        _ => unreachable!(),
-                    };
-                    result = Expr::BinaryOp {
-                        left: Box::new(result),
-                        operator,
-                        right: Box::new(Self::parse_expr(right)?),
-                    };
-                }
-
-                Ok(result)
-            }
-            x => unreachable!("Unexpected rule in expression: {:?}", x),
-        }
+        Ok(PartyDef { name: identifier })
     }
 
     fn parse_type(pair: pest::iterators::Pair<Rule>) -> Result<Type, ParseError> {
         match pair.as_str() {
             "Int" => Ok(Type::Int),
-            "Token" => Ok(Type::Token),
-            "Datum" => Ok(Type::Datum),
+            "Bytes" => Ok(Type::Bytes),
             t => Ok(Type::Custom(t.to_string())),
         }
     }
@@ -276,5 +138,141 @@ impl Tx3Parser {
         }
 
         Ok(parameters)
+    }
+
+    fn parse_binary_operator(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<BinaryOperator, ParseError> {
+        match pair.as_str() {
+            "+" => Ok(BinaryOperator::Add),
+            "-" => Ok(BinaryOperator::Subtract),
+            x => Err(ParseError::InvalidBinaryOperator(x.to_string())),
+        }
+    }
+
+    // asset_expr = { asset_term ~ (binary_operator ~ asset_term)* }
+    // asset_term = _{ asset_constructor | identifier | property_access }
+
+    fn parse_asset_term(pair: pest::iterators::Pair<Rule>) -> Result<AssetExpr, ParseError> {
+        dbg!(&pair);
+        todo!()
+    }
+
+    fn parse_asset_expr(pair: pest::iterators::Pair<Rule>) -> Result<AssetExpr, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let mut final_expr = Self::parse_asset_term(inner.next().unwrap())?;
+
+        for term in inner {
+            let mut inner = term.into_inner();
+
+            let operator = Self::parse_binary_operator(inner.next().unwrap())?;
+            let next_expr = Self::parse_asset_term(inner.next().unwrap())?;
+
+            final_expr = AssetExpr::BinaryOp(AssetBinaryOp {
+                operator,
+                left: Box::new(final_expr),
+                right: Box::new(next_expr),
+            });
+        }
+
+        Ok(final_expr)
+    }
+
+    fn parse_data_expr(pair: pest::iterators::Pair<Rule>) -> Result<DataExpr, ParseError> {
+        dbg!(&pair);
+        todo!()
+    }
+
+    fn parse_input_block(pair: pest::iterators::Pair<Rule>) -> Result<InputBlock, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let identifier = inner.next().unwrap().as_str().to_string();
+
+        let mut input_block = InputBlock {
+            name: identifier,
+            is_many: false,
+            from: None,
+            datum_is: None,
+            min_amount: None,
+            redeemer: None,
+        };
+
+        for field_option in inner {
+            let field = field_option.into_inner().next().unwrap();
+
+            match field.as_rule() {
+                Rule::input_block_from => {
+                    input_block.from = Some(field.as_str().to_string());
+                }
+                Rule::input_block_datum_is => {
+                    input_block.datum_is = Some(Self::parse_type(field)?);
+                }
+                Rule::input_block_min_amount => {
+                    input_block.min_amount = Some(Self::parse_asset_expr(field)?.into());
+                }
+                Rule::input_block_redeemer => {
+                    input_block.redeemer = Some(Self::parse_data_expr(field)?.into());
+                }
+                x => unreachable!("Unexpected rule in input_block: {:?}", x),
+            }
+        }
+
+        Ok(input_block)
+    }
+
+    fn parse_output_block(pair: pest::iterators::Pair<Rule>) -> Result<OutputBlock, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let mut output_block = OutputBlock {
+            to: String::new(),
+            amount: None,
+            datum: None,
+        };
+
+        for item in inner {
+            match item.as_rule() {
+                Rule::output_block_to => output_block.to = item.as_str().to_string(),
+                Rule::output_block_amount => {
+                    output_block.amount = Some(Self::parse_asset_expr(item)?.into());
+                }
+                Rule::output_block_datum => {
+                    output_block.datum = Some(Self::parse_data_expr(item)?.into());
+                }
+                x => unreachable!("Unexpected rule in output_block: {:?}", x),
+            }
+        }
+
+        Ok(output_block)
+    }
+
+    fn parse_tx_def(pair: pest::iterators::Pair<Rule>) -> Result<TxDef, ParseError> {
+        let mut inner = pair.into_inner();
+        let identifier = inner.next().unwrap().as_str().to_string();
+        let parameters = Self::parse_parameters(inner.next().unwrap())?;
+
+        let mut inputs = Vec::new();
+        let mut outputs = Vec::new();
+        let mut burns = None;
+        let mut mints = None;
+
+        for item in inner {
+            match item.as_rule() {
+                Rule::input_block => inputs.push(Self::parse_input_block(item)?),
+                Rule::output_block => outputs.push(Self::parse_output_block(item)?),
+                Rule::burn_block => burns = todo!(),
+                Rule::mint_block => mints = todo!(),
+                x => unreachable!("Unexpected rule in tx_def: {:?}", x),
+            }
+        }
+
+        Ok(TxDef {
+            name: identifier,
+            parameters,
+            inputs,
+            outputs,
+            burns,
+            mints,
+        })
     }
 }
