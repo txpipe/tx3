@@ -68,7 +68,7 @@ pub struct PartyField {
 pub struct AssetConstructor {
     pub r#type: Identifier,
     pub amount: Box<DataExpr>,
-    pub token_name: Option<Box<DataExpr>>,
+    pub name: Option<Box<DataExpr>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -83,12 +83,13 @@ pub enum AssetExpr {
     Constructor(AssetConstructor),
     BinaryOp(AssetBinaryOp),
     PropertyAccess(PropertyAccess),
+    Identifier(Identifier),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PropertyAccess {
-    pub object: Box<Identifier>,
-    pub property: String,
+    pub object: Identifier,
+    pub path: Vec<Identifier>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -112,7 +113,7 @@ pub enum DataExpr {
     Number(i64),
     String(String),
     HexString(String),
-    DatumConstructor(DatumConstructor),
+    Constructor(DatumConstructor),
     Identifier(String),
     PropertyAccess(PropertyAccess),
     BinaryOp(DataBinaryOp),

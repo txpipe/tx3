@@ -1,0 +1,219 @@
+{
+  "txs": [
+    {
+      "name": "move_ship",
+      "parameters": [
+        {
+          "name": "ship_name",
+          "typ": {
+            "Custom": "AssetName"
+          }
+        },
+        {
+          "name": "delta_x",
+          "typ": "Int"
+        },
+        {
+          "name": "delta_y",
+          "typ": "Int"
+        },
+        {
+          "name": "required_fuel",
+          "typ": "Int"
+        }
+      ],
+      "inputs": [
+        {
+          "name": "ship",
+          "is_many": false,
+          "from": "Game",
+          "datum_is": {
+            "Custom": "ShipState"
+          },
+          "min_amount": {
+            "Constructor": {
+              "type": "Ship",
+              "amount": {
+                "Number": 42
+              },
+              "name": {
+                "Number": 42
+              }
+            }
+          },
+          "redeemer": {
+            "Number": 42
+          }
+        },
+        {
+          "name": "pilot",
+          "is_many": false,
+          "from": "Player",
+          "datum_is": null,
+          "min_amount": {
+            "Constructor": {
+              "type": "Pilot",
+              "amount": {
+                "Number": 42
+              },
+              "name": {
+                "Number": 42
+              }
+            }
+          },
+          "redeemer": null
+        },
+        {
+          "name": "fees",
+          "is_many": false,
+          "from": "Player",
+          "datum_is": null,
+          "min_amount": {
+            "Identifier": "fee"
+          },
+          "redeemer": null
+        }
+      ],
+      "outputs": [
+        {
+          "to": "to: Game",
+          "amount": {
+            "PropertyAccess": {
+              "object": "inputs",
+              "path": [
+                "ship",
+                "amount"
+              ]
+            }
+          },
+          "datum": {
+            "Number": 42
+          }
+        },
+        {
+          "to": "to: Player",
+          "amount": {
+            "PropertyAccess": {
+              "object": "inputs",
+              "path": [
+                "pilot",
+                "amount"
+              ]
+            }
+          },
+          "datum": null
+        }
+      ],
+      "burns": {
+        "amount": {
+          "Constructor": {
+            "type": "Fuel",
+            "amount": {
+              "Number": 42
+            },
+            "name": null
+          }
+        }
+      },
+      "mints": null
+    }
+  ],
+  "datums": [
+    {
+      "name": "ShipState",
+      "variants": [
+        {
+          "name": "Playing",
+          "fields": [
+            {
+              "name": "pos_x",
+              "typ": "Int"
+            },
+            {
+              "name": "pos_y",
+              "typ": "Int"
+            },
+            {
+              "name": "ship_token_name",
+              "typ": {
+                "Custom": "AssetName"
+              }
+            },
+            {
+              "name": "pilot_token_name",
+              "typ": {
+                "Custom": "AssetName"
+              }
+            },
+            {
+              "name": "last_move_latest_time",
+              "typ": {
+                "Custom": "PosixTime"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ShipCommand",
+      "variants": [
+        {
+          "name": "MoveShip",
+          "fields": [
+            {
+              "name": "delta_x",
+              "typ": "Int"
+            },
+            {
+              "name": "delta_y",
+              "typ": "Int"
+            }
+          ]
+        },
+        {
+          "name": "GatherFuel",
+          "fields": [
+            {
+              "name": "amount",
+              "typ": "Int"
+            }
+          ]
+        },
+        {
+          "name": "MineAsteria",
+          "fields": []
+        },
+        {
+          "name": "Quit",
+          "fields": []
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "name": "Pilot",
+      "policy": "0x11111",
+      "asset_name": "*"
+    },
+    {
+      "name": "Ship",
+      "policy": "0x33333",
+      "asset_name": "*"
+    },
+    {
+      "name": "Fuel",
+      "policy": "0x22222",
+      "asset_name": "FUEL"
+    }
+  ],
+  "parties": [
+    {
+      "name": "Player"
+    },
+    {
+      "name": "Game"
+    }
+  ]
+}

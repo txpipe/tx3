@@ -66,10 +66,6 @@ asset_constructor = {
     identifier ~ "(" ~ data_expr ~ ("," ~ data_expr)? ~ ")"
 }
 
-asset_binary_op = {
-    asset_expr ~ binary_operator ~ asset_expr
-}
-
 binary_operator = { "+" | "-" }
 
 data_expr = { data_term ~ (binary_operator ~ data_term)* }
@@ -88,10 +84,6 @@ datum_constructor = {
     (identifier ~ ":" ~ data_expr ~ ",")* ~
     ("..." ~ data_expr)? ~
     "}"
-}
-
-data_binary_op = {
-    data_expr ~ binary_operator ~ data_expr
 }
 
 input_block_from = { "from" ~ ":" ~ identifier }

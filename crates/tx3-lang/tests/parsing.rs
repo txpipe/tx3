@@ -16,7 +16,7 @@ fn test_parsing_example(example: &str) {
     make_snapshot(example, &program);
 
     let ast = std::fs::read_to_string(format!("tests/{}.ast", example)).unwrap();
-    let expected: Vec<Program> = serde_json::from_str(&ast).unwrap();
+    let expected: Program = serde_json::from_str(&ast).unwrap();
 
     assert_json_eq!(program, expected);
 }

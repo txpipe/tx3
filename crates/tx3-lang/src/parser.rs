@@ -1,6 +1,7 @@
 use crate::ast::{
-    AssetBinaryOp, AssetDef, AssetExpr, BinaryOperator, DataExpr, DatumDef, DatumField,
-    DatumVariant, InputBlock, OutputBlock, Parameter, PartyDef, Program, TxDef, Type,
+    AssetBinaryOp, AssetConstructor, AssetDef, AssetExpr, BinaryOperator, BurnBlock, DataBinaryOp,
+    DataExpr, DatumConstructor, DatumDef, DatumField, DatumVariant, Identifier, InputBlock,
+    MintBlock, OutputBlock, Parameter, PartyDef, Program, PropertyAccess, TxDef, Type,
 };
 use pest::Parser;
 use pest_derive::Parser;
@@ -86,6 +87,22 @@ impl Tx3Parser {
 
     fn parse_datum_variant(pair: pest::iterators::Pair<Rule>) -> Result<DatumVariant, ParseError> {
         let mut inner = pair.into_inner();
+
+        let flavor = inner.next().unwrap();
+
+        match flavor.as_rule() {
+            Rule::datum_variant_struct => Self::parse_datum_variant_struct(flavor),
+            Rule::datum_variant_tuple => todo!("parse datum variant tuple"),
+            Rule::datum_variant_unit => Self::parse_datum_variant_unit(flavor),
+            x => unreachable!("Unexpected rule in datum_variant: {:?}", x),
+        }
+    }
+
+    fn parse_datum_variant_struct(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<DatumVariant, ParseError> {
+        let mut inner = pair.into_inner();
+
         let identifier = inner.next().unwrap().as_str().to_string();
 
         let mut fields = Vec::new();
@@ -97,6 +114,19 @@ impl Tx3Parser {
         Ok(DatumVariant {
             name: identifier,
             fields,
+        })
+    }
+
+    fn parse_datum_variant_unit(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<DatumVariant, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let identifier = inner.next().unwrap().as_str().to_string();
+
+        Ok(DatumVariant {
+            name: identifier,
+            fields: vec![],
         })
     }
 
@@ -150,12 +180,125 @@ impl Tx3Parser {
         }
     }
 
-    // asset_expr = { asset_term ~ (binary_operator ~ asset_term)* }
-    // asset_term = _{ asset_constructor | identifier | property_access }
+    fn parse_identifier(pair: pest::iterators::Pair<Rule>) -> Result<Identifier, ParseError> {
+        Ok(pair.as_str().to_string())
+    }
+
+    fn parse_property_access(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<PropertyAccess, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let object = Self::parse_identifier(inner.next().unwrap())?;
+
+        let mut identifiers = Vec::new();
+        identifiers.push(Self::parse_identifier(inner.next().unwrap())?);
+
+        for identifier in inner {
+            identifiers.push(Self::parse_identifier(identifier)?);
+        }
+
+        Ok(PropertyAccess {
+            object,
+            path: identifiers,
+        })
+    }
+
+    fn parse_datum_constructor(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<DatumConstructor, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let r#type = Self::parse_identifier(inner.next().unwrap())?;
+        let variant = Self::parse_identifier(inner.next().unwrap())?;
+
+        let mut fields = Vec::new();
+
+        for field in inner.next().unwrap().into_inner() {
+            let mut inner = field.into_inner();
+
+            let name = Self::parse_identifier(inner.next().unwrap())?;
+            let value = Self::parse_data_expr(inner.next().unwrap())?;
+
+            fields.push((name, Box::new(value)));
+        }
+
+        let spread = inner.next().map(|x| Self::parse_data_expr(x)).transpose()?;
+
+        Ok(DatumConstructor {
+            r#type,
+            variant,
+            fields,
+            spread: spread.map(|x| Box::new(x)),
+        })
+    }
+
+    fn parse_data_term(pair: pest::iterators::Pair<Rule>) -> Result<DataExpr, ParseError> {
+        match pair.as_rule() {
+            Rule::number => Ok(DataExpr::Number(pair.as_str().parse().unwrap())),
+            Rule::string => Ok(DataExpr::String(pair.as_str().to_string())),
+            Rule::hex_string => Ok(DataExpr::HexString(pair.as_str().to_string())),
+            Rule::datum_constructor => {
+                Ok(DataExpr::Constructor(Self::parse_datum_constructor(pair)?))
+            }
+            Rule::identifier => Ok(DataExpr::Identifier(Self::parse_identifier(pair)?)),
+            Rule::property_access => {
+                Ok(DataExpr::PropertyAccess(Self::parse_property_access(pair)?))
+            }
+            x => unreachable!("Unexpected rule in data_term: {:?}", x),
+        }
+    }
+
+    fn parse_data_expr(pair: pest::iterators::Pair<Rule>) -> Result<DataExpr, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let mut final_expr = Self::parse_data_term(inner.next().unwrap())?;
+
+        for term in inner {
+            let mut inner = term.into_inner();
+
+            let operator = Self::parse_binary_operator(inner.next().unwrap())?;
+            let next_expr = Self::parse_data_term(inner.next().unwrap())?;
+
+            final_expr = DataExpr::BinaryOp(DataBinaryOp {
+                operator,
+                left: Box::new(final_expr),
+                right: Box::new(next_expr),
+            });
+        }
+
+        Ok(final_expr)
+    }
+
+    fn parse_asset_constructor(
+        pair: pest::iterators::Pair<Rule>,
+    ) -> Result<AssetConstructor, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let r#type = Self::parse_identifier(inner.next().unwrap())?;
+
+        inner.next().unwrap();
+        let amount = DataExpr::Number(42); // Self::parse_data_expr(inner.next().unwrap())?;
+        let name = inner.next().map(|x| Self::parse_data_expr(x)).transpose()?;
+
+        Ok(AssetConstructor {
+            r#type,
+            amount: Box::new(amount),
+            name: name.map(|x| Box::new(x)),
+        })
+    }
 
     fn parse_asset_term(pair: pest::iterators::Pair<Rule>) -> Result<AssetExpr, ParseError> {
-        dbg!(&pair);
-        todo!()
+        match pair.as_rule() {
+            Rule::asset_constructor => {
+                Ok(AssetExpr::Constructor(Self::parse_asset_constructor(pair)?))
+            }
+            Rule::identifier => Ok(AssetExpr::Identifier(Self::parse_identifier(pair)?)),
+            Rule::property_access => Ok(AssetExpr::PropertyAccess(Self::parse_property_access(
+                pair,
+            )?)),
+            x => unreachable!("Unexpected rule in asset_term: {:?}", x),
+        }
     }
 
     fn parse_asset_expr(pair: pest::iterators::Pair<Rule>) -> Result<AssetExpr, ParseError> {
@@ -164,8 +307,6 @@ impl Tx3Parser {
         let mut final_expr = Self::parse_asset_term(inner.next().unwrap())?;
 
         for term in inner {
-            let mut inner = term.into_inner();
-
             let operator = Self::parse_binary_operator(inner.next().unwrap())?;
             let next_expr = Self::parse_asset_term(inner.next().unwrap())?;
 
@@ -177,11 +318,6 @@ impl Tx3Parser {
         }
 
         Ok(final_expr)
-    }
-
-    fn parse_data_expr(pair: pest::iterators::Pair<Rule>) -> Result<DataExpr, ParseError> {
-        dbg!(&pair);
-        todo!()
     }
 
     fn parse_input_block(pair: pest::iterators::Pair<Rule>) -> Result<InputBlock, ParseError> {
@@ -203,16 +339,20 @@ impl Tx3Parser {
 
             match field.as_rule() {
                 Rule::input_block_from => {
-                    input_block.from = Some(field.as_str().to_string());
+                    input_block.from =
+                        Some(field.into_inner().next().unwrap().as_str().to_string());
                 }
                 Rule::input_block_datum_is => {
-                    input_block.datum_is = Some(Self::parse_type(field)?);
+                    input_block.datum_is =
+                        Some(Self::parse_type(field.into_inner().next().unwrap())?);
                 }
                 Rule::input_block_min_amount => {
-                    input_block.min_amount = Some(Self::parse_asset_expr(field)?.into());
+                    input_block.min_amount =
+                        Some(Self::parse_asset_expr(field.into_inner().next().unwrap())?.into());
                 }
                 Rule::input_block_redeemer => {
-                    input_block.redeemer = Some(Self::parse_data_expr(field)?.into());
+                    input_block.redeemer =
+                        Some(Self::parse_data_expr(field.into_inner().next().unwrap())?.into());
                 }
                 x => unreachable!("Unexpected rule in input_block: {:?}", x),
             }
@@ -222,7 +362,7 @@ impl Tx3Parser {
     }
 
     fn parse_output_block(pair: pest::iterators::Pair<Rule>) -> Result<OutputBlock, ParseError> {
-        let mut inner = pair.into_inner();
+        let inner = pair.into_inner();
 
         let mut output_block = OutputBlock {
             to: String::new(),
@@ -230,20 +370,45 @@ impl Tx3Parser {
             datum: None,
         };
 
-        for item in inner {
-            match item.as_rule() {
-                Rule::output_block_to => output_block.to = item.as_str().to_string(),
+        for field_option in inner {
+            let field = field_option.into_inner().next().unwrap();
+
+            match field.as_rule() {
+                Rule::output_block_to => output_block.to = field.as_str().to_string(),
                 Rule::output_block_amount => {
-                    output_block.amount = Some(Self::parse_asset_expr(item)?.into());
+                    output_block.amount = Some(Self::parse_asset_expr(field)?.into());
                 }
                 Rule::output_block_datum => {
-                    output_block.datum = Some(Self::parse_data_expr(item)?.into());
+                    output_block.datum = Some(Self::parse_data_expr(field)?.into());
                 }
                 x => unreachable!("Unexpected rule in output_block: {:?}", x),
             }
         }
 
         Ok(output_block)
+    }
+
+    fn parse_burn_block(pair: pest::iterators::Pair<Rule>) -> Result<BurnBlock, ParseError> {
+        let inner = pair.into_inner();
+
+        let mut amount = None;
+
+        for item in inner {
+            match item.as_rule() {
+                Rule::burn_block_amount => {
+                    amount = Some(Self::parse_asset_expr(item)?.into());
+                }
+                x => unreachable!("Unexpected rule in burn_block: {:?}", x),
+            }
+        }
+
+        Ok(BurnBlock {
+            amount: amount.unwrap(),
+        })
+    }
+
+    fn parse_mint_block(pair: pest::iterators::Pair<Rule>) -> Result<MintBlock, ParseError> {
+        todo!()
     }
 
     fn parse_tx_def(pair: pest::iterators::Pair<Rule>) -> Result<TxDef, ParseError> {
@@ -260,8 +425,8 @@ impl Tx3Parser {
             match item.as_rule() {
                 Rule::input_block => inputs.push(Self::parse_input_block(item)?),
                 Rule::output_block => outputs.push(Self::parse_output_block(item)?),
-                Rule::burn_block => burns = todo!(),
-                Rule::mint_block => mints = todo!(),
+                Rule::burn_block => burns = Some(Self::parse_burn_block(item)?),
+                Rule::mint_block => mints = Some(Self::parse_mint_block(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
         }
