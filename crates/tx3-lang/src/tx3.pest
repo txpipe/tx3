@@ -79,10 +79,16 @@ data_term = _{
     identifier
 }
 
+spread_expression = { "..." ~ data_expr }
+
+datum_constructor_field = {
+    identifier ~ ":" ~ data_expr
+}
+
 datum_constructor = {
     identifier ~ "::" ~ identifier ~ "{" ~
-    (identifier ~ ":" ~ data_expr ~ ",")* ~
-    ("..." ~ data_expr)? ~
+    (datum_constructor_field ~ ",")* ~
+    spread_expression? ~
     "}"
 }
 

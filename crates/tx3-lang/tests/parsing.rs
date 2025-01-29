@@ -1,6 +1,10 @@
 use assert_json_diff::assert_json_eq;
 use paste::paste;
-use tx3_lang::ast::Program;
+use pest::Parser;
+use tx3_lang::{
+    ast::{AstNode, Program},
+    Rule,
+};
 
 #[allow(dead_code)]
 fn make_snapshot(example: &str, program: &Program) {
@@ -10,10 +14,11 @@ fn make_snapshot(example: &str, program: &Program) {
 
 fn test_parsing_example(example: &str) {
     let input = std::fs::read_to_string(format!("tests/{}.tx3", example)).unwrap();
-    let program = tx3_lang::parser::Tx3Parser::parse_program(&input).unwrap();
+    let pairs = tx3_lang::Tx3Parser::parse(Rule::program, &input).unwrap();
+    let program = tx3_lang::ast::Program::parse(pairs.into_iter().next().unwrap()).unwrap();
 
     // Uncomment to update AST snapshots
-    make_snapshot(example, &program);
+    // make_snapshot(example, &program);
 
     let ast = std::fs::read_to_string(format!("tests/{}.ast", example)).unwrap();
     let expected: Program = serde_json::from_str(&ast).unwrap();
