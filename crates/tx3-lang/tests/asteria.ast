@@ -1,0 +1,343 @@
+{
+  "txs": [
+    {
+      "name": "move_ship",
+      "parameters": {
+        "parameters": [
+          {
+            "name": "ship_name",
+            "typ": {
+              "Custom": "AssetName"
+            }
+          },
+          {
+            "name": "delta_x",
+            "typ": "Int"
+          },
+          {
+            "name": "delta_y",
+            "typ": "Int"
+          },
+          {
+            "name": "required_fuel",
+            "typ": "Int"
+          }
+        ]
+      },
+      "inputs": [
+        {
+          "name": "ship",
+          "is_many": false,
+          "from": "Game",
+          "datum_is": {
+            "Custom": "ShipState"
+          },
+          "min_amount": {
+            "BinaryOp": {
+              "left": {
+                "Constructor": {
+                  "type": "Ship",
+                  "amount": {
+                    "Number": 1
+                  },
+                  "name": {
+                    "Identifier": "ship_name"
+                  }
+                }
+              },
+              "operator": "Add",
+              "right": {
+                "Constructor": {
+                  "type": "Fuel",
+                  "amount": {
+                    "Identifier": "required_fuel"
+                  },
+                  "name": null
+                }
+              }
+            }
+          },
+          "redeemer": {
+            "Constructor": {
+              "type": "ShipCommand",
+              "variant": "MoveShip",
+              "fields": [
+                {
+                  "name": "delta_x",
+                  "value": {
+                    "Identifier": "delta_x"
+                  }
+                },
+                {
+                  "name": "delta_y",
+                  "value": {
+                    "Identifier": "delta_y"
+                  }
+                }
+              ],
+              "spread": null
+            }
+          }
+        },
+        {
+          "name": "pilot",
+          "is_many": false,
+          "from": "Player",
+          "datum_is": null,
+          "min_amount": {
+            "Constructor": {
+              "type": "Pilot",
+              "amount": {
+                "Number": 1
+              },
+              "name": {
+                "Identifier": "ship_name"
+              }
+            }
+          },
+          "redeemer": null
+        },
+        {
+          "name": "fees",
+          "is_many": false,
+          "from": "Player",
+          "datum_is": null,
+          "min_amount": {
+            "Identifier": "fee"
+          },
+          "redeemer": null
+        }
+      ],
+      "outputs": [
+        {
+          "to": "Game",
+          "amount": {
+            "BinaryOp": {
+              "left": {
+                "PropertyAccess": {
+                  "object": "inputs",
+                  "path": [
+                    "ship",
+                    "amount"
+                  ]
+                }
+              },
+              "operator": "Subtract",
+              "right": {
+                "Constructor": {
+                  "type": "Fuel",
+                  "amount": {
+                    "Identifier": "required_fuel"
+                  },
+                  "name": null
+                }
+              }
+            }
+          },
+          "datum": {
+            "Constructor": {
+              "type": "ShipState",
+              "variant": "Playing",
+              "fields": [
+                {
+                  "name": "pos_x",
+                  "value": {
+                    "BinaryOp": {
+                      "left": {
+                        "PropertyAccess": {
+                          "object": "inputs",
+                          "path": [
+                            "ship",
+                            "pos_x"
+                          ]
+                        }
+                      },
+                      "operator": "Add",
+                      "right": {
+                        "Identifier": "delta_x"
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "pos_y",
+                  "value": {
+                    "BinaryOp": {
+                      "left": {
+                        "PropertyAccess": {
+                          "object": "inputs",
+                          "path": [
+                            "ship",
+                            "pos_y"
+                          ]
+                        }
+                      },
+                      "operator": "Add",
+                      "right": {
+                        "Identifier": "delta_y"
+                      }
+                    }
+                  }
+                }
+              ],
+              "spread": {
+                "PropertyAccess": {
+                  "object": "inputs",
+                  "path": [
+                    "ship",
+                    "datum"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "to": "Player",
+          "amount": {
+            "BinaryOp": {
+              "left": {
+                "BinaryOp": {
+                  "left": {
+                    "PropertyAccess": {
+                      "object": "inputs",
+                      "path": [
+                        "pilot",
+                        "amount"
+                      ]
+                    }
+                  },
+                  "operator": "Add",
+                  "right": {
+                    "PropertyAccess": {
+                      "object": "inputs",
+                      "path": [
+                        "fees",
+                        "amount"
+                      ]
+                    }
+                  }
+                }
+              },
+              "operator": "Subtract",
+              "right": {
+                "Identifier": "fee"
+              }
+            }
+          },
+          "datum": null
+        }
+      ],
+      "burns": {
+        "amount": {
+          "Constructor": {
+            "type": "Fuel",
+            "amount": {
+              "Identifier": "required_fuel"
+            },
+            "name": null
+          }
+        }
+      },
+      "mints": null
+    }
+  ],
+  "datums": [
+    {
+      "name": "ShipState",
+      "variants": [
+        {
+          "name": "Playing",
+          "fields": [
+            {
+              "name": "pos_x",
+              "typ": "Int"
+            },
+            {
+              "name": "pos_y",
+              "typ": "Int"
+            },
+            {
+              "name": "ship_token_name",
+              "typ": {
+                "Custom": "AssetName"
+              }
+            },
+            {
+              "name": "pilot_token_name",
+              "typ": {
+                "Custom": "AssetName"
+              }
+            },
+            {
+              "name": "last_move_latest_time",
+              "typ": {
+                "Custom": "PosixTime"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ShipCommand",
+      "variants": [
+        {
+          "name": "MoveShip",
+          "fields": [
+            {
+              "name": "delta_x",
+              "typ": "Int"
+            },
+            {
+              "name": "delta_y",
+              "typ": "Int"
+            }
+          ]
+        },
+        {
+          "name": "GatherFuel",
+          "fields": [
+            {
+              "name": "amount",
+              "typ": "Int"
+            }
+          ]
+        },
+        {
+          "name": "MineAsteria",
+          "fields": []
+        },
+        {
+          "name": "Quit",
+          "fields": []
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "name": "Pilot",
+      "policy": "0x11111",
+      "asset_name": "*"
+    },
+    {
+      "name": "Ship",
+      "policy": "0x33333",
+      "asset_name": "*"
+    },
+    {
+      "name": "Fuel",
+      "policy": "0x22222",
+      "asset_name": "FUEL"
+    }
+  ],
+  "parties": [
+    {
+      "name": "Player"
+    },
+    {
+      "name": "Game"
+    }
+  ]
+}
