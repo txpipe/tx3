@@ -2,12 +2,11 @@ party Player;
 
 party Game;
 
-asset Pilot = 0x11111.*;
+asset Fuel = 0x11111.FUEL;
 
 asset Ship = 0x33333.*;
 
-asset Fuel = 0x22222.FUEL;
-
+asset Pilot = 0x33333.*;
 
 datum ShipState {
     Playing {
@@ -40,7 +39,7 @@ tx move_ship(
     input ship {
         from: Game,
         datum_is: ShipState,
-        min_amount: Ship(1, ship_name) + Fuel(required_fuel),
+        min_amount: Ship(ship_name, 1) + Fuel(required_fuel),
 
         redeemer: ShipCommand::MoveShip {
             delta_x: delta_x,
@@ -50,7 +49,7 @@ tx move_ship(
 
     input pilot {
         from: Player,
-        min_amount: Pilot(1, ship_name),
+        min_amount: Pilot(ship_name, 1),
     }
     
     input fees {
