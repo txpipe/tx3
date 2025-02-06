@@ -5,11 +5,12 @@ COMMENT = _{ "//" ~ (!"\n" ~ ANY)* | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 number = @{ "-"? ~ ASCII_DIGIT+ }
 string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+bool = @{ "true" | "false" }
 hex_string = @{ "0x" ~ ASCII_HEX_DIGIT+ }
 wildcard = @{ "*" }
 
 // Type definitions
-type = { "Int" | "Bytes" | identifier }
+type = { "Int" | "Bool" | "Bytes" | identifier }
 
 // Parameters
 parameter = { identifier ~ ":" ~ type }
@@ -72,6 +73,7 @@ data_expr = { data_term ~ (binary_operator ~ data_term)* }
 data_term = _{
     "none" |
     number |
+    bool |
     string |
     hex_string |
     datum_constructor |

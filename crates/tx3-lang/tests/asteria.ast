@@ -38,10 +38,10 @@
                 "Constructor": {
                   "type": "Ship",
                   "amount": {
-                    "Number": 1
+                    "Identifier": "ship_name"
                   },
                   "name": {
-                    "Identifier": "ship_name"
+                    "Number": 1
                   }
                 }
               },
@@ -88,10 +88,10 @@
             "Constructor": {
               "type": "Pilot",
               "amount": {
-                "Number": 1
+                "Identifier": "ship_name"
               },
               "name": {
-                "Identifier": "ship_name"
+                "Number": 1
               }
             }
           },
@@ -317,9 +317,9 @@
   ],
   "assets": [
     {
-      "name": "Pilot",
+      "name": "Fuel",
       "policy": "0x11111",
-      "asset_name": "*"
+      "asset_name": "FUEL"
     },
     {
       "name": "Ship",
@@ -327,9 +327,9 @@
       "asset_name": "*"
     },
     {
-      "name": "Fuel",
-      "policy": "0x22222",
-      "asset_name": "FUEL"
+      "name": "Pilot",
+      "policy": "0x33333",
+      "asset_name": "*"
     }
   ],
   "parties": [

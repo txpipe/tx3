@@ -1,7 +1,7 @@
 use pest::iterators::Pair;
 use serde::{Deserialize, Serialize};
 
-use crate::{ParseError, Rule};
+use crate::parse::{Error as ParseError, Rule};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Identifier(pub String);
@@ -11,6 +11,12 @@ impl AstNode for Identifier {
 
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         Ok(Identifier(pair.as_str().to_string()))
+    }
+}
+
+impl AsRef<str> for Identifier {
+    fn as_ref(&self) -> &str {
+        &self.0
     }
 }
 
@@ -32,7 +38,7 @@ impl AstNode for Program {
     const RULE: Rule = Rule::program;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        let mut inner = pair.into_inner();
+        let inner = pair.into_inner();
 
         let mut program = Self {
             txs: Vec::new(),
@@ -508,6 +514,7 @@ pub struct DataBinaryOp {
 pub enum DataExpr {
     None,
     Number(i64),
+    Bool(bool),
     String(String),
     HexString(String),
     Constructor(DatumConstructor),
@@ -525,6 +532,10 @@ impl DataExpr {
 
     fn number_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         Ok(DataExpr::Number(pair.as_str().parse().unwrap()))
+    }
+
+    fn bool_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        Ok(DataExpr::Bool(pair.as_str().parse().unwrap()))
     }
 
     fn hex_string_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
@@ -547,6 +558,7 @@ impl DataExpr {
         match pair.as_rule() {
             Rule::number => DataExpr::number_parse(pair),
             Rule::string => DataExpr::string_parse(pair),
+            Rule::bool => DataExpr::bool_parse(pair),
             Rule::hex_string => DataExpr::hex_string_parse(pair),
             Rule::datum_constructor => DataExpr::constructor_parse(pair),
             Rule::identifier => DataExpr::identifier_parse(pair),
@@ -600,6 +612,7 @@ impl AstNode for BinaryOperator {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Type {
     Int,
+    Bool,
     Bytes,
     Custom(String),
 }
@@ -610,6 +623,7 @@ impl AstNode for Type {
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         match pair.as_str() {
             "Int" => Ok(Type::Int),
+            "Bool" => Ok(Type::Bool),
             "Bytes" => Ok(Type::Bytes),
             t => Ok(Type::Custom(t.to_string())),
         }
@@ -734,7 +748,7 @@ mod tests {
             paste::paste! {
                 #[test]
                 fn [<test_parse_ $ast:snake _ $name>]() {
-                    let pairs = crate::Tx3Parser::parse(<$ast>::RULE, $input).unwrap();
+                    let pairs = crate::parse::Tx3Grammar::parse(<$ast>::RULE, $input).unwrap();
                     let single_match = pairs.into_iter().next().unwrap();
                     let result = <$ast>::parse(single_match).unwrap();
 
@@ -753,6 +767,15 @@ mod tests {
         "literal_string",
         "\"Hello, world!\"",
         DataExpr::String("Hello, world!".to_string())
+    );
+
+    input_to_ast_check!(DataExpr, "literal_bool_true", "true", DataExpr::Bool(true));
+
+    input_to_ast_check!(
+        DataExpr,
+        "literal_bool_false",
+        "false",
+        DataExpr::Bool(false)
     );
 
     input_to_ast_check!(
