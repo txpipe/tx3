@@ -31,54 +31,55 @@ A key concept in Tx3 is the distinction between concrete transactions and transa
 
 ```tx3
 datum PoolState {
-   pair_a: Token,
-   pair_b: Token,
+    PoolState {
+        pair_a: Token,
+        pair_b: Token,
+    }
 }
 
 datum SwapParams {
-   amount: Int,
-   ratio: Int,
+    SwapParams {
+        amount: Int,
+        ratio: Int,
+    }
 }
 
 party Buyer;
 
-party Dex {
-   address: addr1xxx,
-}
+party Dex;
 
 tx swap(
-   buyer: Buyer,
-   ask: Token,
-   bid: Token
+    ask: Token,
+    bid: Token
 ) {
-   input pool {
-         from: dex,
-         datum_is: PoolState,
+    input pool {
+        from: dex,
+        datum_is: PoolState,
 
-         redeemer: SwapParams {
+        redeemer: SwapParams::SwapParams {
             ask: ask,
             bid: ask,
-         }
-   }
-   
-   input* payment {
-         from: buyer,
-         min_amount: fees + bid,
-   }
-   
-   output {
-         to: pool
-         datum: PoolState {
+        },
+    }
+    
+    input payment {
+        from: buyer,
+        min_amount: fees + bid,
+    }
+    
+    output {
+        to: pool,
+        datum: PoolState::PoolState {
             pair_a: inputs.pool.pair_a - ask,
             pair_b: inputs.pool.pair_b + bid,
             ...inputs.pool.datum
-         }
-   }
+        },
+    }
 
-   output {
-         to: buyer,
-         amount: inputs.payment.amount + ask - bid - fees,
-   }
+    output {
+        to: buyer,
+        amount: inputs.payment.amount + ask - bid - fees,
+    }
 }
 ```
 

@@ -21,7 +21,7 @@ tx swap(
     bid: Token
 ) {
     input pool {
-        from: dex,
+        from: Dex,
         datum_is: PoolState,
 
         redeemer: SwapParams::SwapParams {
@@ -31,21 +31,22 @@ tx swap(
     }
     
     input payment {
-        from: buyer,
+        from: Buyer,
         min_amount: fees + bid,
     }
     
     output {
-        to: pool,
+        to: Dex,
         datum: PoolState::PoolState {
             pair_a: inputs.pool.pair_a - ask,
             pair_b: inputs.pool.pair_b + bid,
             ...inputs.pool.datum
         },
+        amount: inputs.pool.amount,
     }
 
     output {
-        to: buyer,
+        to: Buyer,
         amount: inputs.payment.amount + ask - bid - fees,
     }
 }

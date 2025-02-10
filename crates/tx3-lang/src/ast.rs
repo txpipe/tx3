@@ -1,22 +1,45 @@
+use std::rc::Rc;
+
 use pest::iterators::Pair;
 use serde::{Deserialize, Serialize};
 
-use crate::parse::{Error as ParseError, Rule};
+use crate::{
+    analyze::{Scope, Symbol},
+    parse::{Error as ParseError, Rule},
+};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Identifier(pub String);
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct Identifier {
+    pub value: String,
+
+    // analysis
+    #[serde(skip)]
+    pub symbol: Option<Symbol>,
+}
+
+impl Identifier {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self {
+            value: value.into(),
+            symbol: None,
+        }
+    }
+}
 
 impl AstNode for Identifier {
     const RULE: Rule = Rule::identifier;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        Ok(Identifier(pair.as_str().to_string()))
+        Ok(Identifier {
+            value: pair.as_str().to_string(),
+            symbol: None,
+        })
     }
 }
 
 impl AsRef<str> for Identifier {
     fn as_ref(&self) -> &str {
-        &self.0
+        &self.value
     }
 }
 
@@ -32,6 +55,10 @@ pub struct Program {
     pub datums: Vec<DatumDef>,
     pub assets: Vec<AssetDef>,
     pub parties: Vec<PartyDef>,
+
+    // analysis
+    #[serde(skip)]
+    pub scope: Option<Rc<Scope>>,
 }
 
 impl AstNode for Program {
@@ -45,6 +72,7 @@ impl AstNode for Program {
             assets: Vec::new(),
             datums: Vec::new(),
             parties: Vec::new(),
+            scope: None,
         };
 
         for pair in inner {
@@ -64,7 +92,7 @@ impl AstNode for Program {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ParameterList {
-    pub parameters: Vec<Parameter>,
+    pub parameters: Vec<ParamDef>,
 }
 
 impl AstNode for ParameterList {
@@ -78,9 +106,9 @@ impl AstNode for ParameterList {
         for param in inner {
             let mut inner = param.into_inner();
             let name = inner.next().unwrap().as_str().to_string();
-            let typ = Type::parse(inner.next().unwrap())?;
+            let r#type = Type::parse(inner.next().unwrap())?;
 
-            parameters.push(Parameter { name, typ });
+            parameters.push(ParamDef { name, r#type });
         }
 
         Ok(ParameterList { parameters })
@@ -89,12 +117,16 @@ impl AstNode for ParameterList {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TxDef {
-    pub name: Identifier,
+    pub name: String,
     pub parameters: ParameterList,
     pub inputs: Vec<InputBlock>,
     pub outputs: Vec<OutputBlock>,
-    pub burns: Option<BurnBlock>,
-    pub mints: Option<MintBlock>,
+    pub burn: Option<BurnBlock>,
+    pub mint: Option<MintBlock>,
+
+    // analysis
+    #[serde(skip)]
+    pub scope: Option<Rc<Scope>>,
 }
 
 impl AstNode for TxDef {
@@ -103,20 +135,20 @@ impl AstNode for TxDef {
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         let mut inner = pair.into_inner();
 
-        let name = Identifier::parse(inner.next().unwrap())?;
+        let name = inner.next().unwrap().as_str().to_string();
         let parameters = ParameterList::parse(inner.next().unwrap())?;
 
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
-        let mut burns = None;
-        let mut mints = None;
+        let mut burn = None;
+        let mut mint = None;
 
         for item in inner {
             match item.as_rule() {
                 Rule::input_block => inputs.push(InputBlock::parse(item)?),
                 Rule::output_block => outputs.push(OutputBlock::parse(item)?),
-                Rule::burn_block => burns = Some(BurnBlock::parse(item)?),
-                Rule::mint_block => mints = Some(MintBlock::parse(item)?),
+                Rule::burn_block => burn = Some(BurnBlock::parse(item)?),
+                Rule::mint_block => mint = Some(MintBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
         }
@@ -126,15 +158,16 @@ impl AstNode for TxDef {
             parameters,
             inputs,
             outputs,
-            burns,
-            mints,
+            burn,
+            mint,
+            scope: None,
         })
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct InputBlock {
-    pub name: Identifier,
+    pub name: String,
     pub is_many: bool,
     pub from: Option<Identifier>,
     pub datum_is: Option<Type>,
@@ -148,7 +181,7 @@ impl AstNode for InputBlock {
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         let mut inner = pair.into_inner();
 
-        let name = Identifier::parse(inner.next().unwrap())?;
+        let name = inner.next().unwrap().as_str().to_string();
 
         let mut input_block = InputBlock {
             name,
@@ -199,7 +232,10 @@ impl AstNode for OutputBlock {
         let inner = pair.into_inner();
 
         let mut output_block = OutputBlock {
-            to: Identifier(String::new()),
+            to: Identifier {
+                value: String::new(),
+                symbol: None,
+            },
             amount: None,
             datum: None,
         };
@@ -283,7 +319,7 @@ impl AstNode for BurnBlock {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct DatumField {
     pub name: String,
     pub typ: Type,
@@ -304,7 +340,7 @@ impl AstNode for DatumField {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct PartyDef {
     pub name: String,
 }
@@ -416,6 +452,34 @@ impl AstNode for AssetExpr {
 pub struct PropertyAccess {
     pub object: Identifier,
     pub path: Vec<Identifier>,
+
+    // analysis
+    #[serde(skip)]
+    pub scope: Option<Rc<Scope>>,
+}
+
+impl PropertyAccess {
+    pub fn new(object: &str, path: &[&str]) -> Self {
+        Self {
+            object: Identifier::new(object),
+            path: path.iter().map(|x| Identifier::new(*x)).collect(),
+            scope: None,
+        }
+    }
+}
+
+impl PropertyAccess {
+    /// Shift the property access to the next property in the path.
+    pub fn shift(mut self) -> Option<Self> {
+        if self.path.is_empty() {
+            return None;
+        }
+
+        let new_object = self.path.remove(0);
+        self.object = new_object;
+
+        Some(self)
+    }
 }
 
 impl AstNode for PropertyAccess {
@@ -436,6 +500,7 @@ impl AstNode for PropertyAccess {
         Ok(PropertyAccess {
             object,
             path: identifiers,
+            scope: None,
         })
     }
 }
@@ -591,7 +656,7 @@ impl AstNode for DataExpr {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum BinaryOperator {
     Add,
     Subtract,
@@ -609,7 +674,7 @@ impl AstNode for BinaryOperator {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Type {
     Int,
     Bool,
@@ -630,13 +695,13 @@ impl AstNode for Type {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Parameter {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct ParamDef {
     pub name: String,
-    pub typ: Type,
+    pub r#type: Type,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct DatumDef {
     pub name: String,
     pub variants: Vec<DatumVariant>,
@@ -706,13 +771,13 @@ impl AstNode for DatumDef {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct DatumVariant {
     pub name: String,
     pub fields: Vec<DatumField>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct AssetDef {
     pub name: String,
     pub policy: String,
@@ -782,23 +847,14 @@ mod tests {
         PropertyAccess,
         "single_property",
         "subject.property",
-        PropertyAccess {
-            object: Identifier("subject".to_string()),
-            path: vec![Identifier("property".to_string())],
-        }
+        PropertyAccess::new("subject", &["property"])
     );
 
     input_to_ast_check!(
         PropertyAccess,
         "multiple_properties",
         "subject.property.subproperty",
-        PropertyAccess {
-            object: Identifier("subject".to_string()),
-            path: vec![
-                Identifier("property".to_string()),
-                Identifier("subproperty".to_string())
-            ],
-        }
+        PropertyAccess::new("subject", &["property", "subproperty"])
     );
 
     input_to_ast_check!(
@@ -806,7 +862,7 @@ mod tests {
         "type_and_literal",
         "MyToken(15)",
         AssetConstructor {
-            r#type: Identifier("MyToken".to_string()),
+            r#type: Identifier::new("MyToken"),
             amount: Box::new(DataExpr::Number(15)),
             name: None,
         }
@@ -817,7 +873,7 @@ mod tests {
         "type_and_literal_with_name",
         "MyClass(15, \"TokenName\")",
         AssetConstructor {
-            r#type: Identifier("MyClass".to_string()),
+            r#type: Identifier::new("MyClass"),
             amount: Box::new(DataExpr::Number(15)),
             name: Some(Box::new(DataExpr::String("TokenName".to_string()))),
         }
@@ -830,7 +886,7 @@ mod tests {
         DataExpr::BinaryOp(DataBinaryOp {
             operator: BinaryOperator::Add,
             left: Box::new(DataExpr::Number(5)),
-            right: Box::new(DataExpr::Identifier(Identifier("var1".to_string()))),
+            right: Box::new(DataExpr::Identifier(Identifier::new("var1"))),
         })
     );
 
@@ -842,16 +898,16 @@ mod tests {
             delta_y: delta_y,
         }",
         DatumConstructor {
-            r#type: Identifier("ShipCommand".to_string()),
-            variant: Identifier("MoveShip".to_string()),
+            r#type: Identifier::new("ShipCommand"),
+            variant: Identifier::new("MoveShip"),
             fields: vec![
                 DatumConstructorField {
-                    name: Identifier("delta_x".to_string()),
-                    value: Box::new(DataExpr::Identifier(Identifier("delta_x".to_string()))),
+                    name: Identifier::new("delta_x"),
+                    value: Box::new(DataExpr::Identifier(Identifier::new("delta_x"))),
                 },
                 DatumConstructorField {
-                    name: Identifier("delta_y".to_string()),
-                    value: Box::new(DataExpr::Identifier(Identifier("delta_y".to_string()))),
+                    name: Identifier::new("delta_y"),
+                    value: Box::new(DataExpr::Identifier(Identifier::new("delta_y"))),
                 },
             ],
             spread: None,
@@ -867,19 +923,19 @@ mod tests {
             ...abc
         }",
         DatumConstructor {
-            r#type: Identifier("ShipCommand".to_string()),
-            variant: Identifier("MoveShip".to_string()),
+            r#type: Identifier::new("ShipCommand"),
+            variant: Identifier::new("MoveShip"),
             fields: vec![
                 DatumConstructorField {
-                    name: Identifier("delta_x".to_string()),
-                    value: Box::new(DataExpr::Identifier(Identifier("delta_x".to_string()))),
+                    name: Identifier::new("delta_x"),
+                    value: Box::new(DataExpr::Identifier(Identifier::new("delta_x"))),
                 },
                 DatumConstructorField {
-                    name: Identifier("delta_y".to_string()),
-                    value: Box::new(DataExpr::Identifier(Identifier("delta_y".to_string()))),
+                    name: Identifier::new("delta_y"),
+                    value: Box::new(DataExpr::Identifier(Identifier::new("delta_y"))),
                 },
             ],
-            spread: Some(Box::new(DataExpr::Identifier(Identifier(
+            spread: Some(Box::new(DataExpr::Identifier(Identifier::new(
                 "abc".to_string()
             )))),
         }
