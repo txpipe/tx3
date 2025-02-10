@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
-use pallas_primitives::{conway, Constr, Hash, NonEmptyKeyValuePairs, PlutusData, PositiveCoin};
+use pallas::ledger::primitives::{conway, Hash, NonEmptyKeyValuePairs, PlutusData, PositiveCoin};
 use plutus_data::IntoData;
 
 use super::*;
-use crate::{analyze::Symbol, ast::*};
+use tx3_lang::analyze::Symbol;
+use tx3_lang::ast::*;
 
 mod asset_math;
 mod plutus_data;
@@ -214,7 +215,7 @@ impl<C: Context> Vm<C> {
             .get(party.name.as_str())
             .ok_or(Error::PartyNotAssigned(party.name.as_str().to_string()))?;
 
-        let address = pallas_addresses::Address::from_str(party)?;
+        let address = pallas::ledger::addresses::Address::from_str(party)?;
 
         let value = match &ast.amount {
             Some(amount) => self.eval_asset_expr(amount)?,
@@ -305,7 +306,7 @@ impl<C: Context> Vm<C> {
 
     fn eval_auxiliary_data(&mut self) -> Result<Option<conway::AuxiliaryData>, Error> {
         Ok(Some(conway::AuxiliaryData::PostAlonzo(
-            pallas_primitives::alonzo::PostAlonzoAuxiliaryData {
+            pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
                 metadata: None,
                 native_scripts: None,
                 plutus_scripts: None,
@@ -377,7 +378,7 @@ impl<C: Context> Vm<C> {
         };
 
         Ok(TxEval {
-            payload: pallas_codec::minicbor::to_vec(tx).unwrap(),
+            payload: pallas::codec::minicbor::to_vec(tx).unwrap(),
             fee: 0,
             ex_units: 0,
         })

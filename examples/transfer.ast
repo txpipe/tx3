@@ -1,0 +1,111 @@
+{
+  "txs": [
+    {
+      "name": "transfer",
+      "parameters": {
+        "parameters": [
+          {
+            "name": "quantity",
+            "type": "Int"
+          }
+        ]
+      },
+      "inputs": [
+        {
+          "name": "source",
+          "is_many": false,
+          "from": {
+            "value": "Sender"
+          },
+          "datum_is": null,
+          "min_amount": {
+            "Constructor": {
+              "type": {
+                "value": "Ada"
+              },
+              "amount": {
+                "Identifier": {
+                  "value": "quantity"
+                }
+              },
+              "name": null
+            }
+          },
+          "redeemer": null
+        }
+      ],
+      "outputs": [
+        {
+          "to": {
+            "value": "Receiver"
+          },
+          "amount": {
+            "Constructor": {
+              "type": {
+                "value": "Ada"
+              },
+              "amount": {
+                "Identifier": {
+                  "value": "quantity"
+                }
+              },
+              "name": null
+            }
+          },
+          "datum": null
+        },
+        {
+          "to": {
+            "value": "Sender"
+          },
+          "amount": {
+            "BinaryOp": {
+              "left": {
+                "BinaryOp": {
+                  "left": {
+                    "Identifier": {
+                      "value": "source"
+                    }
+                  },
+                  "operator": "Subtract",
+                  "right": {
+                    "Constructor": {
+                      "type": {
+                        "value": "Ada"
+                      },
+                      "amount": {
+                        "Identifier": {
+                          "value": "quantity"
+                        }
+                      },
+                      "name": null
+                    }
+                  }
+                }
+              },
+              "operator": "Subtract",
+              "right": {
+                "Identifier": {
+                  "value": "fees"
+                }
+              }
+            }
+          },
+          "datum": null
+        }
+      ],
+      "burn": null,
+      "mint": null
+    }
+  ],
+  "datums": [],
+  "assets": [],
+  "parties": [
+    {
+      "name": "Sender"
+    },
+    {
+      "name": "Receiver"
+    }
+  ]
+}

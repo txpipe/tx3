@@ -6,21 +6,21 @@
         "parameters": [
           {
             "name": "ship_name",
-            "typ": {
+            "type": {
               "Custom": "AssetName"
             }
           },
           {
             "name": "delta_x",
-            "typ": "Int"
+            "type": "Int"
           },
           {
             "name": "delta_y",
-            "typ": "Int"
+            "type": "Int"
           },
           {
             "name": "required_fuel",
-            "typ": "Int"
+            "type": "Int"
           }
         ]
       },
@@ -28,7 +28,9 @@
         {
           "name": "ship",
           "is_many": false,
-          "from": "Game",
+          "from": {
+            "value": "Game"
+          },
           "datum_is": {
             "Custom": "ShipState"
           },
@@ -36,9 +38,13 @@
             "BinaryOp": {
               "left": {
                 "Constructor": {
-                  "type": "Ship",
+                  "type": {
+                    "value": "Ship"
+                  },
                   "amount": {
-                    "Identifier": "ship_name"
+                    "Identifier": {
+                      "value": "ship_name"
+                    }
                   },
                   "name": {
                     "Number": 1
@@ -48,9 +54,13 @@
               "operator": "Add",
               "right": {
                 "Constructor": {
-                  "type": "Fuel",
+                  "type": {
+                    "value": "Fuel"
+                  },
                   "amount": {
-                    "Identifier": "required_fuel"
+                    "Identifier": {
+                      "value": "required_fuel"
+                    }
                   },
                   "name": null
                 }
@@ -59,19 +69,31 @@
           },
           "redeemer": {
             "Constructor": {
-              "type": "ShipCommand",
-              "variant": "MoveShip",
+              "type": {
+                "value": "ShipCommand"
+              },
+              "variant": {
+                "value": "MoveShip"
+              },
               "fields": [
                 {
-                  "name": "delta_x",
+                  "name": {
+                    "value": "delta_x"
+                  },
                   "value": {
-                    "Identifier": "delta_x"
+                    "Identifier": {
+                      "value": "delta_x"
+                    }
                   }
                 },
                 {
-                  "name": "delta_y",
+                  "name": {
+                    "value": "delta_y"
+                  },
                   "value": {
-                    "Identifier": "delta_y"
+                    "Identifier": {
+                      "value": "delta_y"
+                    }
                   }
                 }
               ],
@@ -82,13 +104,19 @@
         {
           "name": "pilot",
           "is_many": false,
-          "from": "Player",
+          "from": {
+            "value": "Player"
+          },
           "datum_is": null,
           "min_amount": {
             "Constructor": {
-              "type": "Pilot",
+              "type": {
+                "value": "Pilot"
+              },
               "amount": {
-                "Identifier": "ship_name"
+                "Identifier": {
+                  "value": "ship_name"
+                }
               },
               "name": {
                 "Number": 1
@@ -100,34 +128,50 @@
         {
           "name": "fees",
           "is_many": false,
-          "from": "Player",
+          "from": {
+            "value": "Player"
+          },
           "datum_is": null,
           "min_amount": {
-            "Identifier": "fee"
+            "Identifier": {
+              "value": "fee"
+            }
           },
           "redeemer": null
         }
       ],
       "outputs": [
         {
-          "to": "Game",
+          "to": {
+            "value": "Game"
+          },
           "amount": {
             "BinaryOp": {
               "left": {
                 "PropertyAccess": {
-                  "object": "inputs",
+                  "object": {
+                    "value": "inputs"
+                  },
                   "path": [
-                    "ship",
-                    "amount"
+                    {
+                      "value": "ship"
+                    },
+                    {
+                      "value": "amount"
+                    }
                   ]
                 }
               },
               "operator": "Subtract",
               "right": {
                 "Constructor": {
-                  "type": "Fuel",
+                  "type": {
+                    "value": "Fuel"
+                  },
                   "amount": {
-                    "Identifier": "required_fuel"
+                    "Identifier": {
+                      "value": "required_fuel"
+                    }
                   },
                   "name": null
                 }
@@ -136,45 +180,69 @@
           },
           "datum": {
             "Constructor": {
-              "type": "ShipState",
-              "variant": "Playing",
+              "type": {
+                "value": "ShipState"
+              },
+              "variant": {
+                "value": "Playing"
+              },
               "fields": [
                 {
-                  "name": "pos_x",
+                  "name": {
+                    "value": "pos_x"
+                  },
                   "value": {
                     "BinaryOp": {
                       "left": {
                         "PropertyAccess": {
-                          "object": "inputs",
+                          "object": {
+                            "value": "inputs"
+                          },
                           "path": [
-                            "ship",
-                            "pos_x"
+                            {
+                              "value": "ship"
+                            },
+                            {
+                              "value": "pos_x"
+                            }
                           ]
                         }
                       },
                       "operator": "Add",
                       "right": {
-                        "Identifier": "delta_x"
+                        "Identifier": {
+                          "value": "delta_x"
+                        }
                       }
                     }
                   }
                 },
                 {
-                  "name": "pos_y",
+                  "name": {
+                    "value": "pos_y"
+                  },
                   "value": {
                     "BinaryOp": {
                       "left": {
                         "PropertyAccess": {
-                          "object": "inputs",
+                          "object": {
+                            "value": "inputs"
+                          },
                           "path": [
-                            "ship",
-                            "pos_y"
+                            {
+                              "value": "ship"
+                            },
+                            {
+                              "value": "pos_y"
+                            }
                           ]
                         }
                       },
                       "operator": "Add",
                       "right": {
-                        "Identifier": "delta_y"
+                        "Identifier": {
+                          "value": "delta_y"
+                        }
                       }
                     }
                   }
@@ -182,10 +250,16 @@
               ],
               "spread": {
                 "PropertyAccess": {
-                  "object": "inputs",
+                  "object": {
+                    "value": "inputs"
+                  },
                   "path": [
-                    "ship",
-                    "datum"
+                    {
+                      "value": "ship"
+                    },
+                    {
+                      "value": "datum"
+                    }
                   ]
                 }
               }
@@ -193,27 +267,41 @@
           }
         },
         {
-          "to": "Player",
+          "to": {
+            "value": "Player"
+          },
           "amount": {
             "BinaryOp": {
               "left": {
                 "BinaryOp": {
                   "left": {
                     "PropertyAccess": {
-                      "object": "inputs",
+                      "object": {
+                        "value": "inputs"
+                      },
                       "path": [
-                        "pilot",
-                        "amount"
+                        {
+                          "value": "pilot"
+                        },
+                        {
+                          "value": "amount"
+                        }
                       ]
                     }
                   },
                   "operator": "Add",
                   "right": {
                     "PropertyAccess": {
-                      "object": "inputs",
+                      "object": {
+                        "value": "inputs"
+                      },
                       "path": [
-                        "fees",
-                        "amount"
+                        {
+                          "value": "fees"
+                        },
+                        {
+                          "value": "amount"
+                        }
                       ]
                     }
                   }
@@ -221,25 +309,31 @@
               },
               "operator": "Subtract",
               "right": {
-                "Identifier": "fee"
+                "Identifier": {
+                  "value": "fee"
+                }
               }
             }
           },
           "datum": null
         }
       ],
-      "burns": {
+      "burn": {
         "amount": {
           "Constructor": {
-            "type": "Fuel",
+            "type": {
+              "value": "Fuel"
+            },
             "amount": {
-              "Identifier": "required_fuel"
+              "Identifier": {
+                "value": "required_fuel"
+              }
             },
             "name": null
           }
         }
       },
-      "mints": null
+      "mint": null
     }
   ],
   "datums": [

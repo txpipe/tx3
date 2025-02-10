@@ -9,18 +9,11 @@ pest = { version = "2.7.15", features = ["miette-error", "pretty-print"] }
 pest_derive = "2.7.15"
 serde = { version = "1.0.217", features = ["derive"] }
 thiserror = "2.0.11"
-pallas-primitives = { version = "0.32.0", optional = true }
-pallas-codec = "0.32.0"
-pallas-addresses = "0.32.0"
 quickscope = "0.2.0"
 hex = "0.4.3"
-pallas-crypto = "0.32.0"
+
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"
 paste = "1.0.15"
 serde_json = "1.0.137"
-
-[features]
-cardano = ["pallas-primitives"]
-default = ["cardano"]

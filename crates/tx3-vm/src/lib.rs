@@ -1,11 +1,8 @@
 use std::collections::HashMap;
 
-use pallas_primitives::conway;
+use pallas::ledger::primitives::conway;
 
-use crate::{
-    analyze::Symbol,
-    ast::{self, Program, TxDef},
-};
+use tx3_lang::{analyze::Symbol, ast};
 
 #[cfg(feature = "cardano")]
 mod cardano;
@@ -25,7 +22,7 @@ pub enum Error {
     ArgNotAssigned(String),
 
     #[error("invalid address")]
-    InvalidAddress(#[from] pallas_addresses::Error),
+    InvalidAddress(#[from] pallas::ledger::addresses::Error),
 
     #[error("mapping error {0}")]
     MappingError(String),
@@ -97,8 +94,8 @@ pub trait Context {
 
 pub struct Vm<C: Context> {
     context: C,
-    program: Program,
-    entrypoint: TxDef,
+    program: ast::Program,
+    entrypoint: ast::TxDef,
     parties: HashMap<String, Address>,
     inputs: HashMap<String, Vec<Utxo>>,
     args: HashMap<String, Value>,
@@ -107,7 +104,7 @@ pub struct Vm<C: Context> {
 
 impl<C: Context> Vm<C> {
     pub fn new(
-        program: Program,
+        program: ast::Program,
         tx_id: &str,
         parties: HashMap<String, Address>,
         args: HashMap<String, Value>,
@@ -152,7 +149,7 @@ mod tests {
                         index: 0,
                     },
                     conway::PostAlonzoTransactionOutput {
-                        address: pallas_addresses::Address::from_bech32("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2").unwrap().to_vec().into(),
+                        address: pallas::ledger::addresses::Address::from_bech32("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2").unwrap().to_vec().into(),
                         value: conway::Value::Coin(500_000_000),
                         datum_option: None,
                         script_ref: None,
@@ -164,7 +161,7 @@ mod tests {
                         index: 1,
                     },
                     conway::PostAlonzoTransactionOutput {
-                        address: pallas_addresses::Address::from_bech32("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2").unwrap().to_vec().into(),
+                        address: pallas::ledger::addresses::Address::from_bech32("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2").unwrap().to_vec().into(),
                         value: conway::Value::Coin(301_000_000),
                         datum_option: None,
                         script_ref: None,
@@ -176,9 +173,11 @@ mod tests {
 
     #[test]
     fn smoke_test_transfer() {
-        let mut program = crate::parse::parse_file("tests/transfer.tx3").unwrap();
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let test_file = format!("{}/../../examples/transfer.tx3", manifest_dir);
+        let mut program = tx3_lang::parse::parse_file(&test_file).unwrap();
 
-        crate::analyze::analyze(&mut program).unwrap();
+        tx3_lang::analyze::analyze(&mut program).unwrap();
 
         let parties = HashMap::from([
             ("Sender".to_string(), "addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2".to_string()),

@@ -1,5 +1,5 @@
-pub use pallas_codec::utils::Int;
-pub use pallas_primitives::{BigInt, BoundedBytes, PlutusData};
+pub use pallas::codec::utils::Int;
+pub use pallas::ledger::primitives::{BigInt, BoundedBytes, PlutusData};
 
 pub trait IntoData {
     fn into_data(&self) -> PlutusData;
@@ -9,7 +9,7 @@ pub trait IntoData {
 macro_rules! constr {
     ($tag:expr, $($field:expr),*) => {
         {
-            use pallas_primitives::{Constr, PlutusData, MaybeIndefArray};
+            use pallas::ledger::primitives::{Constr, PlutusData, MaybeIndefArray};
 
             let inner = Constr {
                 tag: 121 + $tag,
