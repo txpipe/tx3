@@ -6,13 +6,13 @@
         "parameters": [
           {
             "name": "ask",
-            "typ": {
+            "type": {
               "Custom": "Token"
             }
           },
           {
             "name": "bid",
-            "typ": {
+            "type": {
               "Custom": "Token"
             }
           }
@@ -22,26 +22,40 @@
         {
           "name": "pool",
           "is_many": false,
-          "from": "dex",
+          "from": {
+            "value": "Dex"
+          },
           "datum_is": {
             "Custom": "PoolState"
           },
           "min_amount": null,
           "redeemer": {
             "Constructor": {
-              "type": "SwapParams",
-              "variant": "SwapParams",
+              "type": {
+                "value": "SwapParams"
+              },
+              "variant": {
+                "value": "SwapParams"
+              },
               "fields": [
                 {
-                  "name": "ask",
+                  "name": {
+                    "value": "ask"
+                  },
                   "value": {
-                    "Identifier": "ask"
+                    "Identifier": {
+                      "value": "ask"
+                    }
                   }
                 },
                 {
-                  "name": "bid",
+                  "name": {
+                    "value": "bid"
+                  },
                   "value": {
-                    "Identifier": "ask"
+                    "Identifier": {
+                      "value": "ask"
+                    }
                   }
                 }
               ],
@@ -52,16 +66,22 @@
         {
           "name": "payment",
           "is_many": false,
-          "from": "buyer",
+          "from": {
+            "value": "Buyer"
+          },
           "datum_is": null,
           "min_amount": {
             "BinaryOp": {
               "left": {
-                "Identifier": "fees"
+                "Identifier": {
+                  "value": "fees"
+                }
               },
               "operator": "Add",
               "right": {
-                "Identifier": "bid"
+                "Identifier": {
+                  "value": "bid"
+                }
               }
             }
           },
@@ -70,49 +90,89 @@
       ],
       "outputs": [
         {
-          "to": "pool",
-          "amount": null,
+          "to": {
+            "value": "Dex"
+          },
+          "amount": {
+            "PropertyAccess": {
+              "object": {
+                "value": "inputs"
+              },
+              "path": [
+                {
+                  "value": "pool"
+                },
+                {
+                  "value": "amount"
+                }
+              ]
+            }
+          },
           "datum": {
             "Constructor": {
-              "type": "PoolState",
-              "variant": "PoolState",
+              "type": {
+                "value": "PoolState"
+              },
+              "variant": {
+                "value": "PoolState"
+              },
               "fields": [
                 {
-                  "name": "pair_a",
+                  "name": {
+                    "value": "pair_a"
+                  },
                   "value": {
                     "BinaryOp": {
                       "left": {
                         "PropertyAccess": {
-                          "object": "inputs",
+                          "object": {
+                            "value": "inputs"
+                          },
                           "path": [
-                            "pool",
-                            "pair_a"
+                            {
+                              "value": "pool"
+                            },
+                            {
+                              "value": "pair_a"
+                            }
                           ]
                         }
                       },
                       "operator": "Subtract",
                       "right": {
-                        "Identifier": "ask"
+                        "Identifier": {
+                          "value": "ask"
+                        }
                       }
                     }
                   }
                 },
                 {
-                  "name": "pair_b",
+                  "name": {
+                    "value": "pair_b"
+                  },
                   "value": {
                     "BinaryOp": {
                       "left": {
                         "PropertyAccess": {
-                          "object": "inputs",
+                          "object": {
+                            "value": "inputs"
+                          },
                           "path": [
-                            "pool",
-                            "pair_b"
+                            {
+                              "value": "pool"
+                            },
+                            {
+                              "value": "pair_b"
+                            }
                           ]
                         }
                       },
                       "operator": "Add",
                       "right": {
-                        "Identifier": "bid"
+                        "Identifier": {
+                          "value": "bid"
+                        }
                       }
                     }
                   }
@@ -120,10 +180,16 @@
               ],
               "spread": {
                 "PropertyAccess": {
-                  "object": "inputs",
+                  "object": {
+                    "value": "inputs"
+                  },
                   "path": [
-                    "pool",
-                    "datum"
+                    {
+                      "value": "pool"
+                    },
+                    {
+                      "value": "datum"
+                    }
                   ]
                 }
               }
@@ -131,7 +197,9 @@
           }
         },
         {
-          "to": "buyer",
+          "to": {
+            "value": "Buyer"
+          },
           "amount": {
             "BinaryOp": {
               "left": {
@@ -140,36 +208,48 @@
                     "BinaryOp": {
                       "left": {
                         "PropertyAccess": {
-                          "object": "inputs",
+                          "object": {
+                            "value": "inputs"
+                          },
                           "path": [
-                            "payment",
-                            "amount"
+                            {
+                              "value": "payment"
+                            },
+                            {
+                              "value": "amount"
+                            }
                           ]
                         }
                       },
                       "operator": "Add",
                       "right": {
-                        "Identifier": "ask"
+                        "Identifier": {
+                          "value": "ask"
+                        }
                       }
                     }
                   },
                   "operator": "Subtract",
                   "right": {
-                    "Identifier": "bid"
+                    "Identifier": {
+                      "value": "bid"
+                    }
                   }
                 }
               },
               "operator": "Subtract",
               "right": {
-                "Identifier": "fees"
+                "Identifier": {
+                  "value": "fees"
+                }
               }
             }
           },
           "datum": null
         }
       ],
-      "burns": null,
-      "mints": null
+      "burn": null,
+      "mint": null
     }
   ],
   "datums": [

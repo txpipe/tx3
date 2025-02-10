@@ -1,15 +1,15 @@
-use pallas_crypto::hash::Hash;
-use pallas_primitives::{
+use pallas::crypto::hash::Hash;
+use pallas::ledger::primitives::{
     conway::{self, Value},
     AssetName, NonEmptyKeyValuePairs, NonZeroInt, PolicyId, PositiveCoin,
 };
 use std::collections::{hash_map::Entry, HashMap};
 
-use crate::eval::Error;
+use crate::Error;
 
 fn fold_assets<T>(
-    acc: &mut HashMap<pallas_codec::utils::Bytes, T>,
-    item: NonEmptyKeyValuePairs<pallas_codec::utils::Bytes, T>,
+    acc: &mut HashMap<pallas::codec::utils::Bytes, T>,
+    item: NonEmptyKeyValuePairs<pallas::codec::utils::Bytes, T>,
 ) where
     T: SafeAdd + Copy,
 {
@@ -30,8 +30,8 @@ fn fold_assets<T>(
 }
 
 pub fn fold_multiassets<T>(
-    acc: &mut HashMap<Hash<28>, HashMap<pallas_codec::utils::Bytes, T>>,
-    item: NonEmptyKeyValuePairs<Hash<28>, NonEmptyKeyValuePairs<pallas_codec::utils::Bytes, T>>,
+    acc: &mut HashMap<Hash<28>, HashMap<pallas::codec::utils::Bytes, T>>,
+    item: NonEmptyKeyValuePairs<Hash<28>, NonEmptyKeyValuePairs<pallas::codec::utils::Bytes, T>>,
 ) where
     T: SafeAdd + Copy,
 {
@@ -220,7 +220,7 @@ mod tests {
     use std::str::FromStr as _;
 
     use super::*;
-    use pallas_primitives::conway::Value;
+    use pallas::ledger::primitives::conway::Value;
 
     #[test]
     fn test_add_values_coin_only() {

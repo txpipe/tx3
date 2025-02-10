@@ -1,0 +1,14 @@
+[package]
+name = "tx3-vm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tx3-lang = { version = "0.1.0", path = "../tx3-lang" }
+pallas = { version = "0.32.0", optional = true }
+hex = "0.4.3"
+thiserror = "2.0.11"
+
+[features]
+cardano = ["pallas"]
+default = ["cardano"]
