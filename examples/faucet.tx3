@@ -1,0 +1,30 @@
+asset MyToken;
+
+policy PasswordPolicy;
+
+asset MyToken {
+    policy: PasswordPolicy;
+    name: "MY_TOKEN";
+}
+
+party Requester;
+
+tx claim_with_password(
+    password_hash: Bytes,
+    quantity: Int,
+) {
+    input gas {
+        from: Requester,
+        min_amount: fees,
+    }
+
+    mint {
+        amount: MyToken(quantity),
+        redeemer: password_hash,
+    }
+    
+    output {
+        to: Requester,
+        amount: gas - fees + MyToken(quantity),
+    }
+}

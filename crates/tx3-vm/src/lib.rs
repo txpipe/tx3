@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use pallas::ledger::primitives::conway;
 
-use tx3_lang::{analyze::Symbol, ast};
+use tx3_lang::{analyze::Symbol, ast, ir};
 
 #[cfg(feature = "cardano")]
 mod cardano;
@@ -50,11 +50,14 @@ pub enum Error {
 
     #[error("can't resolve symbol '{0:?}'")]
     CantResolveSymbol(Symbol),
+
+    #[error("invalid asset expression '{0}'")]
+    InvalidAssetExpression(String),
 }
 
 #[derive(Debug, Clone)]
-pub enum Value {
-    Int(i64),
+pub enum ArgValue {
+    Int(i128),
     Bool(bool),
     String(String),
 }
@@ -88,41 +91,31 @@ pub type Utxo = (
 
 pub type Address = String;
 
-pub trait Context {
-    fn resolve_input(&self, input: &ast::InputBlock) -> Result<Vec<Utxo>, Error>;
+pub trait Ledger {
+    fn resolve_input(&self, input: &ir::InputQuery) -> Result<Vec<Utxo>, Error>;
 }
 
-pub struct Vm<C: Context> {
-    context: C,
-    program: ast::Program,
-    entrypoint: ast::TxDef,
+pub struct Vm<L: Ledger> {
+    ledger: L,
+    entrypoint: ir::Tx,
     parties: HashMap<String, Address>,
     inputs: HashMap<String, Vec<Utxo>>,
-    args: HashMap<String, Value>,
+    args: HashMap<String, ArgValue>,
     eval: TxEval,
 }
 
-impl<C: Context> Vm<C> {
+impl<L: Ledger> Vm<L> {
     pub fn new(
-        program: ast::Program,
-        tx_id: &str,
+        entrypoint: ir::Tx,
         parties: HashMap<String, Address>,
-        args: HashMap<String, Value>,
-        context: C,
+        args: HashMap<String, ArgValue>,
+        ledger: L,
     ) -> Result<Self, Error> {
-        let entrypoint = program
-            .txs
-            .iter()
-            .find(|tx| &tx.name == tx_id)
-            .ok_or(Error::TxNotFound(tx_id.to_string()))?
-            .clone();
-
         Ok(Self {
-            program,
-            parties,
-            context,
             entrypoint,
+            parties,
             args,
+            ledger,
             eval: Default::default(),
             inputs: Default::default(),
         })
@@ -140,8 +133,8 @@ mod tests {
 
     struct TestContext;
 
-    impl Context for TestContext {
-        fn resolve_input(&self, input: &ast::InputBlock) -> Result<Vec<Utxo>, Error> {
+    impl Ledger for TestContext {
+        fn resolve_input(&self, input: &ir::InputQuery) -> Result<Vec<Utxo>, Error> {
             Ok(vec![
                 (
                     conway::TransactionInput {
@@ -176,19 +169,21 @@ mod tests {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let test_file = format!("{}/../../examples/transfer.tx3", manifest_dir);
         let mut program = tx3_lang::parse::parse_file(&test_file).unwrap();
-
         tx3_lang::analyze::analyze(&mut program).unwrap();
+        let ir = tx3_lang::lowering::lower(&mut program).unwrap();
 
         let parties = HashMap::from([
             ("Sender".to_string(), "addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2".to_string()),
             ("Receiver".to_string(), "addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2".to_string()),
         ]);
 
-        let args = HashMap::from([("quantity".to_string(), Value::Int(100_000_000))]);
+        let args = HashMap::from([("quantity".to_string(), ArgValue::Int(100_000_000))]);
 
         let context = TestContext;
 
-        let mut vm = Vm::new(program, "transfer", parties, args, context).unwrap();
+        let entrypoint = ir.txs.iter().find(|tx| tx.name == "transfer").unwrap();
+
+        let mut vm = Vm::new(entrypoint.clone(), parties, args, context).unwrap();
 
         let eval = vm.eval().unwrap();
 

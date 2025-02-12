@@ -1,39 +1,32 @@
 use std::str::FromStr;
 
-use pallas::ledger::primitives::{conway, Hash, NonEmptyKeyValuePairs, PlutusData, PositiveCoin};
-use plutus_data::IntoData;
+use pallas::{
+    codec::utils::Bytes,
+    ledger::primitives::{conway, Hash, NonEmptyKeyValuePairs, PlutusData, PositiveCoin},
+};
 
 use super::*;
-use tx3_lang::analyze::Symbol;
 use tx3_lang::ast::*;
 
 mod asset_math;
 mod plutus_data;
 
-fn coerce_data_into_positive_coin(data: &PlutusData) -> Result<PositiveCoin, Error> {
-    match data {
-        PlutusData::BigInt(x) => match x {
-            conway::BigInt::Int(int) => {
-                let value = i128::from(*int);
-                let value = PositiveCoin::try_from(value as u64).map_err(|_| {
-                    Error::CoerceError(value.to_string(), "PositiveCoin".to_string())
-                })?;
-                Ok(value)
-            }
-            _ => {
-                return Err(Error::CoerceError(
-                    format!("{:?}", data),
-                    "PositiveCoin".to_string(),
-                ))
-            }
-        },
-        _ => {
-            return Err(Error::CoerceError(
-                format!("{:?}", data),
-                "PositiveCoin".to_string(),
-            ))
+macro_rules! asset {
+    ($policy:expr, $asset:expr, $amount:expr) => {
+        ($policy, NonEmptyKeyValuePairs::Def(vec![($asset, $amount)]))
+    };
+}
+
+macro_rules! value {
+    ($coin:expr, $($asset:expr),*) => {
+        {
+            let assets = NonEmptyKeyValuePairs::from_vec(vec![$(($asset.0, $asset.1)),*]).unwrap();
+            pallas::ledger::primitives::conway::Value::Multiasset($coin, assets)
         }
-    }
+    };
+    ($coin:expr) => {
+        pallas::ledger::primitives::conway::Value::Coin($coin)
+    };
 }
 
 fn coerce_data_into_bytes(data: &PlutusData) -> Result<Vec<u8>, Error> {
@@ -48,7 +41,31 @@ fn coerce_data_into_bytes(data: &PlutusData) -> Result<Vec<u8>, Error> {
     }
 }
 
-impl<C: Context> Vm<C> {
+fn coerce_expr_into_address(
+    expr: &ir::Expression,
+) -> Result<pallas::ledger::addresses::Address, Error> {
+    match expr {
+        ir::Expression::Address(value) => Ok(pallas::ledger::addresses::Address::from_str(value)?),
+        _ => {
+            return Err(Error::CoerceError(
+                format!("{:?}", expr),
+                "Address".to_string(),
+            ))
+        }
+    }
+}
+
+fn coerce_arg_into_number(arg: &ArgValue) -> Result<i128, Error> {
+    match arg {
+        ArgValue::Int(x) => Ok(*x),
+        _ => Err(Error::CoerceError(
+            format!("{:?}", arg),
+            "Number".to_string(),
+        )),
+    }
+}
+
+impl<L: Ledger> Vm<L> {
     fn eval_input_block(
         &mut self,
         ast: &InputBlock,
@@ -58,169 +75,160 @@ impl<C: Context> Vm<C> {
         Ok(inputs.iter().map(|(input, _)| input.clone()).collect())
     }
 
-    // TODO: refactor list lookup into hashmap cache
-    fn resolve_party(&mut self, name: &str) -> Result<PartyDef, Error> {
+    fn resolve_party(&mut self, name: &str) -> Result<String, Error> {
         let party = self
-            .program
             .parties
-            .iter()
-            .find(|p| p.name == name)
+            .get(name)
             .ok_or(Error::DefinitionNotFound(name.to_string()))?
             .clone();
 
         Ok(party)
     }
 
-    // TODO: refactor list lookup into hashmap cache
-    fn resolve_asset_type(&mut self, ast: &Identifier) -> Result<AssetDef, Error> {
-        let asset = self
-            .program
-            .assets
-            .iter()
-            .find(|a| a.name == ast.as_ref())
-            .ok_or(Error::DefinitionNotFound(ast.as_ref().to_string()))?
-            .clone();
-
-        Ok(asset)
-    }
-
-    fn eval_asset_identifier(&mut self, identifier: &Identifier) -> Result<conway::Value, Error> {
-        let symbol = identifier.symbol.as_ref().ok_or(Error::NoAstAnalysis)?;
-
-        if let Symbol::ParamVar(x) = symbol {
-            if x == "fees" {
-                return Ok(conway::Value::Coin(555u64));
-            }
-
-            return Err(Error::CantResolveSymbol(symbol.clone()));
-        }
-
-        if let Symbol::Input(x) = symbol {
-            let utxos = self
-                .inputs
-                .get(x)
-                .ok_or(Error::CantResolveSymbol(symbol.clone()))?;
-
-            let values = utxos.iter().map(|(_, utxo)| utxo.value.clone());
-            let value = asset_math::aggregate_values(values);
-
-            return Ok(value);
-        }
-
-        Err(Error::CantResolveSymbol(symbol.clone()))
-    }
-
-    fn eval_data_identifier(&mut self, ast: &Identifier) -> Result<PlutusData, Error> {
+    fn resolve_parameter(&mut self, name: &str) -> Result<ArgValue, Error> {
         let value = self
             .args
-            .get(ast.as_ref())
-            .ok_or(Error::ArgNotAssigned(ast.as_ref().to_string()))?
+            .get(name)
+            .ok_or(Error::DefinitionNotFound(name.to_string()))?
             .clone();
 
-        match value {
-            Value::Int(x) => Ok(x.into_data()),
-            Value::Bool(x) => Ok(x.into_data()),
-            _ => Err(Error::CoerceError(
-                format!("{:?}", value),
-                "Data".to_string(),
-            )),
-        }
+        Ok(value)
     }
 
-    fn eval_data_expr(&mut self, ast: &DataExpr) -> Result<PlutusData, Error> {
-        match ast {
-            DataExpr::None => Ok(().into_data()),
-            DataExpr::Number(x) => Ok(x.into_data()),
-            DataExpr::Bool(x) => Ok(x.into_data()),
-            DataExpr::String(x) => todo!(),
-            DataExpr::HexString(x) => todo!(),
-            DataExpr::Constructor(x) => todo!(),
-            DataExpr::Identifier(x) => self.eval_data_identifier(x),
-            DataExpr::PropertyAccess(x) => todo!(),
-            DataExpr::BinaryOp(x) => todo!(),
+    fn resolve_input_assets(&mut self, identifier: &str) -> Result<conway::Value, Error> {
+        let utxos = self
+            .inputs
+            .get(identifier)
+            .ok_or(Error::DefinitionNotFound(identifier.to_string()))?;
+
+        let values = utxos.iter().map(|(_, utxo)| utxo.value.clone());
+        let value = asset_math::aggregate_values(values);
+
+        return Ok(value);
+    }
+
+    fn eval_data_expr(&mut self, ir: &ir::Expression) -> Result<PlutusData, Error> {
+        match ir {
+            ir::Expression::Struct(struct_expr) => todo!(),
+            ir::Expression::Bytes(items) => todo!(),
+            ir::Expression::Number(_) => todo!(),
+            ir::Expression::Address(_) => todo!(),
+            ir::Expression::BuildAsset(x) => todo!(),
+            ir::Expression::EvalParty(_) => todo!(),
+            ir::Expression::EvalParameter(_) => todo!(),
+            ir::Expression::EvalInputDatum(_) => todo!(),
+            ir::Expression::EvalCustom(binary_op) => todo!(),
+            ir::Expression::EvalFees => todo!(),
         }
     }
 
     fn eval_native_asset_constructor(
         &mut self,
-        ast: &AssetConstructor,
+        ctr: &ir::AssetConstructor,
     ) -> Result<conway::Value, Error> {
-        let def = self.resolve_asset_type(&ast.r#type)?;
+        let policy = Hash::<28>::from_str(ctr.policy.as_str()).unwrap();
 
-        let policy = Hash::try_from(hex::decode(def.policy.as_str()).unwrap().as_slice()).unwrap();
+        let asset_name = ctr
+            .asset_name
+            .as_ref()
+            .map(|x| self.eval_into_bytes(x))
+            .transpose()?
+            .ok_or(Error::MissingAssetName)?;
 
-        let asset = match def.asset_name {
-            Some(name) => name.as_bytes().to_vec(),
-            None => match &ast.name {
-                Some(name) => {
-                    let value = self.eval_data_expr(name)?;
-                    coerce_data_into_bytes(&value)?
-                }
-                None => return Err(Error::MissingAssetName),
-            },
-        };
+        let amount = ctr
+            .amount
+            .as_ref()
+            .map(|x| self.eval_into_number(x))
+            .transpose()?
+            .ok_or(Error::MissingAmount)?;
 
-        let quantity = self.eval_data_expr(&ast.amount)?;
-        let quantity = coerce_data_into_positive_coin(&quantity)?;
-
-        let asset = NonEmptyKeyValuePairs::from_vec(vec![(asset.into(), quantity)]).unwrap();
-        let multiasset = conway::Multiasset::from_vec(vec![(policy, asset)]).unwrap();
-        let value = conway::Value::Multiasset(0, multiasset);
-
-        Ok(value)
+        Ok(value!(0, asset!(policy, asset_name, amount)))
     }
 
-    fn eval_ada_constructor(&mut self, ast: &AssetConstructor) -> Result<conway::Value, Error> {
-        let quantity = self.eval_data_expr(&ast.amount)?;
+    fn eval_ada_constructor(&mut self, ctr: &ir::AssetConstructor) -> Result<conway::Value, Error> {
+        let amount = ctr
+            .amount
+            .as_ref()
+            .map(|x| self.eval_into_number(x))
+            .transpose()?
+            .ok_or(Error::MissingAmount)?;
 
-        let quantity = coerce_data_into_positive_coin(&quantity)?;
-
-        let value = conway::Value::Coin(quantity.into());
-
-        Ok(value)
+        Ok(value!(amount as u64))
     }
 
-    fn eval_asset_constructor(&mut self, ast: &AssetConstructor) -> Result<conway::Value, Error> {
-        if ast.r#type.as_ref() == "Ada" {
-            self.eval_ada_constructor(ast)
+    fn eval_asset_constructor(
+        &mut self,
+        ir: &ir::AssetConstructor,
+    ) -> Result<conway::Value, Error> {
+        if &ir.policy == "Ada" {
+            self.eval_ada_constructor(ir)
         } else {
-            self.eval_native_asset_constructor(ast)
+            self.eval_native_asset_constructor(ir)
         }
     }
 
-    fn eval_asset_binary_op(&mut self, ast: &AssetBinaryOp) -> Result<conway::Value, Error> {
-        let left = self.eval_asset_expr(&ast.left)?;
-        let right = self.eval_asset_expr(&ast.right)?;
+    fn eval_asset_binary_op(&mut self, ir: &ir::BinaryOp) -> Result<conway::Value, Error> {
+        let left = self.eval_into_asset(&ir.left)?;
+        let right = self.eval_into_asset(&ir.right)?;
 
-        match ast.operator {
-            BinaryOperator::Add => asset_math::add_values(&left, &right),
-            BinaryOperator::Subtract => asset_math::subtract_value(&left, &right),
+        match ir.op {
+            ir::BinaryOpKind::Add => asset_math::add_values(&left, &right),
+            ir::BinaryOpKind::Sub => asset_math::subtract_value(&left, &right),
         }
     }
 
-    fn eval_asset_expr(&mut self, ast: &AssetExpr) -> Result<conway::Value, Error> {
-        match ast {
-            AssetExpr::Constructor(x) => self.eval_asset_constructor(x),
-            AssetExpr::BinaryOp(x) => self.eval_asset_binary_op(x),
-            AssetExpr::Identifier(x) => self.eval_asset_identifier(x),
-            AssetExpr::PropertyAccess(_) => todo!(),
+    fn eval_into_asset(&mut self, ir: &ir::Expression) -> Result<conway::Value, Error> {
+        match ir {
+            ir::Expression::BuildAsset(x) => self.eval_asset_constructor(x),
+            ir::Expression::EvalInputAssets(x) => self.resolve_input_assets(x),
+            ir::Expression::EvalCustom(x) => self.eval_asset_binary_op(x),
+            ir::Expression::EvalFees => Ok(value!(self.eval.fee)),
+            _ => Err(Error::InvalidAssetExpression(format!("{:?}", ir))),
         }
     }
 
-    fn eval_output_block(&mut self, ast: &OutputBlock) -> Result<conway::TransactionOutput, Error> {
-        let party = self.resolve_party(ast.to.as_ref())?;
+    fn eval_number_binary_op(&mut self, ir: &ir::BinaryOp) -> Result<i128, Error> {
+        let left = self.eval_into_number(&ir.left)?;
+        let right = self.eval_into_number(&ir.right)?;
 
-        let party = self
-            .parties
-            .get(party.name.as_str())
-            .ok_or(Error::PartyNotAssigned(party.name.as_str().to_string()))?;
+        match ir.op {
+            ir::BinaryOpKind::Add => Ok(left + right),
+            ir::BinaryOpKind::Sub => Ok(left - right),
+        }
+    }
 
-        let address = pallas::ledger::addresses::Address::from_str(party)?;
+    fn eval_into_number(&mut self, ir: &ir::Expression) -> Result<i128, Error> {
+        match ir {
+            ir::Expression::Number(x) => Ok(*x),
+            ir::Expression::EvalParameter(x) => {
+                let raw = self.resolve_parameter(x)?;
+                coerce_arg_into_number(&raw)
+            }
+            ir::Expression::EvalCustom(x) => self.eval_number_binary_op(x),
+            ir::Expression::EvalFees => Ok(self.eval.fee as i128),
+            _ => Err(Error::InvalidAssetExpression(format!("{:?}", ir))),
+        }
+    }
 
-        let value = match &ast.amount {
-            Some(amount) => self.eval_asset_expr(amount)?,
-            None => return Err(Error::MissingAmount),
-        };
+    fn eval_into_bytes(&mut self, ir: &ir::Expression) -> Result<Bytes, Error> {
+        match ir {
+            ir::Expression::Bytes(x) => Ok(Bytes::from(x.clone())),
+            _ => Err(Error::InvalidAssetExpression(format!("{:?}", ir))),
+        }
+    }
+
+    fn eval_output_block(&mut self, ir: &ir::Output) -> Result<conway::TransactionOutput, Error> {
+        let address = ir
+            .address
+            .as_ref()
+            .map(coerce_expr_into_address)
+            .transpose()?;
+
+        let value = ir
+            .amount
+            .map(|x| self.eval_into_asset(&x))
+            .transpose()?
+            .ok_or(Error::MissingAmount)?;
 
         let output = conway::TransactionOutput::PostAlonzo(conway::PostAlonzoTransactionOutput {
             address: address.to_vec().into(),
@@ -240,18 +248,15 @@ impl<C: Context> Vm<C> {
         todo!()
     }
 
-    fn eval_inputs(&mut self) -> Result<Vec<conway::TransactionInput>, Error> {
-        let blocks = self.entrypoint.inputs.iter().cloned().collect::<Vec<_>>();
-
-        let resolved = blocks
-            .iter()
-            .map(|i| self.eval_input_block(i))
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter()
-            .flatten()
+    fn build_inputs(&mut self) -> Result<Vec<conway::TransactionInput>, Error> {
+        let inputs = self
+            .inputs
+            .values()
+            .flat_map(|i| i.iter().cloned())
+            .map(|(i, _)| i)
             .collect();
 
-        Ok(resolved)
+        Ok(inputs)
     }
 
     fn eval_outputs(&mut self) -> Result<Vec<conway::TransactionOutput>, Error> {
@@ -267,7 +272,7 @@ impl<C: Context> Vm<C> {
 
     fn eval_tx_body(&mut self) -> Result<conway::TransactionBody, Error> {
         let out = conway::TransactionBody {
-            inputs: self.eval_inputs()?.into(),
+            inputs: self.build_inputs()?.into(),
             outputs: self.eval_outputs()?.into(),
             fee: self.eval.fee,
             ttl: None,
@@ -354,7 +359,7 @@ impl<C: Context> Vm<C> {
 
     pub fn resolve_inputs(&mut self) -> Result<(), Error> {
         for block in self.entrypoint.inputs.iter() {
-            let inputs = self.context.resolve_input(block)?;
+            let inputs = self.ledger.resolve_input(block)?;
             self.inputs.insert(block.name.clone(), inputs.clone());
         }
 

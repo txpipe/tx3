@@ -42,11 +42,11 @@ tx swap(
             pair_b: inputs.pool.pair_b + bid,
             ...inputs.pool.datum
         },
-        amount: inputs.pool.amount,
+        amount: pool,
     }
 
     output {
         to: Buyer,
-        amount: inputs.payment.amount + ask - bid - fees,
+        amount: payment + ask - bid - fees,
     }
 }

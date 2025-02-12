@@ -1,0 +1,23 @@
+digraph G {
+  rankdir = LR
+  
+  subgraph cluster_swap {
+    label="swap";
+    style=filled;
+    color=lightgrey;
+    node [style=filled,color=white];
+        
+    subgraph inputs {
+        order
+        pool
+    }
+      
+    subgraph outputs {
+        purchase
+        change
+    }
+  }
+
+  buyer -> order;
+  dex -> pool;
+}
