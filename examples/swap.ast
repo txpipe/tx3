@@ -23,7 +23,9 @@
           "name": "pool",
           "is_many": false,
           "from": {
-            "value": "Dex"
+            "Identifier": {
+              "value": "Dex"
+            }
           },
           "datum_is": {
             "Custom": "PoolState"
@@ -67,7 +69,9 @@
           "name": "payment",
           "is_many": false,
           "from": {
-            "value": "Buyer"
+            "Identifier": {
+              "value": "Buyer"
+            }
           },
           "datum_is": null,
           "min_amount": {
@@ -94,18 +98,8 @@
             "value": "Dex"
           },
           "amount": {
-            "PropertyAccess": {
-              "object": {
-                "value": "inputs"
-              },
-              "path": [
-                {
-                  "value": "pool"
-                },
-                {
-                  "value": "amount"
-                }
-              ]
+            "Identifier": {
+              "value": "pool"
             }
           },
           "datum": {
@@ -207,18 +201,8 @@
                   "left": {
                     "BinaryOp": {
                       "left": {
-                        "PropertyAccess": {
-                          "object": {
-                            "value": "inputs"
-                          },
-                          "path": [
-                            {
-                              "value": "payment"
-                            },
-                            {
-                              "value": "amount"
-                            }
-                          ]
+                        "Identifier": {
+                          "value": "payment"
                         }
                       },
                       "operator": "Add",

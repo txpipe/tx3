@@ -166,10 +166,38 @@ impl AstNode for TxDef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum AddressExpr {
+    Identifier(Identifier),
+    String(String),
+}
+
+impl AddressExpr {
+    fn string_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        Ok(AddressExpr::String(
+            pair.as_str()[1..pair.as_str().len() - 1].to_string(),
+        ))
+    }
+}
+
+impl AstNode for AddressExpr {
+    const RULE: Rule = Rule::address_expr;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        let inner = pair.into_inner().next().unwrap();
+
+        match inner.as_rule() {
+            Rule::string => AddressExpr::string_parse(inner),
+            Rule::identifier => Ok(AddressExpr::Identifier(Identifier::parse(inner)?)),
+            x => unreachable!("Unexpected rule in address_expr: {:?}", x),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct InputBlock {
     pub name: String,
     pub is_many: bool,
-    pub from: Option<Identifier>,
+    pub from: Option<AddressExpr>,
     pub datum_is: Option<Type>,
     pub min_amount: Option<Box<AssetExpr>>,
     pub redeemer: Option<Box<DataExpr>>,
@@ -197,7 +225,8 @@ impl AstNode for InputBlock {
 
             match field.as_rule() {
                 Rule::input_block_from => {
-                    input_block.from = Some(Identifier::parse(field.into_inner().next().unwrap())?);
+                    input_block.from =
+                        Some(AddressExpr::parse(field.into_inner().next().unwrap())?);
                 }
                 Rule::input_block_datum_is => {
                     input_block.datum_is = Some(Type::parse(field.into_inner().next().unwrap())?);
@@ -220,7 +249,7 @@ impl AstNode for InputBlock {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OutputBlock {
-    pub to: Identifier,
+    pub to: Option<AddressExpr>,
     pub amount: Option<Box<AssetExpr>>,
     pub datum: Option<Box<DataExpr>>,
 }
@@ -232,10 +261,7 @@ impl AstNode for OutputBlock {
         let inner = pair.into_inner();
 
         let mut output_block = OutputBlock {
-            to: Identifier {
-                value: String::new(),
-                symbol: None,
-            },
+            to: None,
             amount: None,
             datum: None,
         };
@@ -245,7 +271,7 @@ impl AstNode for OutputBlock {
 
             match field.as_rule() {
                 Rule::output_block_to => {
-                    output_block.to = Identifier::parse(field.into_inner().next().unwrap())?
+                    output_block.to = Some(AddressExpr::parse(field.into_inner().next().unwrap())?);
                 }
                 Rule::output_block_amount => {
                     output_block.amount =
@@ -366,7 +392,7 @@ pub struct PartyField {
 pub struct AssetConstructor {
     pub r#type: Identifier,
     pub amount: Box<DataExpr>,
-    pub name: Option<Box<DataExpr>>,
+    pub asset_name: Option<Box<DataExpr>>,
 }
 
 impl AstNode for AssetConstructor {
@@ -382,7 +408,7 @@ impl AstNode for AssetConstructor {
         Ok(AssetConstructor {
             r#type,
             amount: Box::new(amount),
-            name: name.map(|x| Box::new(x)),
+            asset_name: name.map(|x| Box::new(x)),
         })
     }
 }
@@ -679,7 +705,7 @@ pub enum Type {
     Int,
     Bool,
     Bytes,
-    Custom(String),
+    Custom(Identifier),
 }
 
 impl AstNode for Type {
@@ -690,7 +716,7 @@ impl AstNode for Type {
             "Int" => Ok(Type::Int),
             "Bool" => Ok(Type::Bool),
             "Bytes" => Ok(Type::Bytes),
-            t => Ok(Type::Custom(t.to_string())),
+            t => Ok(Type::Custom(Identifier::new(t.to_string()))),
         }
     }
 }
@@ -834,6 +860,20 @@ mod tests {
         DataExpr::String("Hello, world!".to_string())
     );
 
+    input_to_ast_check!(
+        AddressExpr,
+        "literal_string",
+        "\"addr1qx234567890abcdefghijklmnopqrstuvwxyz\"",
+        AddressExpr::String("addr1qx234567890abcdefghijklmnopqrstuvwxyz".to_string())
+    );
+
+    input_to_ast_check!(
+        AddressExpr,
+        "identifier",
+        "my_party",
+        AddressExpr::Identifier(Identifier::new("my_party".to_string()))
+    );
+
     input_to_ast_check!(DataExpr, "literal_bool_true", "true", DataExpr::Bool(true));
 
     input_to_ast_check!(
@@ -864,7 +904,7 @@ mod tests {
         AssetConstructor {
             r#type: Identifier::new("MyToken"),
             amount: Box::new(DataExpr::Number(15)),
-            name: None,
+            asset_name: None,
         }
     );
 
@@ -875,7 +915,7 @@ mod tests {
         AssetConstructor {
             r#type: Identifier::new("MyClass"),
             amount: Box::new(DataExpr::Number(15)),
-            name: Some(Box::new(DataExpr::String("TokenName".to_string()))),
+            asset_name: Some(Box::new(DataExpr::String("TokenName".to_string()))),
         }
     );
 
@@ -938,6 +978,24 @@ mod tests {
             spread: Some(Box::new(DataExpr::Identifier(Identifier::new(
                 "abc".to_string()
             )))),
+        }
+    );
+
+    input_to_ast_check!(
+        OutputBlock,
+        "output_block",
+        r#"output {
+            to: my_party,
+            amount: Ada(100),
+        }"#,
+        OutputBlock {
+            to: Some(AddressExpr::Identifier(Identifier::new("my_party"))),
+            datum: None,
+            amount: Some(Box::new(AssetExpr::Constructor(AssetConstructor {
+                r#type: Identifier::new("Ada"),
+                amount: Box::new(DataExpr::Number(100)),
+                asset_name: None,
+            }))),
         }
     );
 }

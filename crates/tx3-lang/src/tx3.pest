@@ -94,7 +94,9 @@ datum_constructor = {
     "}"
 }
 
-input_block_from = { "from" ~ ":" ~ identifier }
+address_expr = { string | identifier }
+
+input_block_from = { "from" ~ ":" ~ address_expr }
 input_block_datum_is = { "datum_is" ~ ":" ~ type }
 input_block_min_amount = { "min_amount" ~ ":" ~ asset_expr }
 input_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
@@ -112,7 +114,7 @@ input_block = {
     "}"
 }
 
-output_block_to = { "to" ~ ":" ~ identifier }
+output_block_to = { "to" ~ ":" ~ address_expr }
 output_block_amount = { "amount" ~ ":" ~ asset_expr }
 output_block_datum = { "datum" ~ ":" ~ data_expr }
 

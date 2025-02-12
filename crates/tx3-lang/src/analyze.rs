@@ -1,3 +1,8 @@
+//! Semantic analysis of the Tx3 language.
+//!
+//! This module takes an AST and performs semantic analysis on it. It checks for
+//! duplicate definitions, unknown symbols, and other semantic errors.
+
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -76,7 +81,7 @@ impl Analyzable for AssetConstructor {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
         self.amount.analyze(parent.clone())?;
         self.r#type.analyze(parent.clone())?;
-        self.name.analyze(parent.clone())?;
+        self.asset_name.analyze(parent.clone())?;
 
         Ok(())
     }
@@ -117,6 +122,37 @@ impl Analyzable for Identifier {
     }
 }
 
+impl Analyzable for AddressExpr {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        match self {
+            AddressExpr::Identifier(x) => x.analyze(parent),
+            _ => Ok(()),
+        }
+    }
+}
+
+impl Analyzable for Type {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        match self {
+            Type::Int => todo!(),
+            Type::Bool => todo!(),
+            Type::Bytes => todo!(),
+            Type::Custom(x) => x.analyze(parent),
+        }
+    }
+}
+
+impl Analyzable for InputBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        self.min_amount.analyze(parent.clone())?;
+        self.datum_is.analyze(parent.clone())?;
+        self.redeemer.analyze(parent.clone())?;
+        self.from.analyze(parent.clone())?;
+
+        Ok(())
+    }
+}
+
 impl Analyzable for OutputBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
         self.to.analyze(parent.clone())?;
@@ -135,7 +171,7 @@ impl Analyzable for TxDef {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
         let mut scope = Scope::new(parent);
 
-        scope.track_param_var(&FEES.name);
+        scope.symbols.insert("fees".to_string(), Symbol::Fees);
 
         for param in self.parameters.parameters.iter() {
             scope.track_param_var(&param.name);
@@ -146,6 +182,10 @@ impl Analyzable for TxDef {
         }
 
         self.scope = Some(Rc::new(scope));
+
+        for input in self.inputs.iter_mut() {
+            input.analyze(self.scope.clone())?;
+        }
 
         for output in self.outputs.iter_mut() {
             output.analyze(self.scope.clone())?;
@@ -158,7 +198,7 @@ impl Analyzable for TxDef {
 static ADA: std::sync::LazyLock<AssetDef> = std::sync::LazyLock::new(|| AssetDef {
     name: "Ada".to_string(),
     policy: "".to_string(),
-    asset_name: None,
+    asset_name: Some("ada".to_string()),
 });
 
 impl Analyzable for Program {
@@ -252,6 +292,7 @@ pub enum Symbol {
     PartyDef(Box<PartyDef>),
     AssetDef(Box<AssetDef>),
     DatumDef(Box<DatumDef>),
+    Fees,
 }
 
 pub fn analyze(ast: &mut Program) -> Result<(), Error> {

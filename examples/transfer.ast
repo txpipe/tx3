@@ -15,7 +15,9 @@
           "name": "source",
           "is_many": false,
           "from": {
-            "value": "Sender"
+            "Identifier": {
+              "value": "Sender"
+            }
           },
           "datum_is": null,
           "min_amount": {
