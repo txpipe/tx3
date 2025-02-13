@@ -54,10 +54,16 @@ pub struct Output {
 }
 
 #[derive(Debug, Clone)]
+pub struct Mint {
+    pub amount: Option<Expression>,
+}
+
+#[derive(Debug, Clone)]
 pub struct Tx {
     pub name: String,
     pub inputs: Vec<InputQuery>,
     pub outputs: Vec<Output>,
+    pub mints: Vec<Mint>,
 }
 
 #[derive(Debug, Clone)]

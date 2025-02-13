@@ -2,11 +2,11 @@ use std::str::FromStr;
 
 use pallas::{
     codec::utils::Bytes,
+    ledger::addresses::Address as PallasAddress,
     ledger::primitives::{conway, Hash, NonEmptyKeyValuePairs, PlutusData, PositiveCoin},
 };
 
 use super::*;
-use tx3_lang::ast::*;
 
 mod asset_math;
 mod plutus_data;
@@ -41,18 +41,9 @@ fn coerce_data_into_bytes(data: &PlutusData) -> Result<Vec<u8>, Error> {
     }
 }
 
-fn coerce_expr_into_address(
-    expr: &ir::Expression,
-) -> Result<pallas::ledger::addresses::Address, Error> {
-    match expr {
-        ir::Expression::Address(value) => Ok(pallas::ledger::addresses::Address::from_str(value)?),
-        _ => {
-            return Err(Error::CoerceError(
-                format!("{:?}", expr),
-                "Address".to_string(),
-            ))
-        }
-    }
+fn coerce_string_into_address(value: &str) -> Result<pallas::ledger::addresses::Address, Error> {
+    pallas::ledger::addresses::Address::from_str(value)
+        .map_err(|_| Error::CoerceError(value.to_string(), "Address".to_string()))
 }
 
 fn coerce_arg_into_number(arg: &ArgValue) -> Result<i128, Error> {
@@ -66,15 +57,6 @@ fn coerce_arg_into_number(arg: &ArgValue) -> Result<i128, Error> {
 }
 
 impl<L: Ledger> Vm<L> {
-    fn eval_input_block(
-        &mut self,
-        ast: &InputBlock,
-    ) -> Result<Vec<conway::TransactionInput>, Error> {
-        let inputs = self.inputs.get(&ast.name).ok_or(Error::InputsNotResolved)?;
-
-        Ok(inputs.iter().map(|(input, _)| input.clone()).collect())
-    }
-
     fn resolve_party(&mut self, name: &str) -> Result<String, Error> {
         let party = self
             .parties
@@ -109,16 +91,17 @@ impl<L: Ledger> Vm<L> {
 
     fn eval_data_expr(&mut self, ir: &ir::Expression) -> Result<PlutusData, Error> {
         match ir {
-            ir::Expression::Struct(struct_expr) => todo!(),
-            ir::Expression::Bytes(items) => todo!(),
+            ir::Expression::Struct(_) => todo!(),
+            ir::Expression::Bytes(_) => todo!(),
             ir::Expression::Number(_) => todo!(),
             ir::Expression::Address(_) => todo!(),
-            ir::Expression::BuildAsset(x) => todo!(),
+            ir::Expression::BuildAsset(_) => todo!(),
             ir::Expression::EvalParty(_) => todo!(),
             ir::Expression::EvalParameter(_) => todo!(),
             ir::Expression::EvalInputDatum(_) => todo!(),
-            ir::Expression::EvalCustom(binary_op) => todo!(),
+            ir::Expression::EvalCustom(_) => todo!(),
             ir::Expression::EvalFees => todo!(),
+            _ => todo!(),
         }
     }
 
@@ -126,6 +109,7 @@ impl<L: Ledger> Vm<L> {
         &mut self,
         ctr: &ir::AssetConstructor,
     ) -> Result<conway::Value, Error> {
+        dbg!(&ctr);
         let policy = Hash::<28>::from_str(ctr.policy.as_str()).unwrap();
 
         let asset_name = ctr
@@ -142,7 +126,9 @@ impl<L: Ledger> Vm<L> {
             .transpose()?
             .ok_or(Error::MissingAmount)?;
 
-        Ok(value!(0, asset!(policy, asset_name, amount)))
+        let amount = PositiveCoin::try_from(amount as u64).unwrap();
+
+        Ok(value!(0, asset!(policy, asset_name.clone(), amount)))
     }
 
     fn eval_ada_constructor(&mut self, ctr: &ir::AssetConstructor) -> Result<conway::Value, Error> {
@@ -182,7 +168,7 @@ impl<L: Ledger> Vm<L> {
             ir::Expression::BuildAsset(x) => self.eval_asset_constructor(x),
             ir::Expression::EvalInputAssets(x) => self.resolve_input_assets(x),
             ir::Expression::EvalCustom(x) => self.eval_asset_binary_op(x),
-            ir::Expression::EvalFees => Ok(value!(self.eval.fee)),
+            ir::Expression::EvalFees => Ok(value!(self.eval.fee as u64)),
             _ => Err(Error::InvalidAssetExpression(format!("{:?}", ir))),
         }
     }
@@ -217,15 +203,28 @@ impl<L: Ledger> Vm<L> {
         }
     }
 
+    fn eval_into_address(&mut self, ir: &ir::Expression) -> Result<PallasAddress, Error> {
+        match ir {
+            ir::Expression::Address(x) => coerce_string_into_address(x),
+            ir::Expression::EvalParty(x) => {
+                let party = self.resolve_party(x)?;
+                coerce_string_into_address(&party)
+            }
+            _ => Err(Error::InvalidAddressExpression(format!("{:?}", ir))),
+        }
+    }
+
     fn eval_output_block(&mut self, ir: &ir::Output) -> Result<conway::TransactionOutput, Error> {
         let address = ir
             .address
             .as_ref()
-            .map(coerce_expr_into_address)
-            .transpose()?;
+            .map(|x| self.eval_into_address(x))
+            .transpose()?
+            .ok_or(Error::MissingAddress)?;
 
         let value = ir
             .amount
+            .as_ref()
             .map(|x| self.eval_into_asset(&x))
             .transpose()?
             .ok_or(Error::MissingAmount)?;
@@ -241,7 +240,7 @@ impl<L: Ledger> Vm<L> {
     }
 
     fn eval_mint_block(&mut self) -> Result<Option<conway::Mint>, Error> {
-        if self.entrypoint.mint.is_none() {
+        if self.entrypoint.mints.is_empty() {
             return Ok(None);
         }
 
@@ -320,7 +319,7 @@ impl<L: Ledger> Vm<L> {
     }
 
     fn eval_mint_redeemers(&mut self) -> Result<Vec<conway::Redeemer>, Error> {
-        if self.entrypoint.mint.is_none() {
+        if self.entrypoint.mints.is_empty() {
             return Ok(vec![]);
         }
 
@@ -357,7 +356,7 @@ impl<L: Ledger> Vm<L> {
         Ok(out)
     }
 
-    pub fn resolve_inputs(&mut self) -> Result<(), Error> {
+    fn resolve_inputs(&mut self) -> Result<(), Error> {
         for block in self.entrypoint.inputs.iter() {
             let inputs = self.ledger.resolve_input(block)?;
             self.inputs.insert(block.name.clone(), inputs.clone());
@@ -366,11 +365,30 @@ impl<L: Ledger> Vm<L> {
         Ok(())
     }
 
-    pub fn eval(&mut self) -> Result<TxEval, Error> {
-        self.validate_parameters()?;
+    fn resolve_pparams(&mut self) -> Result<(), Error> {
+        let pparams = self.ledger.get_pparams()?;
+        self.pparams = Some(pparams);
 
-        self.resolve_inputs()?;
+        Ok(())
+    }
 
+    fn eval_pass(&mut self) -> Result<(), Error> {
+        let tx = self.build_tx()?;
+
+        let pparams = self.pparams.as_ref().unwrap();
+        let payload = pallas::codec::minicbor::to_vec(tx).unwrap();
+        let fee = (payload.len() as u64 * pparams.a) + pparams.b;
+
+        self.eval = TxEval {
+            payload,
+            fee,
+            ex_units: 0,
+        };
+
+        Ok(())
+    }
+
+    fn build_tx(&mut self) -> Result<conway::Tx, Error> {
         let transaction_body = self.eval_tx_body()?;
         let transaction_witness_set = self.eval_witness_set()?;
         let auxiliary_data = self.eval_auxiliary_data()?;
@@ -382,10 +400,18 @@ impl<L: Ledger> Vm<L> {
             success: true,
         };
 
-        Ok(TxEval {
-            payload: pallas::codec::minicbor::to_vec(tx).unwrap(),
-            fee: 0,
-            ex_units: 0,
-        })
+        Ok(tx)
+    }
+
+    pub fn execute(mut self) -> Result<TxEval, Error> {
+        self.validate_parameters()?;
+        self.resolve_inputs()?;
+        self.resolve_pparams()?;
+
+        for _ in 0..3 {
+            self.eval_pass()?;
+        }
+
+        Ok(self.eval)
     }
 }

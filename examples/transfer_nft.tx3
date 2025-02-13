@@ -1,0 +1,27 @@
+party Sender;
+
+party Receiver;
+
+tx transfer_nft(
+    token: Asset,
+) {
+    input gas_source {
+        from: Sender,
+        min_amount: fees + minutxo(token_target),
+    }
+
+    input token_source {
+        from: Sender,
+        min_amount: token,
+    }
+    
+    output token_target {
+        to: Receiver,
+        amount: token + minutxo(self),
+    }
+
+    output change_target {
+        to: Sender,
+        amount: gas_source + token_source - token - minutxo(token_target) - fees,
+    }
+}

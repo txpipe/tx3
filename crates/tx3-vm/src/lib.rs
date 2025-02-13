@@ -33,6 +33,9 @@ pub enum Error {
     #[error("missing asset name")]
     MissingAssetName,
 
+    #[error("missing address")]
+    MissingAddress,
+
     #[error("asset value too high")]
     AssetValueTooHigh,
 
@@ -53,6 +56,9 @@ pub enum Error {
 
     #[error("invalid asset expression '{0}'")]
     InvalidAssetExpression(String),
+
+    #[error("invalid address expression '{0}'")]
+    InvalidAddressExpression(String),
 }
 
 #[derive(Debug, Clone)]
@@ -91,7 +97,14 @@ pub type Utxo = (
 
 pub type Address = String;
 
+struct PParams {
+    a: u64,
+    b: u64,
+    // TODO: cost models, execution prices
+}
+
 pub trait Ledger {
+    fn get_pparams(&self) -> Result<PParams, Error>;
     fn resolve_input(&self, input: &ir::InputQuery) -> Result<Vec<Utxo>, Error>;
 }
 
@@ -101,6 +114,7 @@ pub struct Vm<L: Ledger> {
     parties: HashMap<String, Address>,
     inputs: HashMap<String, Vec<Utxo>>,
     args: HashMap<String, ArgValue>,
+    pparams: Option<PParams>,
     eval: TxEval,
 }
 
@@ -117,6 +131,7 @@ impl<L: Ledger> Vm<L> {
             args,
             ledger,
             eval: Default::default(),
+            pparams: Default::default(),
             inputs: Default::default(),
         })
     }
@@ -134,6 +149,10 @@ mod tests {
     struct TestContext;
 
     impl Ledger for TestContext {
+        fn get_pparams(&self) -> Result<PParams, Error> {
+            Ok(PParams { a: 1, b: 2 })
+        }
+
         fn resolve_input(&self, input: &ir::InputQuery) -> Result<Vec<Utxo>, Error> {
             Ok(vec![
                 (
@@ -183,10 +202,10 @@ mod tests {
 
         let entrypoint = ir.txs.iter().find(|tx| tx.name == "transfer").unwrap();
 
-        let mut vm = Vm::new(entrypoint.clone(), parties, args, context).unwrap();
+        let vm = Vm::new(entrypoint.clone(), parties, args, context).unwrap();
+        let tx = vm.execute().unwrap();
 
-        let eval = vm.eval().unwrap();
-
-        println!("{}", hex::encode(eval.payload));
+        println!("{}", hex::encode(tx.payload));
+        println!("{}", tx.fee);
     }
 }
