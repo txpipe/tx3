@@ -13,7 +13,7 @@ tx claim_with_password(
     password_hash: Bytes,
     quantity: Int,
 ) {
-    input gas {
+    input provided_gas {
         from: Requester,
         min_amount: fees,
     }
@@ -25,6 +25,6 @@ tx claim_with_password(
     
     output {
         to: Requester,
-        amount: gas - fees + MyToken(quantity),
+        amount: provided_gas - fees + MyToken(quantity),
     }
 }

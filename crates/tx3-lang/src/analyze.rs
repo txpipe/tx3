@@ -197,7 +197,7 @@ impl Analyzable for TxDef {
 
 static ADA: std::sync::LazyLock<AssetDef> = std::sync::LazyLock::new(|| AssetDef {
     name: "Ada".to_string(),
-    policy: "".to_string(),
+    policy: "Ada".to_string(),
     asset_name: Some("ada".to_string()),
 });
 
