@@ -2,7 +2,7 @@ party Owner;
 
 party Beneficiary;
 
-policy TimeLock = import(validators/vesting.ak);
+policy TimeLock = 0xAFAFAF;
 
 record State {
   lock_until: Int,
@@ -26,7 +26,7 @@ tx lock(
             lock_until: until,
             owner: Owner,
             beneficiary: Beneficiary,
-        }
+        },
     }
 
     output {

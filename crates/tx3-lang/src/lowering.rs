@@ -1,5 +1,6 @@
 use crate::analyze::Symbol;
 use crate::ast;
+use crate::ast::OutputBlockField;
 use crate::ir;
 
 #[derive(Debug, thiserror::Error)]
@@ -76,6 +77,7 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::Constructor(x) => todo!(),
             ast::DataExpr::Identifier(x) => match &x.symbol {
                 Some(Symbol::ParamVar(x)) => ir::Expression::EvalParameter(x.clone()),
+                Some(Symbol::PartyDef(x)) => ir::Expression::EvalParty(x.name.clone()),
                 _ => todo!(),
             },
             ast::DataExpr::PropertyAccess(x) => todo!(),
@@ -141,16 +143,17 @@ impl IntoLower for ast::AssetExpr {
     }
 }
 
-impl IntoLower for ast::AddressExpr {
+impl IntoLower for ast::InputBlockField {
     type Output = ir::Expression;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
-        let out = match self {
-            ast::AddressExpr::String(x) => Self::Output::Address(x.clone()),
-            ast::AddressExpr::Identifier(x) => Self::Output::EvalParty(x.value.clone()),
-        };
-
-        Ok(out)
+        match self {
+            ast::InputBlockField::From(x) => x.into_lower(),
+            ast::InputBlockField::DatumIs(_) => todo!(),
+            ast::InputBlockField::MinAmount(x) => x.into_lower(),
+            ast::InputBlockField::Redeemer(x) => x.into_lower(),
+            ast::InputBlockField::Ref(x) => x.into_lower(),
+        }
     }
 }
 
@@ -160,11 +163,26 @@ impl IntoLower for ast::InputBlock {
     fn into_lower(&self) -> Result<Self::Output, Error> {
         let ir = ir::InputQuery {
             name: self.name.clone(),
-            address: self.from.into_lower()?,
-            min_amount: self.min_amount.into_lower()?,
+            address: self.find("from").map(|x| x.into_lower()).transpose()?,
+            min_amount: self
+                .find("min_amount")
+                .map(|x| x.into_lower())
+                .transpose()?,
         };
 
         Ok(ir)
+    }
+}
+
+impl IntoLower for ast::OutputBlockField {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::OutputBlockField::To(x) => x.into_lower(),
+            ast::OutputBlockField::Amount(x) => x.into_lower(),
+            ast::OutputBlockField::Datum(x) => x.into_lower(),
+        }
     }
 }
 
@@ -173,9 +191,9 @@ impl IntoLower for ast::OutputBlock {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         Ok(ir::Output {
-            address: self.to.into_lower()?,
-            datum: self.datum.into_lower()?,
-            amount: self.amount.into_lower()?,
+            address: self.find("to").map(|x| x.into_lower()).transpose()?,
+            datum: self.find("datum").map(|x| x.into_lower()).transpose()?,
+            amount: self.find("amount").map(|x| x.into_lower()).transpose()?,
         })
     }
 }

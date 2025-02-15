@@ -26,6 +26,17 @@ party_def = {
     "party" ~ identifier ~ ";"
 }
 
+// Policy definitions
+policy_import = {
+    "import" ~ "(" ~ string ~ ")"
+}
+
+policy_value = _{ policy_import | hex_string }
+
+policy_def = {
+    "policy" ~ identifier ~ "=" ~ policy_value ~ ";"
+}
+
 // Type definitions
 record_field = { identifier ~ ":" ~ type }
 
@@ -112,23 +123,26 @@ record_constructor = {
     "}"
 }
 
+unit_constructor = { "()" }
+
 datum_constructor = _{
     variant_constructor |
-    record_constructor
+    record_constructor |
+    unit_constructor
 }
 
-address_expr = { string | identifier }
-
-input_block_from = { "from" ~ ":" ~ address_expr }
+input_block_from = { "from" ~ ":" ~ data_expr }
 input_block_datum_is = { "datum_is" ~ ":" ~ type }
 input_block_min_amount = { "min_amount" ~ ":" ~ asset_expr }
 input_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
+input_block_ref = { "ref" ~ ":" ~ data_expr }
 
-input_block_field = { 
+input_block_field = _{ 
     input_block_from |
     input_block_datum_is |
     input_block_min_amount |
-    input_block_redeemer
+    input_block_redeemer |
+    input_block_ref
 }
 
 input_block = {
@@ -137,18 +151,18 @@ input_block = {
     "}"
 }
 
-output_block_to = { "to" ~ ":" ~ address_expr }
+output_block_to = { "to" ~ ":" ~ data_expr }
 output_block_amount = { "amount" ~ ":" ~ asset_expr }
 output_block_datum = { "datum" ~ ":" ~ data_expr }
 
-output_block_field = { 
+output_block_field = _{ 
     output_block_to |
     output_block_amount |
     output_block_datum
 }
 
 output_block = {
-    "output" ~ "{" ~
+    "output" ~ identifier? ~ "{" ~
     (output_block_field ~ ",")* ~
     "}"
 }
@@ -182,6 +196,6 @@ tx_def = {
 // Program
 program = {
     SOI ~
-    (asset_def | party_def | type_def | tx_def)* ~
+    (asset_def | party_def | policy_def | type_def | tx_def)* ~
     EOI
 }
