@@ -30,7 +30,7 @@
                   "value": "quantity"
                 }
               },
-              "name": null
+              "asset_name": null
             }
           },
           "redeemer": null
@@ -39,7 +39,9 @@
       "outputs": [
         {
           "to": {
-            "value": "Receiver"
+            "Identifier": {
+              "value": "Receiver"
+            }
           },
           "amount": {
             "Constructor": {
@@ -51,14 +53,16 @@
                   "value": "quantity"
                 }
               },
-              "name": null
+              "asset_name": null
             }
           },
           "datum": null
         },
         {
           "to": {
-            "value": "Sender"
+            "Identifier": {
+              "value": "Sender"
+            }
           },
           "amount": {
             "BinaryOp": {
@@ -80,7 +84,7 @@
                           "value": "quantity"
                         }
                       },
-                      "name": null
+                      "asset_name": null
                     }
                   }
                 }
@@ -100,7 +104,7 @@
       "mint": null
     }
   ],
-  "datums": [],
+  "types": [],
   "assets": [],
   "parties": [
     {

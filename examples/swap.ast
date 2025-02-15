@@ -7,13 +7,17 @@
           {
             "name": "ask",
             "type": {
-              "Custom": "Token"
+              "Custom": {
+                "value": "Token"
+              }
             }
           },
           {
             "name": "bid",
             "type": {
-              "Custom": "Token"
+              "Custom": {
+                "value": "Token"
+              }
             }
           }
         ]
@@ -28,7 +32,9 @@
             }
           },
           "datum_is": {
-            "Custom": "PoolState"
+            "Custom": {
+              "value": "PoolState"
+            }
           },
           "min_amount": null,
           "redeemer": {
@@ -36,9 +42,7 @@
               "type": {
                 "value": "SwapParams"
               },
-              "variant": {
-                "value": "SwapParams"
-              },
+              "variant": null,
               "fields": [
                 {
                   "name": {
@@ -95,7 +99,9 @@
       "outputs": [
         {
           "to": {
-            "value": "Dex"
+            "Identifier": {
+              "value": "Dex"
+            }
           },
           "amount": {
             "Identifier": {
@@ -107,9 +113,7 @@
               "type": {
                 "value": "PoolState"
               },
-              "variant": {
-                "value": "PoolState"
-              },
+              "variant": null,
               "fields": [
                 {
                   "name": {
@@ -192,7 +196,9 @@
         },
         {
           "to": {
-            "value": "Buyer"
+            "Identifier": {
+              "value": "Buyer"
+            }
           },
           "amount": {
             "BinaryOp": {
@@ -236,46 +242,44 @@
       "mint": null
     }
   ],
-  "datums": [
+  "types": [
     {
-      "name": "PoolState",
-      "variants": [
-        {
-          "name": "PoolState",
-          "fields": [
-            {
-              "name": "pair_a",
-              "typ": {
-                "Custom": "Token"
-              }
-            },
-            {
-              "name": "pair_b",
-              "typ": {
-                "Custom": "Token"
+      "Record": {
+        "name": "PoolState",
+        "fields": [
+          {
+            "name": "pair_a",
+            "typ": {
+              "Custom": {
+                "value": "Token"
               }
             }
-          ]
-        }
-      ]
+          },
+          {
+            "name": "pair_b",
+            "typ": {
+              "Custom": {
+                "value": "Token"
+              }
+            }
+          }
+        ]
+      }
     },
     {
-      "name": "SwapParams",
-      "variants": [
-        {
-          "name": "SwapParams",
-          "fields": [
-            {
-              "name": "amount",
-              "typ": "Int"
-            },
-            {
-              "name": "ratio",
-              "typ": "Int"
-            }
-          ]
-        }
-      ]
+      "Record": {
+        "name": "SwapParams",
+        "fields": [
+          {
+            "name": "amount",
+            "typ": "Int"
+          },
+          {
+            "name": "ratio",
+            "typ": "Int"
+          }
+        ]
+      }
     }
   ],
   "assets": [],

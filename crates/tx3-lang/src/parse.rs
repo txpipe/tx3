@@ -93,9 +93,16 @@ mod tests {
         };
     }
 
+    test_parsing!(lang_tour);
+
     test_parsing!(transfer);
 
     test_parsing!(swap);
 
     test_parsing!(asteria);
+
+    // test_parsing!(vesting);
+
+    // TODO
+    // test_parsing!(faucet);
 }

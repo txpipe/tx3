@@ -215,8 +215,8 @@ impl Analyzable for Program {
             scope.track_asset_def(asset);
         }
 
-        for datum in self.datums.iter() {
-            scope.track_datum_def(datum);
+        for type_def in self.types.iter() {
+            scope.track_type_def(type_def);
         }
 
         self.scope = Some(Rc::new(scope));
@@ -243,10 +243,13 @@ impl Scope {
         }
     }
 
-    pub fn track_datum_def(&mut self, datum: &DatumDef) {
+    pub fn track_type_def(&mut self, type_: &TypeDef) {
         self.symbols.insert(
-            datum.name.clone(),
-            Symbol::DatumDef(Box::new(datum.clone())),
+            match type_ {
+                TypeDef::Variant(x) => x.name.clone(),
+                TypeDef::Record(x) => x.name.clone(),
+            },
+            Symbol::TypeDef(Box::new(type_.clone())),
         );
     }
 
@@ -291,7 +294,7 @@ pub enum Symbol {
     Input(String),
     PartyDef(Box<PartyDef>),
     AssetDef(Box<AssetDef>),
-    DatumDef(Box<DatumDef>),
+    TypeDef(Box<TypeDef>),
     Fees,
 }
 

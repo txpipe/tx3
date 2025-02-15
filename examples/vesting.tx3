@@ -1,0 +1,55 @@
+party Owner;
+
+party Beneficiary;
+
+policy TimeLock = import(validators/vesting.ak);
+
+record State {
+  lock_until: Int,
+  owner: Bytes,
+  beneficiary: Bytes,
+}
+
+tx lock(
+    quantity: Int,
+    until: Int
+) {
+    input source {
+        from: Owner,
+        min_amount: quantity,
+    }
+    
+    output target {
+        to: TimeLock,
+        amount: Ada(quantity),
+        datum: State {
+            lock_until: until,
+            owner: Owner,
+            beneficiary: Beneficiary,
+        }
+    }
+
+    output {
+        to: Owner,
+        amount: source - Ada(quantity) - fees,
+    }
+}
+
+tx unlock(
+    locked_utxo: UtxoRef
+) {
+    input gas {
+        from: Beneficiary,
+        min_amount: fees,
+    }
+
+    input locked {
+        ref: locked_utxo,
+        redeemer: (),
+    }
+
+    output target {
+        to: Beneficiary,
+        amount: gas + locked - fees,
+    }
+}
