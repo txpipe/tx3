@@ -1,0 +1,171 @@
+{
+  "txs": [
+    {
+      "name": "my_tx",
+      "parameters": {
+        "parameters": [
+          {
+            "name": "quantity",
+            "type": "Int"
+          }
+        ]
+      },
+      "inputs": [
+        {
+          "name": "source",
+          "is_many": false,
+          "from": {
+            "Identifier": {
+              "value": "MyParty"
+            }
+          },
+          "datum_is": {
+            "Custom": {
+              "value": "MyRecord"
+            }
+          },
+          "min_amount": {
+            "Constructor": {
+              "type": {
+                "value": "Ada"
+              },
+              "amount": {
+                "Identifier": {
+                  "value": "quantity"
+                }
+              },
+              "asset_name": null
+            }
+          },
+          "redeemer": {
+            "Constructor": {
+              "type": {
+                "value": "MyVariant"
+              },
+              "variant": {
+                "value": "Case1"
+              },
+              "fields": [
+                {
+                  "name": {
+                    "value": "field1"
+                  },
+                  "value": {
+                    "Number": 10
+                  }
+                },
+                {
+                  "name": {
+                    "value": "field2"
+                  },
+                  "value": {
+                    "HexString": "AFAFAF"
+                  }
+                },
+                {
+                  "name": {
+                    "value": "field3"
+                  },
+                  "value": {
+                    "Identifier": {
+                      "value": "quantity"
+                    }
+                  }
+                }
+              ],
+              "spread": null
+            }
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "to": {
+            "Identifier": {
+              "value": "MyParty"
+            }
+          },
+          "amount": null,
+          "datum": {
+            "Constructor": {
+              "type": {
+                "value": "MyRecord"
+              },
+              "variant": null,
+              "fields": [
+                {
+                  "name": {
+                    "value": "field3"
+                  },
+                  "value": {
+                    "Identifier": {
+                      "value": "quantity"
+                    }
+                  }
+                }
+              ],
+              "spread": {
+                "Identifier": {
+                  "value": "source"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "burn": null,
+      "mint": null
+    }
+  ],
+  "types": [
+    {
+      "Record": {
+        "name": "MyRecord",
+        "fields": [
+          {
+            "name": "field1",
+            "typ": "Int"
+          },
+          {
+            "name": "field2",
+            "typ": "Bytes"
+          }
+        ]
+      }
+    },
+    {
+      "Variant": {
+        "name": "MyVariant",
+        "cases": [
+          {
+            "name": "Case1",
+            "fields": [
+              {
+                "name": "field1",
+                "typ": "Int"
+              },
+              {
+                "name": "field2",
+                "typ": "Bytes"
+              },
+              {
+                "name": "field3",
+                "typ": "Int"
+              }
+            ]
+          },
+          {
+            "name": "Case2",
+            "fields": []
+          }
+        ]
+      }
+    }
+  ],
+  "assets": [],
+  "parties": [
+    {
+      "name": "MyParty"
+    }
+  ]
+}

@@ -1,15 +1,11 @@
-datum PoolState {
-    PoolState {
-        pair_a: Token,
-        pair_b: Token,
-    }
+record PoolState {
+    pair_a: Token,
+    pair_b: Token,
 }
 
-datum SwapParams {
-    SwapParams {
-        amount: Int,
-        ratio: Int,
-    }
+record SwapParams {
+    amount: Int,
+    ratio: Int,
 }
 
 party Buyer;
@@ -24,7 +20,7 @@ tx swap(
         from: Dex,
         datum_is: PoolState,
 
-        redeemer: SwapParams::SwapParams {
+        redeemer: SwapParams {
             ask: ask,
             bid: ask,
         },
@@ -37,7 +33,7 @@ tx swap(
     
     output {
         to: Dex,
-        datum: PoolState::PoolState {
+        datum: PoolState {
             pair_a: inputs.pool.pair_a - ask,
             pair_b: inputs.pool.pair_b + bid,
             ...inputs.pool.datum

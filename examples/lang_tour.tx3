@@ -1,0 +1,38 @@
+party MyParty;
+
+record MyRecord {
+    field1: Int,
+    field2: Bytes,
+}
+
+variant MyVariant {
+    Case1 {
+        field1: Int,
+        field2: Bytes,
+        field3: Int,
+    },
+    Case2,
+}
+
+tx my_tx(
+    quantity: Int
+) {
+    input source {
+        from: MyParty,
+        datum_is: MyRecord,
+        min_amount: Ada(quantity),
+        redeemer: MyVariant::Case1 {
+            field1: 10,
+            field2: 0xAFAFAF,
+            field3: quantity,
+        },
+    }
+
+    output {
+        to: MyParty,
+        datum: MyRecord {
+            field3: quantity,
+            ...source
+        },
+    }
+}

@@ -8,26 +8,24 @@ asset Ship = 0x33333.*;
 
 asset Pilot = 0x33333.*;
 
-datum ShipState {
-    Playing {
-        pos_x: Int,
-        pos_y: Int,
-        ship_token_name: AssetName,
-        pilot_token_name: AssetName,
-        last_move_latest_time: PosixTime,
-    }
+record ShipState {
+    pos_x: Int,
+    pos_y: Int,
+    ship_token_name: AssetName,
+    pilot_token_name: AssetName,
+    last_move_latest_time: PosixTime,
 }
 
-datum ShipCommand {
+variant ShipCommand {
     MoveShip { 
         delta_x: Int,
         delta_y: Int,
-    }
+    },
     GatherFuel {
         amount: Int,
-    }
-    MineAsteria
-    Quit
+    },
+    MineAsteria,
+    Quit,
 }
 
 tx move_ship(

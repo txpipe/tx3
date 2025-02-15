@@ -7,7 +7,9 @@
           {
             "name": "ship_name",
             "type": {
-              "Custom": "AssetName"
+              "Custom": {
+                "value": "AssetName"
+              }
             }
           },
           {
@@ -34,7 +36,9 @@
             }
           },
           "datum_is": {
-            "Custom": "ShipState"
+            "Custom": {
+              "value": "ShipState"
+            }
           },
           "min_amount": {
             "BinaryOp": {
@@ -48,7 +52,7 @@
                       "value": "ship_name"
                     }
                   },
-                  "name": {
+                  "asset_name": {
                     "Number": 1
                   }
                 }
@@ -64,7 +68,7 @@
                       "value": "required_fuel"
                     }
                   },
-                  "name": null
+                  "asset_name": null
                 }
               }
             }
@@ -122,7 +126,7 @@
                   "value": "ship_name"
                 }
               },
-              "name": {
+              "asset_name": {
                 "Number": 1
               }
             }
@@ -149,7 +153,9 @@
       "outputs": [
         {
           "to": {
-            "value": "Game"
+            "Identifier": {
+              "value": "Game"
+            }
           },
           "amount": {
             "BinaryOp": {
@@ -179,7 +185,7 @@
                       "value": "required_fuel"
                     }
                   },
-                  "name": null
+                  "asset_name": null
                 }
               }
             }
@@ -274,7 +280,9 @@
         },
         {
           "to": {
-            "value": "Player"
+            "Identifier": {
+              "value": "Player"
+            }
           },
           "amount": {
             "BinaryOp": {
@@ -335,84 +343,89 @@
                 "value": "required_fuel"
               }
             },
-            "name": null
+            "asset_name": null
           }
         }
       },
       "mint": null
     }
   ],
-  "datums": [
+  "types": [
     {
-      "name": "ShipState",
-      "variants": [
-        {
-          "name": "Playing",
-          "fields": [
-            {
-              "name": "pos_x",
-              "typ": "Int"
-            },
-            {
-              "name": "pos_y",
-              "typ": "Int"
-            },
-            {
-              "name": "ship_token_name",
-              "typ": {
-                "Custom": "AssetName"
-              }
-            },
-            {
-              "name": "pilot_token_name",
-              "typ": {
-                "Custom": "AssetName"
-              }
-            },
-            {
-              "name": "last_move_latest_time",
-              "typ": {
-                "Custom": "PosixTime"
+      "Record": {
+        "name": "ShipState",
+        "fields": [
+          {
+            "name": "pos_x",
+            "typ": "Int"
+          },
+          {
+            "name": "pos_y",
+            "typ": "Int"
+          },
+          {
+            "name": "ship_token_name",
+            "typ": {
+              "Custom": {
+                "value": "AssetName"
               }
             }
-          ]
-        }
-      ]
+          },
+          {
+            "name": "pilot_token_name",
+            "typ": {
+              "Custom": {
+                "value": "AssetName"
+              }
+            }
+          },
+          {
+            "name": "last_move_latest_time",
+            "typ": {
+              "Custom": {
+                "value": "PosixTime"
+              }
+            }
+          }
+        ]
+      }
     },
     {
-      "name": "ShipCommand",
-      "variants": [
-        {
-          "name": "MoveShip",
-          "fields": [
-            {
-              "name": "delta_x",
-              "typ": "Int"
-            },
-            {
-              "name": "delta_y",
-              "typ": "Int"
-            }
-          ]
-        },
-        {
-          "name": "GatherFuel",
-          "fields": [
-            {
-              "name": "amount",
-              "typ": "Int"
-            }
-          ]
-        },
-        {
-          "name": "MineAsteria",
-          "fields": []
-        },
-        {
-          "name": "Quit",
-          "fields": []
-        }
-      ]
+      "Variant": {
+        "name": "ShipCommand",
+        "cases": [
+          {
+            "name": "MoveShip",
+            "fields": [
+              {
+                "name": "delta_x",
+                "typ": "Int"
+              },
+              {
+                "name": "delta_y",
+                "typ": "Int"
+              }
+            ]
+          },
+          {
+            "name": "GatherFuel",
+            "fields": [
+              {
+                "name": "amount",
+                "typ": "Int"
+              }
+            ]
+          },
+          {
+            "name": "MineAsteria",
+            "fields": []
+          },
+          {
+            "name": "Quit",
+            "fields": []
+          }
+        ]
+      }
     }
   ],
   "assets": [

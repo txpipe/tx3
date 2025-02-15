@@ -26,35 +26,46 @@ party_def = {
     "party" ~ identifier ~ ";"
 }
 
-// Datum definitions
-datum_field = { identifier ~ ":" ~ type }
+// Type definitions
+record_field = { identifier ~ ":" ~ type }
 
-datum_variant_struct = {
-    identifier ~ "{" ~
-    (datum_field ~ ",")* ~
+record_def = {
+    "record" ~ identifier ~ "{" ~
+    (record_field ~ ",")* ~
     "}"
 }
 
-datum_variant_tuple = {
+variant_case_struct = {
+    identifier ~ "{" ~
+    (record_field ~ ",")* ~
+    "}"
+}
+
+variant_case_tuple = {
     identifier ~ "(" ~
     (type ~ ",")* ~
     ")"
 }
 
-datum_variant_unit = {
+variant_case_unit = {
     identifier
 }
 
-datum_variant = {
-    datum_variant_struct |
-    datum_variant_tuple |
-    datum_variant_unit
+variant_case = _{
+    variant_case_struct |
+    variant_case_tuple |
+    variant_case_unit
 }
 
-datum_def = {
-    "datum" ~ identifier ~ "{" ~
-    datum_variant+ ~
+variant_def = {
+    "variant" ~ identifier ~ "{" ~
+    (variant_case ~ ",")* ~
     "}"
+}
+
+type_def = {
+    record_def |
+    variant_def
 }
 
 // Expressions
@@ -72,10 +83,10 @@ binary_operator = { "+" | "-" }
 data_expr = { data_term ~ (binary_operator ~ data_term)* }
 data_term = _{
     "none" |
+    hex_string |
     number |
     bool |
     string |
-    hex_string |
     datum_constructor |
     property_access |
     identifier
@@ -83,15 +94,27 @@ data_term = _{
 
 spread_expression = { "..." ~ data_expr }
 
-datum_constructor_field = {
+record_constructor_field = {
     identifier ~ ":" ~ data_expr
 }
 
-datum_constructor = {
+variant_constructor = {
     identifier ~ "::" ~ identifier ~ "{" ~
-    (datum_constructor_field ~ ",")* ~
+    (record_constructor_field ~ ",")* ~
     spread_expression? ~
     "}"
+}
+
+record_constructor = {
+    identifier ~ "{" ~
+    (record_constructor_field ~ ",")* ~
+    spread_expression? ~
+    "}"
+}
+
+datum_constructor = _{
+    variant_constructor |
+    record_constructor
 }
 
 address_expr = { string | identifier }
@@ -159,6 +182,6 @@ tx_def = {
 // Program
 program = {
     SOI ~
-    (asset_def | party_def | datum_def | tx_def)* ~
+    (asset_def | party_def | type_def | tx_def)* ~
     EOI
 }
