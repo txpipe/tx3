@@ -14,103 +14,121 @@
         {
           "name": "source",
           "is_many": false,
-          "from": {
-            "Identifier": {
-              "value": "MyParty"
-            }
-          },
-          "datum_is": {
-            "Custom": {
-              "value": "MyRecord"
-            }
-          },
-          "min_amount": {
-            "Constructor": {
-              "type": {
-                "value": "Ada"
-              },
-              "amount": {
+          "fields": [
+            {
+              "From": {
                 "Identifier": {
-                  "value": "quantity"
+                  "value": "MyParty"
                 }
-              },
-              "asset_name": null
-            }
-          },
-          "redeemer": {
-            "Constructor": {
-              "type": {
-                "value": "MyVariant"
-              },
-              "variant": {
-                "value": "Case1"
-              },
-              "fields": [
-                {
-                  "name": {
-                    "value": "field1"
+              }
+            },
+            {
+              "DatumIs": {
+                "Custom": {
+                  "value": "MyRecord"
+                }
+              }
+            },
+            {
+              "MinAmount": {
+                "Constructor": {
+                  "type": {
+                    "value": "Ada"
                   },
-                  "value": {
-                    "Number": 10
-                  }
-                },
-                {
-                  "name": {
-                    "value": "field2"
-                  },
-                  "value": {
-                    "HexString": "AFAFAF"
-                  }
-                },
-                {
-                  "name": {
-                    "value": "field3"
-                  },
-                  "value": {
+                  "amount": {
                     "Identifier": {
                       "value": "quantity"
                     }
-                  }
+                  },
+                  "asset_name": null
                 }
-              ],
-              "spread": null
+              }
+            },
+            {
+              "Redeemer": {
+                "Constructor": {
+                  "type": {
+                    "value": "MyVariant"
+                  },
+                  "variant": {
+                    "value": "Case1"
+                  },
+                  "fields": [
+                    {
+                      "name": {
+                        "value": "field1"
+                      },
+                      "value": {
+                        "Number": 10
+                      }
+                    },
+                    {
+                      "name": {
+                        "value": "field2"
+                      },
+                      "value": {
+                        "HexString": {
+                          "value": "AFAFAF"
+                        }
+                      }
+                    },
+                    {
+                      "name": {
+                        "value": "field3"
+                      },
+                      "value": {
+                        "Identifier": {
+                          "value": "quantity"
+                        }
+                      }
+                    }
+                  ],
+                  "spread": null
+                }
+              }
             }
-          }
+          ]
         }
       ],
       "outputs": [
         {
-          "to": {
-            "Identifier": {
-              "value": "MyParty"
-            }
-          },
-          "amount": null,
-          "datum": {
-            "Constructor": {
-              "type": {
-                "value": "MyRecord"
-              },
-              "variant": null,
-              "fields": [
-                {
-                  "name": {
-                    "value": "field3"
+          "name": null,
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "MyParty"
+                }
+              }
+            },
+            {
+              "Datum": {
+                "Constructor": {
+                  "type": {
+                    "value": "MyRecord"
                   },
-                  "value": {
+                  "variant": null,
+                  "fields": [
+                    {
+                      "name": {
+                        "value": "field3"
+                      },
+                      "value": {
+                        "Identifier": {
+                          "value": "quantity"
+                        }
+                      }
+                    }
+                  ],
+                  "spread": {
                     "Identifier": {
-                      "value": "quantity"
+                      "value": "source"
                     }
                   }
                 }
-              ],
-              "spread": {
-                "Identifier": {
-                  "value": "source"
-                }
               }
             }
-          }
+          ]
         }
       ],
       "burn": null,
@@ -167,5 +185,6 @@
     {
       "name": "MyParty"
     }
-  ]
+  ],
+  "policies": []
 }

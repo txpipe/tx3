@@ -14,90 +14,106 @@
         {
           "name": "source",
           "is_many": false,
-          "from": {
-            "Identifier": {
-              "value": "Sender"
-            }
-          },
-          "datum_is": null,
-          "min_amount": {
-            "Constructor": {
-              "type": {
-                "value": "Ada"
-              },
-              "amount": {
+          "fields": [
+            {
+              "From": {
                 "Identifier": {
-                  "value": "quantity"
+                  "value": "Sender"
                 }
-              },
-              "asset_name": null
+              }
+            },
+            {
+              "MinAmount": {
+                "Constructor": {
+                  "type": {
+                    "value": "Ada"
+                  },
+                  "amount": {
+                    "Identifier": {
+                      "value": "quantity"
+                    }
+                  },
+                  "asset_name": null
+                }
+              }
             }
-          },
-          "redeemer": null
+          ]
         }
       ],
       "outputs": [
         {
-          "to": {
-            "Identifier": {
-              "value": "Receiver"
-            }
-          },
-          "amount": {
-            "Constructor": {
-              "type": {
-                "value": "Ada"
-              },
-              "amount": {
+          "name": null,
+          "fields": [
+            {
+              "To": {
                 "Identifier": {
-                  "value": "quantity"
+                  "value": "Receiver"
                 }
-              },
-              "asset_name": null
+              }
+            },
+            {
+              "Amount": {
+                "Constructor": {
+                  "type": {
+                    "value": "Ada"
+                  },
+                  "amount": {
+                    "Identifier": {
+                      "value": "quantity"
+                    }
+                  },
+                  "asset_name": null
+                }
+              }
             }
-          },
-          "datum": null
+          ]
         },
         {
-          "to": {
-            "Identifier": {
-              "value": "Sender"
-            }
-          },
-          "amount": {
-            "BinaryOp": {
-              "left": {
+          "name": null,
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "Sender"
+                }
+              }
+            },
+            {
+              "Amount": {
                 "BinaryOp": {
                   "left": {
-                    "Identifier": {
-                      "value": "source"
+                    "BinaryOp": {
+                      "left": {
+                        "Identifier": {
+                          "value": "source"
+                        }
+                      },
+                      "operator": "Subtract",
+                      "right": {
+                        "Constructor": {
+                          "type": {
+                            "value": "Ada"
+                          },
+                          "amount": {
+                            "Identifier": {
+                              "value": "quantity"
+                            }
+                          },
+                          "asset_name": null
+                        }
+                      }
                     }
                   },
                   "operator": "Subtract",
                   "right": {
-                    "Constructor": {
-                      "type": {
-                        "value": "Ada"
-                      },
-                      "amount": {
-                        "Identifier": {
-                          "value": "quantity"
-                        }
-                      },
-                      "asset_name": null
+                    "Identifier": {
+                      "value": "fees"
                     }
                   }
                 }
-              },
-              "operator": "Subtract",
-              "right": {
-                "Identifier": {
-                  "value": "fees"
-                }
               }
             }
-          },
-          "datum": null
+          ]
         }
       ],
       "burn": null,
@@ -113,5 +129,6 @@
     {
       "name": "Receiver"
     }
-  ]
+  ],
+  "policies": []
 }

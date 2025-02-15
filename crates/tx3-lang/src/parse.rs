@@ -101,7 +101,7 @@ mod tests {
 
     test_parsing!(asteria);
 
-    // test_parsing!(vesting);
+    test_parsing!(vesting);
 
     // TODO
     // test_parsing!(faucet);

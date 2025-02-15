@@ -26,195 +26,228 @@
         {
           "name": "pool",
           "is_many": false,
-          "from": {
-            "Identifier": {
-              "value": "Dex"
-            }
-          },
-          "datum_is": {
-            "Custom": {
-              "value": "PoolState"
-            }
-          },
-          "min_amount": null,
-          "redeemer": {
-            "Constructor": {
-              "type": {
-                "value": "SwapParams"
-              },
-              "variant": null,
-              "fields": [
-                {
-                  "name": {
-                    "value": "ask"
-                  },
-                  "value": {
-                    "Identifier": {
-                      "value": "ask"
-                    }
-                  }
-                },
-                {
-                  "name": {
-                    "value": "bid"
-                  },
-                  "value": {
-                    "Identifier": {
-                      "value": "ask"
-                    }
-                  }
+          "fields": [
+            {
+              "From": {
+                "Identifier": {
+                  "value": "Dex"
                 }
-              ],
-              "spread": null
+              }
+            },
+            {
+              "DatumIs": {
+                "Custom": {
+                  "value": "PoolState"
+                }
+              }
+            },
+            {
+              "Redeemer": {
+                "Constructor": {
+                  "type": {
+                    "value": "SwapParams"
+                  },
+                  "variant": null,
+                  "fields": [
+                    {
+                      "name": {
+                        "value": "ask"
+                      },
+                      "value": {
+                        "Identifier": {
+                          "value": "ask"
+                        }
+                      }
+                    },
+                    {
+                      "name": {
+                        "value": "bid"
+                      },
+                      "value": {
+                        "Identifier": {
+                          "value": "ask"
+                        }
+                      }
+                    }
+                  ],
+                  "spread": null
+                }
+              }
             }
-          }
+          ]
         },
         {
           "name": "payment",
           "is_many": false,
-          "from": {
-            "Identifier": {
-              "value": "Buyer"
-            }
-          },
-          "datum_is": null,
-          "min_amount": {
-            "BinaryOp": {
-              "left": {
+          "fields": [
+            {
+              "From": {
                 "Identifier": {
-                  "value": "fees"
+                  "value": "Buyer"
                 }
-              },
-              "operator": "Add",
-              "right": {
-                "Identifier": {
-                  "value": "bid"
+              }
+            },
+            {
+              "MinAmount": {
+                "BinaryOp": {
+                  "left": {
+                    "Identifier": {
+                      "value": "fees"
+                    }
+                  },
+                  "operator": "Add",
+                  "right": {
+                    "Identifier": {
+                      "value": "bid"
+                    }
+                  }
                 }
               }
             }
-          },
-          "redeemer": null
+          ]
         }
       ],
       "outputs": [
         {
-          "to": {
-            "Identifier": {
-              "value": "Dex"
-            }
-          },
-          "amount": {
-            "Identifier": {
-              "value": "pool"
-            }
-          },
-          "datum": {
-            "Constructor": {
-              "type": {
-                "value": "PoolState"
-              },
-              "variant": null,
-              "fields": [
-                {
-                  "name": {
-                    "value": "pair_a"
+          "name": null,
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "Dex"
+                }
+              }
+            },
+            {
+              "Datum": {
+                "Constructor": {
+                  "type": {
+                    "value": "PoolState"
                   },
-                  "value": {
+                  "variant": null,
+                  "fields": [
+                    {
+                      "name": {
+                        "value": "pair_a"
+                      },
+                      "value": {
+                        "BinaryOp": {
+                          "left": {
+                            "PropertyAccess": {
+                              "object": {
+                                "value": "inputs"
+                              },
+                              "path": [
+                                {
+                                  "value": "pool"
+                                },
+                                {
+                                  "value": "pair_a"
+                                }
+                              ]
+                            }
+                          },
+                          "operator": "Subtract",
+                          "right": {
+                            "Identifier": {
+                              "value": "ask"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "name": {
+                        "value": "pair_b"
+                      },
+                      "value": {
+                        "BinaryOp": {
+                          "left": {
+                            "PropertyAccess": {
+                              "object": {
+                                "value": "inputs"
+                              },
+                              "path": [
+                                {
+                                  "value": "pool"
+                                },
+                                {
+                                  "value": "pair_b"
+                                }
+                              ]
+                            }
+                          },
+                          "operator": "Add",
+                          "right": {
+                            "Identifier": {
+                              "value": "bid"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "spread": {
+                    "PropertyAccess": {
+                      "object": {
+                        "value": "inputs"
+                      },
+                      "path": [
+                        {
+                          "value": "pool"
+                        },
+                        {
+                          "value": "datum"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "Amount": {
+                "Identifier": {
+                  "value": "pool"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": null,
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "Buyer"
+                }
+              }
+            },
+            {
+              "Amount": {
+                "BinaryOp": {
+                  "left": {
                     "BinaryOp": {
                       "left": {
-                        "PropertyAccess": {
-                          "object": {
-                            "value": "inputs"
-                          },
-                          "path": [
-                            {
-                              "value": "pool"
-                            },
-                            {
-                              "value": "pair_a"
+                        "BinaryOp": {
+                          "left": {
+                            "Identifier": {
+                              "value": "payment"
                             }
-                          ]
+                          },
+                          "operator": "Add",
+                          "right": {
+                            "Identifier": {
+                              "value": "ask"
+                            }
+                          }
                         }
                       },
                       "operator": "Subtract",
                       "right": {
                         "Identifier": {
-                          "value": "ask"
-                        }
-                      }
-                    }
-                  }
-                },
-                {
-                  "name": {
-                    "value": "pair_b"
-                  },
-                  "value": {
-                    "BinaryOp": {
-                      "left": {
-                        "PropertyAccess": {
-                          "object": {
-                            "value": "inputs"
-                          },
-                          "path": [
-                            {
-                              "value": "pool"
-                            },
-                            {
-                              "value": "pair_b"
-                            }
-                          ]
-                        }
-                      },
-                      "operator": "Add",
-                      "right": {
-                        "Identifier": {
                           "value": "bid"
-                        }
-                      }
-                    }
-                  }
-                }
-              ],
-              "spread": {
-                "PropertyAccess": {
-                  "object": {
-                    "value": "inputs"
-                  },
-                  "path": [
-                    {
-                      "value": "pool"
-                    },
-                    {
-                      "value": "datum"
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        {
-          "to": {
-            "Identifier": {
-              "value": "Buyer"
-            }
-          },
-          "amount": {
-            "BinaryOp": {
-              "left": {
-                "BinaryOp": {
-                  "left": {
-                    "BinaryOp": {
-                      "left": {
-                        "Identifier": {
-                          "value": "payment"
-                        }
-                      },
-                      "operator": "Add",
-                      "right": {
-                        "Identifier": {
-                          "value": "ask"
                         }
                       }
                     }
@@ -222,20 +255,13 @@
                   "operator": "Subtract",
                   "right": {
                     "Identifier": {
-                      "value": "bid"
+                      "value": "fees"
                     }
                   }
                 }
-              },
-              "operator": "Subtract",
-              "right": {
-                "Identifier": {
-                  "value": "fees"
-                }
               }
             }
-          },
-          "datum": null
+          ]
         }
       ],
       "burn": null,
@@ -290,5 +316,6 @@
     {
       "name": "Dex"
     }
-  ]
+  ],
+  "policies": []
 }

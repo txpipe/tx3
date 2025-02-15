@@ -122,15 +122,6 @@ impl Analyzable for Identifier {
     }
 }
 
-impl Analyzable for AddressExpr {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        match self {
-            AddressExpr::Identifier(x) => x.analyze(parent),
-            _ => Ok(()),
-        }
-    }
-}
-
 impl Analyzable for Type {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
         match self {
@@ -142,12 +133,37 @@ impl Analyzable for Type {
     }
 }
 
+impl Analyzable for InputBlockField {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        match self {
+            InputBlockField::From(x) => x.analyze(parent.clone())?,
+            InputBlockField::DatumIs(x) => x.analyze(parent.clone())?,
+            InputBlockField::MinAmount(x) => x.analyze(parent.clone())?,
+            InputBlockField::Redeemer(x) => x.analyze(parent.clone())?,
+            InputBlockField::Ref(x) => x.analyze(parent.clone())?,
+        }
+
+        Ok(())
+    }
+}
+
 impl Analyzable for InputBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.min_amount.analyze(parent.clone())?;
-        self.datum_is.analyze(parent.clone())?;
-        self.redeemer.analyze(parent.clone())?;
-        self.from.analyze(parent.clone())?;
+        for field in self.fields.iter_mut() {
+            field.analyze(parent.clone())?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Analyzable for OutputBlockField {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        match self {
+            OutputBlockField::To(x) => x.analyze(parent.clone())?,
+            OutputBlockField::Amount(x) => x.analyze(parent.clone())?,
+            OutputBlockField::Datum(x) => x.analyze(parent.clone())?,
+        }
 
         Ok(())
     }
@@ -155,8 +171,9 @@ impl Analyzable for InputBlock {
 
 impl Analyzable for OutputBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.to.analyze(parent.clone())?;
-        self.amount.analyze(parent.clone())?;
+        for field in self.fields.iter_mut() {
+            field.analyze(parent.clone())?;
+        }
 
         Ok(())
     }

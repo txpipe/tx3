@@ -55,6 +55,7 @@ pub struct Program {
     pub types: Vec<TypeDef>,
     pub assets: Vec<AssetDef>,
     pub parties: Vec<PartyDef>,
+    pub policies: Vec<PolicyDef>,
 
     // analysis
     #[serde(skip)]
@@ -72,6 +73,7 @@ impl AstNode for Program {
             assets: Vec::new(),
             types: Vec::new(),
             parties: Vec::new(),
+            policies: Vec::new(),
             scope: None,
         };
 
@@ -81,6 +83,7 @@ impl AstNode for Program {
                 Rule::asset_def => program.assets.push(AssetDef::parse(pair)?),
                 Rule::type_def => program.types.push(TypeDef::parse(pair)?),
                 Rule::party_def => program.parties.push(PartyDef::parse(pair)?),
+                Rule::policy_def => program.policies.push(PolicyDef::parse(pair)?),
                 Rule::EOI => break,
                 x => unreachable!("Unexpected rule in program: {:?}", x),
             }
@@ -166,29 +169,103 @@ impl AstNode for TxDef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum AddressExpr {
-    Identifier(Identifier),
-    String(String),
+pub struct StringLiteral {
+    pub value: String,
 }
 
-impl AddressExpr {
-    fn string_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        Ok(AddressExpr::String(
-            pair.as_str()[1..pair.as_str().len() - 1].to_string(),
-        ))
+impl StringLiteral {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self {
+            value: value.into(),
+        }
     }
 }
 
-impl AstNode for AddressExpr {
-    const RULE: Rule = Rule::address_expr;
+impl AstNode for StringLiteral {
+    const RULE: Rule = Rule::string;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        let inner = pair.into_inner().next().unwrap();
+        Ok(StringLiteral {
+            value: pair.as_str()[1..pair.as_str().len() - 1].to_string(),
+        })
+    }
+}
 
-        match inner.as_rule() {
-            Rule::string => AddressExpr::string_parse(inner),
-            Rule::identifier => Ok(AddressExpr::Identifier(Identifier::parse(inner)?)),
-            x => unreachable!("Unexpected rule in address_expr: {:?}", x),
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct HexStringLiteral {
+    pub value: String,
+}
+
+impl HexStringLiteral {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self {
+            value: value.into(),
+        }
+    }
+}
+
+impl AstNode for HexStringLiteral {
+    const RULE: Rule = Rule::hex_string;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        Ok(HexStringLiteral {
+            value: pair.as_str()[2..].to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum InputBlockField {
+    From(DataExpr),
+    DatumIs(Type),
+    MinAmount(AssetExpr),
+    Redeemer(DataExpr),
+    Ref(DataExpr),
+}
+
+impl InputBlockField {
+    fn key(&self) -> &str {
+        match self {
+            InputBlockField::From(_) => "from",
+            InputBlockField::DatumIs(_) => "datum_is",
+            InputBlockField::MinAmount(_) => "min_amount",
+            InputBlockField::Redeemer(_) => "redeemer",
+            InputBlockField::Ref(_) => "ref",
+        }
+    }
+}
+
+impl AstNode for InputBlockField {
+    const RULE: Rule = Rule::input_block_field;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        match pair.as_rule() {
+            Rule::input_block_from => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = InputBlockField::From(DataExpr::parse(pair)?);
+                Ok(x)
+            }
+            Rule::input_block_datum_is => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = InputBlockField::DatumIs(Type::parse(pair)?);
+                Ok(x)
+            }
+            Rule::input_block_min_amount => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = InputBlockField::MinAmount(AssetExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            Rule::input_block_redeemer => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = InputBlockField::Redeemer(DataExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            Rule::input_block_ref => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = InputBlockField::Ref(DataExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            x => unreachable!("Unexpected rule in input_block: {:?}", x),
         }
     }
 }
@@ -197,10 +274,13 @@ impl AstNode for AddressExpr {
 pub struct InputBlock {
     pub name: String,
     pub is_many: bool,
-    pub from: Option<AddressExpr>,
-    pub datum_is: Option<Type>,
-    pub min_amount: Option<Box<AssetExpr>>,
-    pub redeemer: Option<Box<DataExpr>>,
+    pub fields: Vec<InputBlockField>,
+}
+
+impl InputBlock {
+    pub(crate) fn find(&self, key: &str) -> Option<&InputBlockField> {
+        self.fields.iter().find(|x| x.key() == key)
+    }
 }
 
 impl AstNode for InputBlock {
@@ -211,81 +291,90 @@ impl AstNode for InputBlock {
 
         let name = inner.next().unwrap().as_str().to_string();
 
-        let mut input_block = InputBlock {
+        let fields = inner
+            .map(|x| InputBlockField::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(InputBlock {
             name,
             is_many: false,
-            from: None,
-            datum_is: None,
-            min_amount: None,
-            redeemer: None,
-        };
+            fields,
+        })
+    }
+}
 
-        for field_option in inner {
-            let field = field_option.into_inner().next().unwrap();
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum OutputBlockField {
+    To(Box<DataExpr>),
+    Amount(Box<AssetExpr>),
+    Datum(Box<DataExpr>),
+}
 
-            match field.as_rule() {
-                Rule::input_block_from => {
-                    input_block.from =
-                        Some(AddressExpr::parse(field.into_inner().next().unwrap())?);
-                }
-                Rule::input_block_datum_is => {
-                    input_block.datum_is = Some(Type::parse(field.into_inner().next().unwrap())?);
-                }
-                Rule::input_block_min_amount => {
-                    input_block.min_amount =
-                        Some(AssetExpr::parse(field.into_inner().next().unwrap())?.into());
-                }
-                Rule::input_block_redeemer => {
-                    input_block.redeemer =
-                        Some(DataExpr::parse(field.into_inner().next().unwrap())?.into());
-                }
-                x => unreachable!("Unexpected rule in input_block: {:?}", x),
-            }
+impl OutputBlockField {
+    fn key(&self) -> &str {
+        match self {
+            OutputBlockField::To(_) => "to",
+            OutputBlockField::Amount(_) => "amount",
+            OutputBlockField::Datum(_) => "datum",
         }
+    }
+}
 
-        Ok(input_block)
+impl AstNode for OutputBlockField {
+    const RULE: Rule = Rule::output_block_field;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        match pair.as_rule() {
+            Rule::output_block_to => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = OutputBlockField::To(Box::new(DataExpr::parse(pair)?));
+                Ok(x)
+            }
+            Rule::output_block_amount => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = OutputBlockField::Amount(AssetExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            Rule::output_block_datum => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = OutputBlockField::Datum(DataExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            x => unreachable!("Unexpected rule in output_block_field: {:?}", x),
+        }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OutputBlock {
-    pub to: Option<AddressExpr>,
-    pub amount: Option<Box<AssetExpr>>,
-    pub datum: Option<Box<DataExpr>>,
+    pub name: Option<String>,
+    pub fields: Vec<OutputBlockField>,
+}
+
+impl OutputBlock {
+    pub(crate) fn find(&self, key: &str) -> Option<&OutputBlockField> {
+        self.fields.iter().find(|x| x.key() == key)
+    }
 }
 
 impl AstNode for OutputBlock {
     const RULE: Rule = Rule::output_block;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        let inner = pair.into_inner();
+        let mut inner = pair.into_inner();
 
-        let mut output_block = OutputBlock {
-            to: None,
-            amount: None,
-            datum: None,
-        };
+        let has_name = inner
+            .peek()
+            .map(|x| x.as_rule() == Rule::identifier)
+            .unwrap_or_default();
 
-        for field_option in inner {
-            let field = field_option.into_inner().next().unwrap();
+        let name = has_name.then(|| inner.next().unwrap().as_str().to_string());
 
-            match field.as_rule() {
-                Rule::output_block_to => {
-                    output_block.to = Some(AddressExpr::parse(field.into_inner().next().unwrap())?);
-                }
-                Rule::output_block_amount => {
-                    output_block.amount =
-                        Some(AssetExpr::parse(field.into_inner().next().unwrap())?.into());
-                }
-                Rule::output_block_datum => {
-                    output_block.datum =
-                        Some(DataExpr::parse(field.into_inner().next().unwrap())?.into());
-                }
-                x => unreachable!("Unexpected rule in output_block: {:?}", x),
-            }
-        }
+        let fields = inner
+            .map(|x| OutputBlockField::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(output_block)
+        Ok(OutputBlock { name, fields })
     }
 }
 
@@ -395,6 +484,44 @@ impl AstNode for PartyDef {
 pub struct PartyField {
     pub name: String,
     pub party_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PolicyDef {
+    pub name: String,
+    pub value: PolicyValue,
+}
+
+impl AstNode for PolicyDef {
+    const RULE: Rule = Rule::policy_def;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        let mut inner = pair.into_inner();
+        let name = inner.next().unwrap().as_str().to_string();
+        let value = PolicyValue::parse(inner.next().unwrap())?;
+
+        Ok(PolicyDef { name, value })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PolicyValue {
+    Import(StringLiteral),
+    HexString(HexStringLiteral),
+}
+
+impl AstNode for PolicyValue {
+    const RULE: Rule = Rule::policy_value;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        match pair.as_rule() {
+            Rule::policy_import => Ok(PolicyValue::Import(StringLiteral::parse(
+                pair.into_inner().next().unwrap(),
+            )?)),
+            Rule::hex_string => Ok(PolicyValue::HexString(HexStringLiteral::parse(pair)?)),
+            x => unreachable!("Unexpected rule in policy_value: {:?}", x),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -627,6 +754,15 @@ impl DatumConstructor {
             spread: spread.map(|x| Box::new(x)),
         })
     }
+
+    fn unit_constructor_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        Ok(DatumConstructor {
+            r#type: Identifier::new("Unit".to_string()),
+            variant: None,
+            fields: vec![],
+            spread: None,
+        })
+    }
 }
 
 impl AstNode for DatumConstructor {
@@ -636,6 +772,7 @@ impl AstNode for DatumConstructor {
         match pair.as_rule() {
             Rule::variant_constructor => DatumConstructor::variant_constructor_parse(pair),
             Rule::record_constructor => DatumConstructor::record_constructor_parse(pair),
+            Rule::unit_constructor => DatumConstructor::unit_constructor_parse(pair),
             x => unreachable!("Unexpected rule in datum_constructor: {:?}", x),
         }
     }
@@ -653,8 +790,8 @@ pub enum DataExpr {
     None,
     Number(i64),
     Bool(bool),
-    String(String),
-    HexString(String),
+    String(StringLiteral),
+    HexString(HexStringLiteral),
     Constructor(DatumConstructor),
     Identifier(Identifier),
     PropertyAccess(PropertyAccess),
@@ -662,22 +799,12 @@ pub enum DataExpr {
 }
 
 impl DataExpr {
-    fn string_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        Ok(DataExpr::String(
-            pair.as_str()[1..pair.as_str().len() - 1].to_string(),
-        ))
-    }
-
     fn number_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         Ok(DataExpr::Number(pair.as_str().parse().unwrap()))
     }
 
     fn bool_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         Ok(DataExpr::Bool(pair.as_str().parse().unwrap()))
-    }
-
-    fn hex_string_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        Ok(DataExpr::HexString(pair.as_str()[2..].to_string()))
     }
 
     fn identifier_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
@@ -695,11 +822,12 @@ impl DataExpr {
     fn term_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         match pair.as_rule() {
             Rule::number => DataExpr::number_parse(pair),
-            Rule::string => DataExpr::string_parse(pair),
+            Rule::string => Ok(DataExpr::String(StringLiteral::parse(pair)?)),
             Rule::bool => DataExpr::bool_parse(pair),
-            Rule::hex_string => DataExpr::hex_string_parse(pair),
+            Rule::hex_string => Ok(DataExpr::HexString(HexStringLiteral::parse(pair)?)),
             Rule::record_constructor => DataExpr::constructor_parse(pair),
             Rule::variant_constructor => DataExpr::constructor_parse(pair),
+            Rule::unit_constructor => DataExpr::constructor_parse(pair),
             Rule::identifier => DataExpr::identifier_parse(pair),
             Rule::property_access => DataExpr::property_access_parse(pair),
             x => Err(ParseError::UnexpectedRule(x)),
@@ -1018,31 +1146,31 @@ mod tests {
     );
 
     input_to_ast_check!(
-        DataExpr,
+        StringLiteral,
         "literal_string",
         "\"Hello, world!\"",
-        DataExpr::String("Hello, world!".to_string())
+        StringLiteral::new("Hello, world!".to_string())
+    );
+
+    input_to_ast_check!(
+        HexStringLiteral,
+        "hex_string",
+        "0xAFAFAF",
+        HexStringLiteral::new("AFAFAF".to_string())
+    );
+
+    input_to_ast_check!(
+        StringLiteral,
+        "literal_string_address",
+        "\"addr1qx234567890abcdefghijklmnopqrstuvwxyz\"",
+        StringLiteral::new("addr1qx234567890abcdefghijklmnopqrstuvwxyz".to_string())
     );
 
     input_to_ast_check!(
         DataExpr,
-        "hex_string",
-        "0xAFAFAF",
-        DataExpr::HexString("AFAFAF".to_string())
-    );
-
-    input_to_ast_check!(
-        AddressExpr,
-        "literal_string",
-        "\"addr1qx234567890abcdefghijklmnopqrstuvwxyz\"",
-        AddressExpr::String("addr1qx234567890abcdefghijklmnopqrstuvwxyz".to_string())
-    );
-
-    input_to_ast_check!(
-        AddressExpr,
         "identifier",
         "my_party",
-        AddressExpr::Identifier(Identifier::new("my_party".to_string()))
+        DataExpr::Identifier(Identifier::new("my_party".to_string()))
     );
 
     input_to_ast_check!(DataExpr, "literal_bool_true", "true", DataExpr::Bool(true));
@@ -1069,6 +1197,26 @@ mod tests {
     );
 
     input_to_ast_check!(
+        PolicyDef,
+        "policy_def_hex",
+        "policy MyPolicy = 0xAFAFAF;",
+        PolicyDef {
+            name: "MyPolicy".to_string(),
+            value: PolicyValue::HexString(HexStringLiteral::new("AFAFAF".to_string())),
+        }
+    );
+
+    input_to_ast_check!(
+        PolicyDef,
+        "policy_def_import",
+        "policy MyPolicy = import(\"aiken_code\");",
+        PolicyDef {
+            name: "MyPolicy".to_string(),
+            value: PolicyValue::Import(StringLiteral::new("aiken_code".to_string())),
+        }
+    );
+
+    input_to_ast_check!(
         AssetConstructor,
         "type_and_literal",
         "MyToken(15)",
@@ -1086,7 +1234,9 @@ mod tests {
         AssetConstructor {
             r#type: Identifier::new("MyClass"),
             amount: Box::new(DataExpr::Number(15)),
-            asset_name: Some(Box::new(DataExpr::String("TokenName".to_string()))),
+            asset_name: Some(Box::new(DataExpr::String(StringLiteral::new(
+                "TokenName".to_string(),
+            )))),
         }
     );
 
@@ -1099,6 +1249,18 @@ mod tests {
             left: Box::new(DataExpr::Number(5)),
             right: Box::new(DataExpr::Identifier(Identifier::new("var1"))),
         })
+    );
+
+    input_to_ast_check!(
+        DatumConstructor,
+        "unit_constructor",
+        "()",
+        DatumConstructor {
+            r#type: Identifier::new("Unit"),
+            variant: None,
+            fields: vec![],
+            spread: None,
+        }
     );
 
     input_to_ast_check!(
@@ -1178,19 +1340,23 @@ mod tests {
 
     input_to_ast_check!(
         OutputBlock,
-        "output_block",
+        "output_block_anonymous",
         r#"output {
             to: my_party,
             amount: Ada(100),
         }"#,
         OutputBlock {
-            to: Some(AddressExpr::Identifier(Identifier::new("my_party"))),
-            datum: None,
-            amount: Some(Box::new(AssetExpr::Constructor(AssetConstructor {
-                r#type: Identifier::new("Ada"),
-                amount: Box::new(DataExpr::Number(100)),
-                asset_name: None,
-            }))),
+            name: None,
+            fields: vec![
+                OutputBlockField::To(Box::new(DataExpr::Identifier(Identifier::new(
+                    "my_party".to_string(),
+                )))),
+                OutputBlockField::Amount(Box::new(AssetExpr::Constructor(AssetConstructor {
+                    r#type: Identifier::new("Ada"),
+                    amount: Box::new(DataExpr::Number(100)),
+                    asset_name: None,
+                }))),
+            ],
         }
     );
 }

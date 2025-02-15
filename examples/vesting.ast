@@ -1,0 +1,307 @@
+{
+  "txs": [
+    {
+      "name": "lock",
+      "parameters": {
+        "parameters": [
+          {
+            "name": "quantity",
+            "type": "Int"
+          },
+          {
+            "name": "until",
+            "type": "Int"
+          }
+        ]
+      },
+      "inputs": [
+        {
+          "name": "source",
+          "is_many": false,
+          "fields": [
+            {
+              "From": {
+                "Identifier": {
+                  "value": "Owner"
+                }
+              }
+            },
+            {
+              "MinAmount": {
+                "Identifier": {
+                  "value": "quantity"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "target",
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "TimeLock"
+                }
+              }
+            },
+            {
+              "Amount": {
+                "Constructor": {
+                  "type": {
+                    "value": "Ada"
+                  },
+                  "amount": {
+                    "Identifier": {
+                      "value": "quantity"
+                    }
+                  },
+                  "asset_name": null
+                }
+              }
+            },
+            {
+              "Datum": {
+                "Constructor": {
+                  "type": {
+                    "value": "State"
+                  },
+                  "variant": null,
+                  "fields": [
+                    {
+                      "name": {
+                        "value": "lock_until"
+                      },
+                      "value": {
+                        "Identifier": {
+                          "value": "until"
+                        }
+                      }
+                    },
+                    {
+                      "name": {
+                        "value": "owner"
+                      },
+                      "value": {
+                        "Identifier": {
+                          "value": "Owner"
+                        }
+                      }
+                    },
+                    {
+                      "name": {
+                        "value": "beneficiary"
+                      },
+                      "value": {
+                        "Identifier": {
+                          "value": "Beneficiary"
+                        }
+                      }
+                    }
+                  ],
+                  "spread": null
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": null,
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "Owner"
+                }
+              }
+            },
+            {
+              "Amount": {
+                "BinaryOp": {
+                  "left": {
+                    "BinaryOp": {
+                      "left": {
+                        "Identifier": {
+                          "value": "source"
+                        }
+                      },
+                      "operator": "Subtract",
+                      "right": {
+                        "Constructor": {
+                          "type": {
+                            "value": "Ada"
+                          },
+                          "amount": {
+                            "Identifier": {
+                              "value": "quantity"
+                            }
+                          },
+                          "asset_name": null
+                        }
+                      }
+                    }
+                  },
+                  "operator": "Subtract",
+                  "right": {
+                    "Identifier": {
+                      "value": "fees"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "burn": null,
+      "mint": null
+    },
+    {
+      "name": "unlock",
+      "parameters": {
+        "parameters": [
+          {
+            "name": "locked_utxo",
+            "type": {
+              "Custom": {
+                "value": "UtxoRef"
+              }
+            }
+          }
+        ]
+      },
+      "inputs": [
+        {
+          "name": "gas",
+          "is_many": false,
+          "fields": [
+            {
+              "From": {
+                "Identifier": {
+                  "value": "Beneficiary"
+                }
+              }
+            },
+            {
+              "MinAmount": {
+                "Identifier": {
+                  "value": "fees"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "locked",
+          "is_many": false,
+          "fields": [
+            {
+              "Ref": {
+                "Identifier": {
+                  "value": "locked_utxo"
+                }
+              }
+            },
+            {
+              "Redeemer": {
+                "Constructor": {
+                  "type": {
+                    "value": "Unit"
+                  },
+                  "variant": null,
+                  "fields": [],
+                  "spread": null
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "target",
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "Beneficiary"
+                }
+              }
+            },
+            {
+              "Amount": {
+                "BinaryOp": {
+                  "left": {
+                    "BinaryOp": {
+                      "left": {
+                        "Identifier": {
+                          "value": "gas"
+                        }
+                      },
+                      "operator": "Add",
+                      "right": {
+                        "Identifier": {
+                          "value": "locked"
+                        }
+                      }
+                    }
+                  },
+                  "operator": "Subtract",
+                  "right": {
+                    "Identifier": {
+                      "value": "fees"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "burn": null,
+      "mint": null
+    }
+  ],
+  "types": [
+    {
+      "Record": {
+        "name": "State",
+        "fields": [
+          {
+            "name": "lock_until",
+            "typ": "Int"
+          },
+          {
+            "name": "owner",
+            "typ": "Bytes"
+          },
+          {
+            "name": "beneficiary",
+            "typ": "Bytes"
+          }
+        ]
+      }
+    }
+  ],
+  "assets": [],
+  "parties": [
+    {
+      "name": "Owner"
+    },
+    {
+      "name": "Beneficiary"
+    }
+  ],
+  "policies": [
+    {
+      "name": "TimeLock",
+      "value": {
+        "HexString": {
+          "value": "AFAFAF"
+        }
+      }
+    }
+  ]
+}
