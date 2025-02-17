@@ -81,7 +81,8 @@ impl AstNode for Program {
             match pair.as_rule() {
                 Rule::tx_def => program.txs.push(TxDef::parse(pair)?),
                 Rule::asset_def => program.assets.push(AssetDef::parse(pair)?),
-                Rule::type_def => program.types.push(TypeDef::parse(pair)?),
+                Rule::record_def => program.types.push(TypeDef::parse(pair)?),
+                Rule::variant_def => program.types.push(TypeDef::parse(pair)?),
                 Rule::party_def => program.parties.push(PartyDef::parse(pair)?),
                 Rule::policy_def => program.policies.push(PolicyDef::parse(pair)?),
                 Rule::EOI => break,
@@ -168,7 +169,7 @@ impl AstNode for TxDef {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct StringLiteral {
     pub value: String,
 }
@@ -191,7 +192,7 @@ impl AstNode for StringLiteral {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct HexStringLiteral {
     pub value: String,
 }
@@ -437,14 +438,19 @@ impl AstNode for BurnBlock {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct RecordField {
     pub name: String,
-    pub typ: Type,
+    pub r#type: Type,
+
+    // analysis
+    #[serde(skip)]
+    pub index: Option<usize>,
 }
 
 impl RecordField {
-    pub fn new(name: &str, typ: Type) -> Self {
+    pub fn new(name: &str, r#type: Type) -> Self {
         Self {
             name: name.to_string(),
-            typ,
+            r#type,
+            index: None,
         }
     }
 }
@@ -455,11 +461,12 @@ impl AstNode for RecordField {
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         let mut inner = pair.into_inner();
         let identifier = inner.next().unwrap().as_str().to_string();
-        let typ = Type::parse(inner.next().unwrap())?;
+        let r#type = Type::parse(inner.next().unwrap())?;
 
         Ok(RecordField {
             name: identifier,
-            typ,
+            r#type,
+            index: None,
         })
     }
 }
@@ -486,7 +493,7 @@ pub struct PartyField {
     pub party_type: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct PolicyDef {
     pub name: String,
     pub value: PolicyValue,
@@ -504,7 +511,7 @@ impl AstNode for PolicyDef {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum PolicyValue {
     Import(StringLiteral),
     HexString(HexStringLiteral),
@@ -692,87 +699,111 @@ impl AstNode for RecordConstructorField {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DatumConstructor {
     pub r#type: Identifier,
-    pub variant: Option<Identifier>,
-    pub fields: Vec<RecordConstructorField>,
-    pub spread: Option<Box<DataExpr>>,
-}
+    pub case: VariantCaseConstructor,
 
-impl DatumConstructor {
-    fn record_constructor_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        let mut inner = pair.into_inner();
-
-        let r#type = Identifier::parse(inner.next().unwrap())?;
-
-        let mut fields = Vec::new();
-        let mut spread = None;
-
-        for pair in inner {
-            match pair.as_rule() {
-                Rule::record_constructor_field => {
-                    fields.push(RecordConstructorField::parse(pair)?);
-                }
-                Rule::spread_expression => {
-                    spread = Some(DataExpr::parse(pair.into_inner().next().unwrap())?);
-                }
-                x => unreachable!("Unexpected rule in datum_constructor: {:?}", x),
-            }
-        }
-
-        Ok(DatumConstructor {
-            r#type,
-            variant: None,
-            fields,
-            spread: spread.map(|x| Box::new(x)),
-        })
-    }
-
-    fn variant_constructor_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        let mut inner = pair.into_inner();
-
-        let r#type = Identifier::parse(inner.next().unwrap())?;
-        let variant = Identifier::parse(inner.next().unwrap())?;
-
-        let mut fields = Vec::new();
-        let mut spread = None;
-
-        for pair in inner {
-            match pair.as_rule() {
-                Rule::record_constructor_field => {
-                    fields.push(RecordConstructorField::parse(pair)?);
-                }
-                Rule::spread_expression => {
-                    spread = Some(DataExpr::parse(pair.into_inner().next().unwrap())?);
-                }
-                x => unreachable!("Unexpected rule in datum_constructor: {:?}", x),
-            }
-        }
-
-        Ok(DatumConstructor {
-            r#type,
-            variant: Some(variant),
-            fields,
-            spread: spread.map(|x| Box::new(x)),
-        })
-    }
-
-    fn unit_constructor_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        Ok(DatumConstructor {
-            r#type: Identifier::new("Unit".to_string()),
-            variant: None,
-            fields: vec![],
-            spread: None,
-        })
-    }
+    // analysis
+    #[serde(skip)]
+    pub scope: Option<Rc<Scope>>,
 }
 
 impl AstNode for DatumConstructor {
     const RULE: Rule = Rule::datum_constructor;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let r#type = Identifier::parse(inner.next().unwrap())?;
+        let case = VariantCaseConstructor::parse(inner.next().unwrap())?;
+
+        Ok(DatumConstructor {
+            r#type,
+            case,
+            scope: None,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct VariantCaseConstructor {
+    pub name: Identifier,
+    pub fields: Vec<RecordConstructorField>,
+    pub spread: Option<Box<DataExpr>>,
+
+    // analysis
+    #[serde(skip)]
+    pub scope: Option<Rc<Scope>>,
+}
+
+impl VariantCaseConstructor {
+    fn implicit_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        let inner = pair.into_inner();
+
+        let mut fields = Vec::new();
+        let mut spread = None;
+
+        for pair in inner {
+            match pair.as_rule() {
+                Rule::record_constructor_field => {
+                    fields.push(RecordConstructorField::parse(pair)?);
+                }
+                Rule::spread_expression => {
+                    spread = Some(DataExpr::parse(pair.into_inner().next().unwrap())?);
+                }
+                x => unreachable!("Unexpected rule in datum_constructor: {:?}", x),
+            }
+        }
+
+        Ok(VariantCaseConstructor {
+            name: Identifier::new("Default"),
+            fields,
+            spread: spread.map(|x| Box::new(x)),
+            scope: None,
+        })
+    }
+
+    fn explicit_parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let name = Identifier::parse(inner.next().unwrap())?;
+
+        let mut fields = Vec::new();
+        let mut spread = None;
+
+        for pair in inner {
+            match pair.as_rule() {
+                Rule::record_constructor_field => {
+                    fields.push(RecordConstructorField::parse(pair)?);
+                }
+                Rule::spread_expression => {
+                    spread = Some(DataExpr::parse(pair.into_inner().next().unwrap())?);
+                }
+                x => unreachable!("Unexpected rule in datum_constructor: {:?}", x),
+            }
+        }
+
+        Ok(VariantCaseConstructor {
+            name,
+            fields,
+            spread: spread.map(|x| Box::new(x)),
+            scope: None,
+        })
+    }
+
+    pub fn find_field_value(&self, field: &str) -> Option<&DataExpr> {
+        self.fields
+            .iter()
+            .find(|x| x.name.value == field)
+            .map(|x| x.value.as_ref())
+    }
+}
+
+impl AstNode for VariantCaseConstructor {
+    const RULE: Rule = Rule::variant_case_constructor;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
         match pair.as_rule() {
-            Rule::variant_constructor => DatumConstructor::variant_constructor_parse(pair),
-            Rule::record_constructor => DatumConstructor::record_constructor_parse(pair),
-            Rule::unit_constructor => DatumConstructor::unit_constructor_parse(pair),
+            Rule::implicit_variant_case_constructor => Self::implicit_parse(pair),
+            Rule::explicit_variant_case_constructor => Self::explicit_parse(pair),
             x => unreachable!("Unexpected rule in datum_constructor: {:?}", x),
         }
     }
@@ -788,6 +819,7 @@ pub struct DataBinaryOp {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DataExpr {
     None,
+    Unit,
     Number(i64),
     Bool(bool),
     String(StringLiteral),
@@ -825,9 +857,8 @@ impl DataExpr {
             Rule::string => Ok(DataExpr::String(StringLiteral::parse(pair)?)),
             Rule::bool => DataExpr::bool_parse(pair),
             Rule::hex_string => Ok(DataExpr::HexString(HexStringLiteral::parse(pair)?)),
-            Rule::record_constructor => DataExpr::constructor_parse(pair),
-            Rule::variant_constructor => DataExpr::constructor_parse(pair),
-            Rule::unit_constructor => DataExpr::constructor_parse(pair),
+            Rule::datum_constructor => DataExpr::constructor_parse(pair),
+            Rule::unit => Ok(DataExpr::Unit),
             Rule::identifier => DataExpr::identifier_parse(pair),
             Rule::property_access => DataExpr::property_access_parse(pair),
             x => Err(ParseError::UnexpectedRule(x)),
@@ -904,15 +935,21 @@ pub struct ParamDef {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct VariantDef {
+pub struct TypeDef {
     pub name: String,
     pub cases: Vec<VariantCase>,
 }
 
-impl AstNode for VariantDef {
-    const RULE: Rule = Rule::variant_def;
+impl TypeDef {
+    pub(crate) fn find_case_index(&self, case: &str) -> Option<usize> {
+        self.cases.iter().position(|x| x.name == case)
+    }
 
-    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+    pub(crate) fn find_case(&self, case: &str) -> Option<&VariantCase> {
+        self.cases.iter().find(|x| x.name == case)
+    }
+
+    fn parse_variant_format(pair: Pair<Rule>) -> Result<Self, ParseError> {
         let mut inner = pair.into_inner();
 
         let identifier = inner.next().unwrap().as_str().to_string();
@@ -921,10 +958,40 @@ impl AstNode for VariantDef {
             .map(VariantCase::parse)
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(VariantDef {
+        Ok(TypeDef {
             name: identifier,
             cases,
         })
+    }
+
+    fn parse_record_format(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        let mut inner = pair.into_inner();
+
+        let identifier = inner.next().unwrap().as_str().to_string();
+
+        let fields = inner
+            .map(RecordField::parse)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(TypeDef {
+            name: identifier.clone(),
+            cases: vec![VariantCase {
+                name: "Default".to_string(),
+                fields,
+            }],
+        })
+    }
+}
+
+impl AstNode for TypeDef {
+    const RULE: Rule = Rule::type_def;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
+        match pair.as_rule() {
+            Rule::variant_def => Ok(TypeDef::parse_variant_format(pair)?),
+            Rule::record_def => Ok(TypeDef::parse_record_format(pair)?),
+            x => unreachable!("Unexpected rule in type_def: {:?}", x),
+        }
     }
 }
 
@@ -960,6 +1027,14 @@ impl VariantCase {
             fields: vec![],
         })
     }
+
+    pub(crate) fn find_field_index(&self, field: &str) -> Option<usize> {
+        self.fields.iter().position(|x| x.name == field)
+    }
+
+    pub(crate) fn find_field(&self, field: &str) -> Option<&RecordField> {
+        self.fields.iter().find(|x| x.name == field)
+    }
 }
 
 impl AstNode for VariantCase {
@@ -974,52 +1049,6 @@ impl AstNode for VariantCase {
         }?;
 
         Ok(case)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct RecordDef {
-    pub name: String,
-    pub fields: Vec<RecordField>,
-}
-
-impl AstNode for RecordDef {
-    const RULE: Rule = Rule::record_def;
-
-    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        let mut inner = pair.into_inner();
-
-        let identifier = inner.next().unwrap().as_str().to_string();
-
-        let fields = inner
-            .map(RecordField::parse)
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(Self {
-            name: identifier,
-            fields,
-        })
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum TypeDef {
-    Variant(VariantDef),
-    Record(RecordDef),
-    //Alias(AliasDef),
-}
-
-impl AstNode for TypeDef {
-    const RULE: Rule = Rule::type_def;
-
-    fn parse(pair: Pair<Rule>) -> Result<Self, ParseError> {
-        let inner = pair.into_inner().next().unwrap();
-
-        match inner.as_rule() {
-            Rule::variant_def => Ok(TypeDef::Variant(VariantDef::parse(inner)?)),
-            Rule::record_def => Ok(TypeDef::Record(RecordDef::parse(inner)?)),
-            x => unreachable!("Unexpected rule in type_def: {:?}", x),
-        }
     }
 }
 
@@ -1074,32 +1103,35 @@ mod tests {
     input_to_ast_check!(BinaryOperator, "minus", "-", BinaryOperator::Subtract);
 
     input_to_ast_check!(
-        RecordDef,
-        "record_def",
-        "record MyRecord {
+        TypeDef,
+        "type_def_record",
+        "type MyRecord {
             field1: Int,
             field2: Bytes,
         }",
-        RecordDef {
+        TypeDef {
             name: "MyRecord".to_string(),
-            fields: vec![
-                RecordField::new("field1", Type::Int),
-                RecordField::new("field2", Type::Bytes)
-            ],
+            cases: vec![VariantCase {
+                name: "Default".to_string(),
+                fields: vec![
+                    RecordField::new("field1", Type::Int),
+                    RecordField::new("field2", Type::Bytes)
+                ],
+            }],
         }
     );
 
     input_to_ast_check!(
-        VariantDef,
-        "variant_def",
-        "variant MyVariant {
+        TypeDef,
+        "type_def_variant",
+        "type MyVariant {
             Case1 {
                 field1: Int,
                 field2: Bytes,
             },
             Case2,
         }",
-        VariantDef {
+        TypeDef {
             name: "MyVariant".to_string(),
             cases: vec![
                 VariantCase {
@@ -1115,34 +1147,6 @@ mod tests {
                 },
             ],
         }
-    );
-
-    input_to_ast_check!(
-        TypeDef,
-        "type_def",
-        "variant MyType {
-            Case1 {
-                field1: Int,
-                field2: Bytes,
-            },
-            Case2,
-        }",
-        TypeDef::Variant(VariantDef {
-            name: "MyType".to_string(),
-            cases: vec![
-                VariantCase {
-                    name: "Case1".to_string(),
-                    fields: vec![
-                        RecordField::new("field1", Type::Int),
-                        RecordField::new("field2", Type::Bytes)
-                    ],
-                },
-                VariantCase {
-                    name: "Case2".to_string(),
-                    fields: vec![],
-                },
-            ],
-        })
     );
 
     input_to_ast_check!(
@@ -1181,6 +1185,8 @@ mod tests {
         "false",
         DataExpr::Bool(false)
     );
+
+    input_to_ast_check!(DataExpr, "unit_value", "())", DataExpr::Unit);
 
     input_to_ast_check!(
         PropertyAccess,
@@ -1253,67 +1259,63 @@ mod tests {
 
     input_to_ast_check!(
         DatumConstructor,
-        "unit_constructor",
-        "()",
-        DatumConstructor {
-            r#type: Identifier::new("Unit"),
-            variant: None,
-            fields: vec![],
-            spread: None,
-        }
-    );
-
-    input_to_ast_check!(
-        DatumConstructor,
-        "struct_record",
+        "datum_constructor_record",
         "MyRecord {
             field1: 10,
             field2: abc,
         }",
         DatumConstructor {
             r#type: Identifier::new("MyRecord"),
-            variant: None,
-            fields: vec![
-                RecordConstructorField {
-                    name: Identifier::new("field1"),
-                    value: Box::new(DataExpr::Number(10)),
-                },
-                RecordConstructorField {
-                    name: Identifier::new("field2"),
-                    value: Box::new(DataExpr::Identifier(Identifier::new("abc"))),
-                },
-            ],
-            spread: None,
+            case: VariantCaseConstructor {
+                name: Identifier::new("Default"),
+                fields: vec![
+                    RecordConstructorField {
+                        name: Identifier::new("field1"),
+                        value: Box::new(DataExpr::Number(10)),
+                    },
+                    RecordConstructorField {
+                        name: Identifier::new("field2"),
+                        value: Box::new(DataExpr::Identifier(Identifier::new("abc"))),
+                    },
+                ],
+                spread: None,
+                scope: None,
+            },
+            scope: None,
         }
     );
 
     input_to_ast_check!(
         DatumConstructor,
-        "struct_variant",
+        "datum_constructor_variant",
         "ShipCommand::MoveShip {
             delta_x: delta_x,
             delta_y: delta_y,
         }",
         DatumConstructor {
             r#type: Identifier::new("ShipCommand"),
-            variant: Some(Identifier::new("MoveShip")),
-            fields: vec![
-                RecordConstructorField {
-                    name: Identifier::new("delta_x"),
-                    value: Box::new(DataExpr::Identifier(Identifier::new("delta_x"))),
-                },
-                RecordConstructorField {
-                    name: Identifier::new("delta_y"),
-                    value: Box::new(DataExpr::Identifier(Identifier::new("delta_y"))),
-                },
-            ],
-            spread: None,
+            case: VariantCaseConstructor {
+                name: Identifier::new("MoveShip"),
+                fields: vec![
+                    RecordConstructorField {
+                        name: Identifier::new("delta_x"),
+                        value: Box::new(DataExpr::Identifier(Identifier::new("delta_x"))),
+                    },
+                    RecordConstructorField {
+                        name: Identifier::new("delta_y"),
+                        value: Box::new(DataExpr::Identifier(Identifier::new("delta_y"))),
+                    },
+                ],
+                spread: None,
+                scope: None,
+            },
+            scope: None,
         }
     );
 
     input_to_ast_check!(
         DatumConstructor,
-        "struct_variant_with_spread",
+        "datum_constructor_variant_with_spread",
         "ShipCommand::MoveShip {
             delta_x: delta_x,
             delta_y: delta_y,
@@ -1321,20 +1323,24 @@ mod tests {
         }",
         DatumConstructor {
             r#type: Identifier::new("ShipCommand"),
-            variant: Some(Identifier::new("MoveShip")),
-            fields: vec![
-                RecordConstructorField {
-                    name: Identifier::new("delta_x"),
-                    value: Box::new(DataExpr::Identifier(Identifier::new("delta_x"))),
-                },
-                RecordConstructorField {
-                    name: Identifier::new("delta_y"),
-                    value: Box::new(DataExpr::Identifier(Identifier::new("delta_y"))),
-                },
-            ],
-            spread: Some(Box::new(DataExpr::Identifier(Identifier::new(
-                "abc".to_string()
-            )))),
+            case: VariantCaseConstructor {
+                name: Identifier::new("MoveShip"),
+                fields: vec![
+                    RecordConstructorField {
+                        name: Identifier::new("delta_x"),
+                        value: Box::new(DataExpr::Identifier(Identifier::new("delta_x"))),
+                    },
+                    RecordConstructorField {
+                        name: Identifier::new("delta_y"),
+                        value: Box::new(DataExpr::Identifier(Identifier::new("delta_y"))),
+                    },
+                ],
+                spread: Some(Box::new(DataExpr::Identifier(Identifier::new(
+                    "abc".to_string()
+                )))),
+                scope: None,
+            },
+            scope: None,
         }
     );
 

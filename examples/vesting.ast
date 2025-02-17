@@ -28,8 +28,16 @@
             },
             {
               "MinAmount": {
-                "Identifier": {
-                  "value": "quantity"
+                "Constructor": {
+                  "type": {
+                    "value": "Ada"
+                  },
+                  "amount": {
+                    "Identifier": {
+                      "value": "quantity"
+                    }
+                  },
+                  "asset_name": null
                 }
               }
             }
@@ -68,40 +76,44 @@
                   "type": {
                     "value": "State"
                   },
-                  "variant": null,
-                  "fields": [
-                    {
-                      "name": {
-                        "value": "lock_until"
-                      },
-                      "value": {
-                        "Identifier": {
-                          "value": "until"
-                        }
-                      }
+                  "case": {
+                    "name": {
+                      "value": "Default"
                     },
-                    {
-                      "name": {
-                        "value": "owner"
+                    "fields": [
+                      {
+                        "name": {
+                          "value": "lock_until"
+                        },
+                        "value": {
+                          "Identifier": {
+                            "value": "until"
+                          }
+                        }
                       },
-                      "value": {
-                        "Identifier": {
-                          "value": "Owner"
+                      {
+                        "name": {
+                          "value": "owner"
+                        },
+                        "value": {
+                          "Identifier": {
+                            "value": "Owner"
+                          }
+                        }
+                      },
+                      {
+                        "name": {
+                          "value": "beneficiary"
+                        },
+                        "value": {
+                          "Identifier": {
+                            "value": "Beneficiary"
+                          }
                         }
                       }
-                    },
-                    {
-                      "name": {
-                        "value": "beneficiary"
-                      },
-                      "value": {
-                        "Identifier": {
-                          "value": "Beneficiary"
-                        }
-                      }
-                    }
-                  ],
-                  "spread": null
+                    ],
+                    "spread": null
+                  }
                 }
               }
             }
@@ -205,16 +217,7 @@
               }
             },
             {
-              "Redeemer": {
-                "Constructor": {
-                  "type": {
-                    "value": "Unit"
-                  },
-                  "variant": null,
-                  "fields": [],
-                  "spread": null
-                }
-              }
+              "Redeemer": "Unit"
             }
           ]
         }
@@ -266,23 +269,26 @@
   ],
   "types": [
     {
-      "Record": {
-        "name": "State",
-        "fields": [
-          {
-            "name": "lock_until",
-            "typ": "Int"
-          },
-          {
-            "name": "owner",
-            "typ": "Bytes"
-          },
-          {
-            "name": "beneficiary",
-            "typ": "Bytes"
-          }
-        ]
-      }
+      "name": "State",
+      "cases": [
+        {
+          "name": "Default",
+          "fields": [
+            {
+              "name": "lock_until",
+              "type": "Int"
+            },
+            {
+              "name": "owner",
+              "type": "Bytes"
+            },
+            {
+              "name": "beneficiary",
+              "type": "Bytes"
+            }
+          ]
+        }
+      ]
     }
   ],
   "assets": [],
@@ -299,7 +305,7 @@
       "name": "TimeLock",
       "value": {
         "HexString": {
-          "value": "AFAFAF"
+          "value": "6b9c456aa650cb808a9ab54326e039d5235ed69f069c9664a8fe5b69"
         }
       }
     }

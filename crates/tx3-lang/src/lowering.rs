@@ -1,25 +1,48 @@
 use crate::analyze::Symbol;
 use crate::ast;
-use crate::ast::OutputBlockField;
 use crate::ir;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("missing analyze phase")]
+    MissingAnalyzePhase,
+
     #[error("symbol '{0}' expected to be '{1}'")]
-    InvalidSymbol(String, String),
+    InvalidSymbol(String, &'static str),
 
     #[error("invalid ast: {0}")]
     InvalidAst(String),
+}
+
+fn expect_type_def(ident: &ast::Identifier) -> Result<&ast::TypeDef, Error> {
+    let symbol = ident.symbol.as_ref().ok_or(Error::MissingAnalyzePhase)?;
+
+    symbol
+        .as_type_def()
+        .ok_or(Error::InvalidSymbol(ident.value.clone(), "TypeDef"))
+}
+
+fn expect_case_def(ident: &ast::Identifier) -> Result<&ast::VariantCase, Error> {
+    let symbol = ident.symbol.as_ref().ok_or(Error::MissingAnalyzePhase)?;
+
+    symbol
+        .as_variant_case()
+        .ok_or(Error::InvalidSymbol(ident.value.clone(), "VariantCase"))
+}
+
+fn expect_field_def(ident: &ast::Identifier) -> Result<&ast::RecordField, Error> {
+    let symbol = ident.symbol.as_ref().ok_or(Error::MissingAnalyzePhase)?;
+
+    symbol
+        .as_field_def()
+        .ok_or(Error::InvalidSymbol(ident.value.clone(), "FieldDef"))
 }
 
 fn coerce_identifier_into_asset_def(identifier: &ast::Identifier) -> Result<ast::AssetDef, Error> {
     if let Some(Symbol::AssetDef(x)) = &identifier.symbol {
         Ok(x.as_ref().clone())
     } else {
-        Err(Error::InvalidSymbol(
-            identifier.value.clone(),
-            "AssetDef".to_string(),
-        ))
+        Err(Error::InvalidSymbol(identifier.value.clone(), "AssetDef"))
     }
 }
 
@@ -29,10 +52,7 @@ fn coerce_identifier_into_asset_expr(
     match &identifier.symbol {
         Some(Symbol::Input(x)) => Ok(ir::Expression::EvalInputAssets(x.clone())),
         Some(Symbol::Fees) => Ok(ir::Expression::EvalFees),
-        _ => Err(Error::InvalidSymbol(
-            identifier.value.clone(),
-            "AssetDef".to_string(),
-        )),
+        _ => Err(Error::InvalidSymbol(identifier.value.clone(), "AssetExpr")),
     }
 }
 
@@ -64,6 +84,48 @@ where
     }
 }
 
+impl IntoLower for ast::DatumConstructor {
+    type Output = ir::StructExpr;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let type_def = expect_type_def(&self.r#type)?;
+
+        let constructor = type_def
+            .find_case_index(&self.case.name.value)
+            .ok_or(Error::InvalidAst("case not found".to_string()))?;
+
+        let case_def = expect_case_def(&self.case.name)?;
+
+        let mut fields = vec![];
+
+        for field_def in case_def.fields.iter() {
+            let value = self.case.find_field_value(&field_def.name);
+
+            if let Some(value) = value {
+                fields.push(value.into_lower()?);
+            } else {
+                todo!();
+            }
+        }
+
+        Ok(ir::StructExpr {
+            constructor,
+            fields,
+        })
+    }
+}
+
+impl IntoLower for ast::PolicyDef {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match &self.value {
+            ast::PolicyValue::HexString(x) => Ok(ir::Expression::Policy(x.value.clone())),
+            ast::PolicyValue::Import(_) => todo!(),
+        }
+    }
+}
+
 impl IntoLower for ast::DataExpr {
     type Output = ir::Expression;
 
@@ -74,11 +136,16 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::Bool(_) => todo!(),
             ast::DataExpr::String(_) => todo!(),
             ast::DataExpr::HexString(_) => todo!(),
-            ast::DataExpr::Constructor(x) => todo!(),
+            ast::DataExpr::Constructor(x) => ir::Expression::Struct(x.into_lower()?),
+            ast::DataExpr::Unit => ir::Expression::Struct(ir::StructExpr::unit()),
             ast::DataExpr::Identifier(x) => match &x.symbol {
                 Some(Symbol::ParamVar(x)) => ir::Expression::EvalParameter(x.clone()),
                 Some(Symbol::PartyDef(x)) => ir::Expression::EvalParty(x.name.clone()),
-                _ => todo!(),
+                Some(Symbol::PolicyDef(x)) => x.into_lower()?,
+                _ => {
+                    dbg!(&x);
+                    todo!();
+                }
             },
             ast::DataExpr::PropertyAccess(x) => todo!(),
             ast::DataExpr::BinaryOp(x) => todo!(),

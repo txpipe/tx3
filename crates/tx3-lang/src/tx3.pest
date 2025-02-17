@@ -8,6 +8,7 @@ string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 bool = @{ "true" | "false" }
 hex_string = @{ "0x" ~ ASCII_HEX_DIGIT+ }
 wildcard = @{ "*" }
+unit = { "()" }
 
 // Type definitions
 type = { "Int" | "Bool" | "Bytes" | identifier }
@@ -41,7 +42,7 @@ policy_def = {
 record_field = { identifier ~ ":" ~ type }
 
 record_def = {
-    "record" ~ identifier ~ "{" ~
+    "type" ~ identifier ~ "{" ~
     (record_field ~ ",")* ~
     "}"
 }
@@ -69,12 +70,12 @@ variant_case = _{
 }
 
 variant_def = {
-    "variant" ~ identifier ~ "{" ~
+    "type" ~ identifier ~ "{" ~
     (variant_case ~ ",")* ~
     "}"
 }
 
-type_def = {
+type_def = _{
     record_def |
     variant_def
 }
@@ -94,6 +95,7 @@ binary_operator = { "+" | "-" }
 data_expr = { data_term ~ (binary_operator ~ data_term)* }
 data_term = _{
     "none" |
+    unit |
     hex_string |
     number |
     bool |
@@ -109,26 +111,27 @@ record_constructor_field = {
     identifier ~ ":" ~ data_expr
 }
 
-variant_constructor = {
-    identifier ~ "::" ~ identifier ~ "{" ~
+explicit_variant_case_constructor = {
+    "::" ~ identifier ~ "{" ~
     (record_constructor_field ~ ",")* ~
     spread_expression? ~
     "}"
 }
 
-record_constructor = {
-    identifier ~ "{" ~
+implicit_variant_case_constructor = {
+    "{" ~
     (record_constructor_field ~ ",")* ~
     spread_expression? ~
     "}"
 }
 
-unit_constructor = { "()" }
+variant_case_constructor = _{
+    explicit_variant_case_constructor |
+    implicit_variant_case_constructor
+}
 
-datum_constructor = _{
-    variant_constructor |
-    record_constructor |
-    unit_constructor
+datum_constructor = {
+    identifier ~ variant_case_constructor
 }
 
 input_block_from = { "from" ~ ":" ~ data_expr }

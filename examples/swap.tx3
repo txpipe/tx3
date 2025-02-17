@@ -1,9 +1,9 @@
-record PoolState {
+type PoolState {
     pair_a: Token,
     pair_b: Token,
 }
 
-record SwapParams {
+type SwapParams {
     amount: Int,
     ratio: Int,
 }

@@ -50,40 +50,42 @@
                   "type": {
                     "value": "MyVariant"
                   },
-                  "variant": {
-                    "value": "Case1"
-                  },
-                  "fields": [
-                    {
-                      "name": {
-                        "value": "field1"
-                      },
-                      "value": {
-                        "Number": 10
-                      }
+                  "case": {
+                    "name": {
+                      "value": "Case1"
                     },
-                    {
-                      "name": {
-                        "value": "field2"
+                    "fields": [
+                      {
+                        "name": {
+                          "value": "field1"
+                        },
+                        "value": {
+                          "Number": 10
+                        }
                       },
-                      "value": {
-                        "HexString": {
-                          "value": "AFAFAF"
+                      {
+                        "name": {
+                          "value": "field2"
+                        },
+                        "value": {
+                          "HexString": {
+                            "value": "AFAFAF"
+                          }
+                        }
+                      },
+                      {
+                        "name": {
+                          "value": "field3"
+                        },
+                        "value": {
+                          "Identifier": {
+                            "value": "quantity"
+                          }
                         }
                       }
-                    },
-                    {
-                      "name": {
-                        "value": "field3"
-                      },
-                      "value": {
-                        "Identifier": {
-                          "value": "quantity"
-                        }
-                      }
-                    }
-                  ],
-                  "spread": null
+                    ],
+                    "spread": null
+                  }
                 }
               }
             }
@@ -107,22 +109,26 @@
                   "type": {
                     "value": "MyRecord"
                   },
-                  "variant": null,
-                  "fields": [
-                    {
-                      "name": {
-                        "value": "field3"
-                      },
-                      "value": {
-                        "Identifier": {
-                          "value": "quantity"
+                  "case": {
+                    "name": {
+                      "value": "Default"
+                    },
+                    "fields": [
+                      {
+                        "name": {
+                          "value": "field3"
+                        },
+                        "value": {
+                          "Identifier": {
+                            "value": "quantity"
+                          }
                         }
                       }
-                    }
-                  ],
-                  "spread": {
-                    "Identifier": {
-                      "value": "source"
+                    ],
+                    "spread": {
+                      "Identifier": {
+                        "value": "source"
+                      }
                     }
                   }
                 }
@@ -137,47 +143,48 @@
   ],
   "types": [
     {
-      "Record": {
-        "name": "MyRecord",
-        "fields": [
-          {
-            "name": "field1",
-            "typ": "Int"
-          },
-          {
-            "name": "field2",
-            "typ": "Bytes"
-          }
-        ]
-      }
+      "name": "MyRecord",
+      "cases": [
+        {
+          "name": "Default",
+          "fields": [
+            {
+              "name": "field1",
+              "type": "Int"
+            },
+            {
+              "name": "field2",
+              "type": "Bytes"
+            }
+          ]
+        }
+      ]
     },
     {
-      "Variant": {
-        "name": "MyVariant",
-        "cases": [
-          {
-            "name": "Case1",
-            "fields": [
-              {
-                "name": "field1",
-                "typ": "Int"
-              },
-              {
-                "name": "field2",
-                "typ": "Bytes"
-              },
-              {
-                "name": "field3",
-                "typ": "Int"
-              }
-            ]
-          },
-          {
-            "name": "Case2",
-            "fields": []
-          }
-        ]
-      }
+      "name": "MyVariant",
+      "cases": [
+        {
+          "name": "Case1",
+          "fields": [
+            {
+              "name": "field1",
+              "type": "Int"
+            },
+            {
+              "name": "field2",
+              "type": "Bytes"
+            },
+            {
+              "name": "field3",
+              "type": "Int"
+            }
+          ]
+        },
+        {
+          "name": "Case2",
+          "fields": []
+        }
+      ]
     }
   ],
   "assets": [],

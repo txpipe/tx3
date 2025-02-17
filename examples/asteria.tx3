@@ -8,7 +8,7 @@ asset Ship = 0x33333.*;
 
 asset Pilot = 0x33333.*;
 
-record ShipState {
+type ShipState {
     pos_x: Int,
     pos_y: Int,
     ship_token_name: AssetName,
@@ -16,7 +16,7 @@ record ShipState {
     last_move_latest_time: PosixTime,
 }
 
-variant ShipCommand {
+type ShipCommand {
     MoveShip { 
         delta_x: Int,
         delta_y: Int,
