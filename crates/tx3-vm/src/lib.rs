@@ -104,6 +104,7 @@ struct PParams {
 }
 
 pub trait Ledger {
+    fn get_network(&self) -> pallas::ledger::addresses::Network;
     fn get_pparams(&self) -> Result<PParams, Error>;
     fn resolve_input(&self, input: &ir::InputQuery) -> Result<Vec<Utxo>, Error>;
 }
@@ -149,6 +150,10 @@ mod tests {
     struct TestContext;
 
     impl Ledger for TestContext {
+        fn get_network(&self) -> pallas::ledger::addresses::Network {
+            pallas::ledger::addresses::Network::Testnet
+        }
+
         fn get_pparams(&self) -> Result<PParams, Error> {
             Ok(PParams { a: 1, b: 2 })
         }
@@ -183,13 +188,19 @@ mod tests {
         }
     }
 
-    #[test]
-    fn smoke_test_transfer() {
+    fn load_example(name: &str) -> Result<ir::Program, Error> {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
-        let test_file = format!("{}/../../examples/transfer.tx3", manifest_dir);
+        let test_file = format!("{}/../../examples/{}.tx3", manifest_dir, name);
         let mut program = tx3_lang::parse::parse_file(&test_file).unwrap();
         tx3_lang::analyze::analyze(&mut program).unwrap();
         let ir = tx3_lang::lowering::lower(&mut program).unwrap();
+
+        Ok(ir)
+    }
+
+    #[test]
+    fn smoke_test_transfer() {
+        let program = load_example("transfer").unwrap();
 
         let parties = HashMap::from([
             ("Sender".to_string(), "addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2".to_string()),
@@ -200,12 +211,42 @@ mod tests {
 
         let context = TestContext;
 
-        let entrypoint = ir.txs.iter().find(|tx| tx.name == "transfer").unwrap();
+        let entrypoint = program.txs.iter().find(|tx| tx.name == "transfer").unwrap();
 
         let vm = Vm::new(entrypoint.clone(), parties, args, context).unwrap();
         let tx = vm.execute().unwrap();
 
         println!("{}", hex::encode(tx.payload));
         println!("{}", tx.fee);
+    }
+
+    #[test]
+    fn smoke_test_vesting() {
+        let program = load_example("vesting").unwrap();
+
+        let parties = HashMap::from([
+            ("Owner".to_string(), "addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2".to_string()),
+            ("Beneficiary".to_string(), "addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2".to_string()),
+        ]);
+
+        let args = HashMap::from([
+            ("quantity".to_string(), ArgValue::Int(100_000_000)),
+            ("until".to_string(), ArgValue::Int(1713288000)),
+        ]);
+
+        let context = TestContext;
+
+        println!("{:?}", program);
+
+        let entrypoint = program.txs.iter().find(|tx| tx.name == "lock").unwrap();
+
+        let vm = Vm::new(entrypoint.clone(), parties, args, context).unwrap();
+        let tx = vm.execute().unwrap();
+
+        println!("{}", hex::encode(&tx.payload));
+        println!("{}", tx.fee);
+
+        let tx = pallas::ledger::traverse::MultiEraTx::decode(&tx.payload).unwrap();
+        println!("{:?}", tx);
     }
 }

@@ -2,9 +2,9 @@ party Owner;
 
 party Beneficiary;
 
-policy TimeLock = 0xAFAFAF;
+policy TimeLock = 0x6b9c456aa650cb808a9ab54326e039d5235ed69f069c9664a8fe5b69;
 
-record State {
+type State {
   lock_until: Int,
   owner: Bytes,
   beneficiary: Bytes,
@@ -16,7 +16,7 @@ tx lock(
 ) {
     input source {
         from: Owner,
-        min_amount: quantity,
+        min_amount: Ada(quantity),
     }
     
     output target {

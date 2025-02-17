@@ -47,30 +47,34 @@
                   "type": {
                     "value": "SwapParams"
                   },
-                  "variant": null,
-                  "fields": [
-                    {
-                      "name": {
-                        "value": "ask"
-                      },
-                      "value": {
-                        "Identifier": {
-                          "value": "ask"
-                        }
-                      }
+                  "case": {
+                    "name": {
+                      "value": "Default"
                     },
-                    {
-                      "name": {
-                        "value": "bid"
-                      },
-                      "value": {
-                        "Identifier": {
+                    "fields": [
+                      {
+                        "name": {
                           "value": "ask"
+                        },
+                        "value": {
+                          "Identifier": {
+                            "value": "ask"
+                          }
+                        }
+                      },
+                      {
+                        "name": {
+                          "value": "bid"
+                        },
+                        "value": {
+                          "Identifier": {
+                            "value": "ask"
+                          }
                         }
                       }
-                    }
-                  ],
-                  "spread": null
+                    ],
+                    "spread": null
+                  }
                 }
               }
             }
@@ -124,82 +128,86 @@
                   "type": {
                     "value": "PoolState"
                   },
-                  "variant": null,
-                  "fields": [
-                    {
-                      "name": {
-                        "value": "pair_a"
-                      },
-                      "value": {
-                        "BinaryOp": {
-                          "left": {
-                            "PropertyAccess": {
-                              "object": {
-                                "value": "inputs"
-                              },
-                              "path": [
-                                {
-                                  "value": "pool"
-                                },
-                                {
-                                  "value": "pair_a"
-                                }
-                              ]
-                            }
-                          },
-                          "operator": "Subtract",
-                          "right": {
-                            "Identifier": {
-                              "value": "ask"
-                            }
-                          }
-                        }
-                      }
+                  "case": {
+                    "name": {
+                      "value": "Default"
                     },
-                    {
-                      "name": {
-                        "value": "pair_b"
-                      },
-                      "value": {
-                        "BinaryOp": {
-                          "left": {
-                            "PropertyAccess": {
-                              "object": {
-                                "value": "inputs"
-                              },
-                              "path": [
-                                {
-                                  "value": "pool"
+                    "fields": [
+                      {
+                        "name": {
+                          "value": "pair_a"
+                        },
+                        "value": {
+                          "BinaryOp": {
+                            "left": {
+                              "PropertyAccess": {
+                                "object": {
+                                  "value": "inputs"
                                 },
-                                {
-                                  "value": "pair_b"
-                                }
-                              ]
+                                "path": [
+                                  {
+                                    "value": "pool"
+                                  },
+                                  {
+                                    "value": "pair_a"
+                                  }
+                                ]
+                              }
+                            },
+                            "operator": "Subtract",
+                            "right": {
+                              "Identifier": {
+                                "value": "ask"
+                              }
                             }
-                          },
-                          "operator": "Add",
-                          "right": {
-                            "Identifier": {
-                              "value": "bid"
+                          }
+                        }
+                      },
+                      {
+                        "name": {
+                          "value": "pair_b"
+                        },
+                        "value": {
+                          "BinaryOp": {
+                            "left": {
+                              "PropertyAccess": {
+                                "object": {
+                                  "value": "inputs"
+                                },
+                                "path": [
+                                  {
+                                    "value": "pool"
+                                  },
+                                  {
+                                    "value": "pair_b"
+                                  }
+                                ]
+                              }
+                            },
+                            "operator": "Add",
+                            "right": {
+                              "Identifier": {
+                                "value": "bid"
+                              }
                             }
                           }
                         }
                       }
-                    }
-                  ],
-                  "spread": {
-                    "PropertyAccess": {
-                      "object": {
-                        "value": "inputs"
-                      },
-                      "path": [
-                        {
-                          "value": "pool"
+                    ],
+                    "spread": {
+                      "PropertyAccess": {
+                        "object": {
+                          "value": "inputs"
                         },
-                        {
-                          "value": "datum"
-                        }
-                      ]
+                        "path": [
+                          {
+                            "value": "pool"
+                          },
+                          {
+                            "value": "datum"
+                          }
+                        ]
+                      }
                     }
                   }
                 }
@@ -270,42 +278,48 @@
   ],
   "types": [
     {
-      "Record": {
-        "name": "PoolState",
-        "fields": [
-          {
-            "name": "pair_a",
-            "typ": {
-              "Custom": {
-                "value": "Token"
+      "name": "PoolState",
+      "cases": [
+        {
+          "name": "Default",
+          "fields": [
+            {
+              "name": "pair_a",
+              "type": {
+                "Custom": {
+                  "value": "Token"
+                }
+              }
+            },
+            {
+              "name": "pair_b",
+              "type": {
+                "Custom": {
+                  "value": "Token"
+                }
               }
             }
-          },
-          {
-            "name": "pair_b",
-            "typ": {
-              "Custom": {
-                "value": "Token"
-              }
-            }
-          }
-        ]
-      }
+          ]
+        }
+      ]
     },
     {
-      "Record": {
-        "name": "SwapParams",
-        "fields": [
-          {
-            "name": "amount",
-            "typ": "Int"
-          },
-          {
-            "name": "ratio",
-            "typ": "Int"
-          }
-        ]
-      }
+      "name": "SwapParams",
+      "cases": [
+        {
+          "name": "Default",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "Int"
+            },
+            {
+              "name": "ratio",
+              "type": "Int"
+            }
+          ]
+        }
+      ]
     }
   ],
   "assets": [],

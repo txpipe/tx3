@@ -1,11 +1,11 @@
 party MyParty;
 
-record MyRecord {
+type MyRecord {
     field1: Int,
     field2: Bytes,
 }
 
-variant MyVariant {
+type MyVariant {
     Case1 {
         field1: Int,
         field2: Bytes,

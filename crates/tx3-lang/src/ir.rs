@@ -1,7 +1,21 @@
+use crate::{
+    analyze::Symbol,
+    ast::{self, PolicyDef},
+};
+
 #[derive(Debug, Clone)]
 pub struct StructExpr {
     pub constructor: usize,
     pub fields: Vec<Expression>,
+}
+
+impl StructExpr {
+    pub fn unit() -> Self {
+        Self {
+            constructor: 0,
+            fields: vec![],
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -30,6 +44,7 @@ pub enum Expression {
     Bytes(Vec<u8>),
     Number(i128),
     Address(String),
+    Policy(String),
     BuildAsset(AssetConstructor),
     EvalParty(String),
     EvalParameter(String),

@@ -1,10 +1,13 @@
 use std::str::FromStr;
 
 use pallas::{
-    codec::utils::Bytes,
-    ledger::addresses::Address as PallasAddress,
-    ledger::primitives::{conway, Hash, NonEmptyKeyValuePairs, PlutusData, PositiveCoin},
+    codec::utils::{Bytes, CborWrap},
+    ledger::{
+        addresses::Address as PallasAddress,
+        primitives::{conway, Hash, NonEmptyKeyValuePairs, PlutusData, PositiveCoin},
+    },
 };
+use plutus_data::IntoData as _;
 
 use super::*;
 
@@ -44,6 +47,21 @@ fn coerce_data_into_bytes(data: &PlutusData) -> Result<Vec<u8>, Error> {
 fn coerce_string_into_address(value: &str) -> Result<pallas::ledger::addresses::Address, Error> {
     pallas::ledger::addresses::Address::from_str(value)
         .map_err(|_| Error::CoerceError(value.to_string(), "Address".to_string()))
+}
+
+fn coerce_policy_into_address(
+    hash: &str,
+    network: pallas::ledger::addresses::Network,
+) -> Result<pallas::ledger::addresses::Address, Error> {
+    let policy = Hash::<28>::from_str(hash).unwrap();
+
+    let address = pallas::ledger::addresses::ShelleyAddress::new(
+        network,
+        pallas::ledger::addresses::ShelleyPaymentPart::Script(policy),
+        pallas::ledger::addresses::ShelleyDelegationPart::Null,
+    );
+
+    Ok(address.into())
 }
 
 fn coerce_arg_into_number(arg: &ArgValue) -> Result<i128, Error> {
@@ -91,13 +109,33 @@ impl<L: Ledger> Vm<L> {
 
     fn eval_data_expr(&mut self, ir: &ir::Expression) -> Result<PlutusData, Error> {
         match ir {
-            ir::Expression::Struct(_) => todo!(),
+            ir::Expression::Struct(x) => {
+                let fields = x
+                    .fields
+                    .iter()
+                    .map(|f| self.eval_data_expr(f))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                Ok(plutus_data::constr(x.constructor as u64, fields))
+            }
             ir::Expression::Bytes(_) => todo!(),
             ir::Expression::Number(_) => todo!(),
             ir::Expression::Address(_) => todo!(),
             ir::Expression::BuildAsset(_) => todo!(),
-            ir::Expression::EvalParty(_) => todo!(),
-            ir::Expression::EvalParameter(_) => todo!(),
+            ir::Expression::EvalParty(x) => {
+                let party = self.resolve_party(x)?;
+                let address = coerce_string_into_address(&party)?;
+                Ok(address.to_vec().into_data())
+            }
+            ir::Expression::EvalParameter(x) => {
+                let arg = self.resolve_parameter(x)?;
+
+                match arg {
+                    ArgValue::Int(x) => Ok(x.into_data()),
+                    ArgValue::Bool(_) => todo!(),
+                    ArgValue::String(_) => todo!(),
+                }
+            }
             ir::Expression::EvalInputDatum(_) => todo!(),
             ir::Expression::EvalCustom(_) => todo!(),
             ir::Expression::EvalFees => todo!(),
@@ -210,6 +248,7 @@ impl<L: Ledger> Vm<L> {
                 let party = self.resolve_party(x)?;
                 coerce_string_into_address(&party)
             }
+            ir::Expression::Policy(x) => coerce_policy_into_address(x, self.ledger.get_network()),
             _ => Err(Error::InvalidAddressExpression(format!("{:?}", ir))),
         }
     }
@@ -229,11 +268,17 @@ impl<L: Ledger> Vm<L> {
             .transpose()?
             .ok_or(Error::MissingAmount)?;
 
+        let datum_option = ir
+            .datum
+            .as_ref()
+            .map(|x| self.eval_data_expr(x))
+            .transpose()?;
+
         let output = conway::TransactionOutput::PostAlonzo(conway::PostAlonzoTransactionOutput {
             address: address.to_vec().into(),
             value,
-            datum_option: None, // TODO: add datum
-            script_ref: None,   // TODO: add script ref
+            datum_option: datum_option.map(|x| conway::DatumOption::Data(CborWrap(x))),
+            script_ref: None, // TODO: add script ref
         });
 
         Ok(output)

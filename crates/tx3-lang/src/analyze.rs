@@ -3,18 +3,25 @@
 //! This module takes an AST and performs semantic analysis on it. It checks for
 //! duplicate definitions, unknown symbols, and other semantic errors.
 
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
+use std::{collections::HashMap, rc::Rc};
+
+use thiserror::Error;
 
 use crate::ast::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Error, Debug)]
 pub enum Error {
+    #[error("duplicate definition: {0}")]
     DuplicateDefinition(String),
+
+    #[error("not in scope: {0}")]
     NotInScope(String),
+
+    #[error("needs parent scope")]
+    NeedsParentScope,
+
+    #[error("invalid symbol, expected {0}, got {1}")]
+    InvalidSymbol(&'static str, String),
 }
 
 trait Analyzable {
@@ -48,9 +55,60 @@ impl Analyzable for DataBinaryOp {
     }
 }
 
+impl Analyzable for RecordConstructorField {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        self.name.analyze(parent.clone())?;
+        self.value.analyze(parent.clone())?;
+
+        Ok(())
+    }
+}
+
+impl Analyzable for VariantCaseConstructor {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        self.name.analyze(parent.clone())?;
+
+        let mut scope = Scope::new(parent);
+
+        let case = match &self.name.symbol {
+            Some(Symbol::VariantCase(x)) => x,
+            Some(x) => return Err(Error::InvalidSymbol("VariantCase", self.name.value.clone())),
+            _ => unreachable!(),
+        };
+
+        for field in case.fields.iter() {
+            scope.track_record_field(field);
+        }
+
+        self.scope = Some(Rc::new(scope));
+
+        for field in self.fields.iter_mut() {
+            field.analyze(self.scope.clone())?;
+        }
+
+        Ok(())
+    }
+}
+
 impl Analyzable for DatumConstructor {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.r#type.analyze(parent)?;
+        self.r#type.analyze(parent.clone())?;
+
+        let mut scope = Scope::new(parent);
+
+        let type_def = match &self.r#type.symbol {
+            Some(Symbol::TypeDef(x)) => x,
+            Some(x) => return Err(Error::InvalidSymbol("TypeDef", self.r#type.value.clone())),
+            _ => unreachable!(),
+        };
+
+        for case in type_def.cases.iter() {
+            scope.track_variant_case(case);
+        }
+
+        self.scope = Some(Rc::new(scope));
+
+        self.case.analyze(self.scope.clone())?;
 
         Ok(())
     }
@@ -125,10 +183,8 @@ impl Analyzable for Identifier {
 impl Analyzable for Type {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
         match self {
-            Type::Int => todo!(),
-            Type::Bool => todo!(),
-            Type::Bytes => todo!(),
             Type::Custom(x) => x.analyze(parent),
+            _ => Ok(()),
         }
     }
 }
@@ -179,10 +235,33 @@ impl Analyzable for OutputBlock {
     }
 }
 
-static FEES: std::sync::LazyLock<ParamDef> = std::sync::LazyLock::new(|| ParamDef {
-    name: "fees".to_string(),
-    r#type: Type::Int,
-});
+impl Analyzable for RecordField {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        self.r#type.analyze(parent.clone())?;
+
+        Ok(())
+    }
+}
+
+impl Analyzable for VariantCase {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        for field in self.fields.iter_mut() {
+            field.analyze(parent.clone())?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Analyzable for TypeDef {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        for case in self.cases.iter_mut() {
+            case.analyze(parent.clone())?;
+        }
+
+        Ok(())
+    }
+}
 
 impl Analyzable for TxDef {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
@@ -226,6 +305,10 @@ impl Analyzable for Program {
             scope.track_party_def(party);
         }
 
+        for policy in self.policies.iter() {
+            scope.track_policy_def(policy);
+        }
+
         scope.track_asset_def(&ADA);
 
         for asset in self.assets.iter() {
@@ -237,6 +320,10 @@ impl Analyzable for Program {
         }
 
         self.scope = Some(Rc::new(scope));
+
+        for type_def in self.types.iter_mut() {
+            type_def.analyze(self.scope.clone())?;
+        }
 
         for tx in self.txs.iter_mut() {
             tx.analyze(self.scope.clone())?;
@@ -261,12 +348,21 @@ impl Scope {
     }
 
     pub fn track_type_def(&mut self, type_: &TypeDef) {
+        self.symbols
+            .insert(type_.name.clone(), Symbol::TypeDef(Box::new(type_.clone())));
+    }
+
+    pub fn track_variant_case(&mut self, case: &VariantCase) {
         self.symbols.insert(
-            match type_ {
-                TypeDef::Variant(x) => x.name.clone(),
-                TypeDef::Record(x) => x.name.clone(),
-            },
-            Symbol::TypeDef(Box::new(type_.clone())),
+            case.name.clone(),
+            Symbol::VariantCase(Box::new(case.clone())),
+        );
+    }
+
+    pub fn track_record_field(&mut self, field: &RecordField) {
+        self.symbols.insert(
+            field.name.clone(),
+            Symbol::RecordField(Box::new(field.clone())),
         );
     }
 
@@ -274,6 +370,13 @@ impl Scope {
         self.symbols.insert(
             party.name.clone(),
             Symbol::PartyDef(Box::new(party.clone())),
+        );
+    }
+
+    pub fn track_policy_def(&mut self, policy: &PolicyDef) {
+        self.symbols.insert(
+            policy.name.clone(),
+            Symbol::PolicyDef(Box::new(policy.clone())),
         );
     }
 
@@ -310,9 +413,35 @@ pub enum Symbol {
     ParamVar(String),
     Input(String),
     PartyDef(Box<PartyDef>),
+    PolicyDef(Box<PolicyDef>),
     AssetDef(Box<AssetDef>),
     TypeDef(Box<TypeDef>),
+    RecordField(Box<RecordField>),
+    VariantCase(Box<VariantCase>),
     Fees,
+}
+
+impl Symbol {
+    pub fn as_type_def(&self) -> Option<&TypeDef> {
+        match self {
+            Symbol::TypeDef(x) => Some(x.as_ref()),
+            _ => None,
+        }
+    }
+
+    pub fn as_variant_case(&self) -> Option<&VariantCase> {
+        match self {
+            Symbol::VariantCase(x) => Some(x.as_ref()),
+            _ => None,
+        }
+    }
+
+    pub fn as_field_def(&self) -> Option<&RecordField> {
+        match self {
+            Symbol::RecordField(x) => Some(x.as_ref()),
+            _ => None,
+        }
+    }
 }
 
 pub fn analyze(ast: &mut Program) -> Result<(), Error> {

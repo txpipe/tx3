@@ -86,32 +86,34 @@
                   "type": {
                     "value": "ShipCommand"
                   },
-                  "variant": {
-                    "value": "MoveShip"
-                  },
-                  "fields": [
-                    {
-                      "name": {
-                        "value": "delta_x"
-                      },
-                      "value": {
-                        "Identifier": {
-                          "value": "delta_x"
-                        }
-                      }
+                  "case": {
+                    "name": {
+                      "value": "MoveShip"
                     },
-                    {
-                      "name": {
-                        "value": "delta_y"
+                    "fields": [
+                      {
+                        "name": {
+                          "value": "delta_x"
+                        },
+                        "value": {
+                          "Identifier": {
+                            "value": "delta_x"
+                          }
+                        }
                       },
-                      "value": {
-                        "Identifier": {
+                      {
+                        "name": {
                           "value": "delta_y"
+                        },
+                        "value": {
+                          "Identifier": {
+                            "value": "delta_y"
+                          }
                         }
                       }
-                    }
-                  ],
-                  "spread": null
+                    ],
+                    "spread": null
+                  }
                 }
               }
             }
@@ -220,84 +222,86 @@
                   "type": {
                     "value": "ShipState"
                   },
-                  "variant": {
-                    "value": "Playing"
-                  },
-                  "fields": [
-                    {
-                      "name": {
-                        "value": "pos_x"
-                      },
-                      "value": {
-                        "BinaryOp": {
-                          "left": {
-                            "PropertyAccess": {
-                              "object": {
-                                "value": "inputs"
-                              },
-                              "path": [
-                                {
-                                  "value": "ship"
-                                },
-                                {
-                                  "value": "pos_x"
-                                }
-                              ]
-                            }
-                          },
-                          "operator": "Add",
-                          "right": {
-                            "Identifier": {
-                              "value": "delta_x"
-                            }
-                          }
-                        }
-                      }
+                  "case": {
+                    "name": {
+                      "value": "Playing"
                     },
-                    {
-                      "name": {
-                        "value": "pos_y"
-                      },
-                      "value": {
-                        "BinaryOp": {
-                          "left": {
-                            "PropertyAccess": {
-                              "object": {
-                                "value": "inputs"
-                              },
-                              "path": [
-                                {
-                                  "value": "ship"
+                    "fields": [
+                      {
+                        "name": {
+                          "value": "pos_x"
+                        },
+                        "value": {
+                          "BinaryOp": {
+                            "left": {
+                              "PropertyAccess": {
+                                "object": {
+                                  "value": "inputs"
                                 },
-                                {
-                                  "value": "pos_y"
-                                }
-                              ]
+                                "path": [
+                                  {
+                                    "value": "ship"
+                                  },
+                                  {
+                                    "value": "pos_x"
+                                  }
+                                ]
+                              }
+                            },
+                            "operator": "Add",
+                            "right": {
+                              "Identifier": {
+                                "value": "delta_x"
+                              }
                             }
-                          },
-                          "operator": "Add",
-                          "right": {
-                            "Identifier": {
-                              "value": "delta_y"
+                          }
+                        }
+                      },
+                      {
+                        "name": {
+                          "value": "pos_y"
+                        },
+                        "value": {
+                          "BinaryOp": {
+                            "left": {
+                              "PropertyAccess": {
+                                "object": {
+                                  "value": "inputs"
+                                },
+                                "path": [
+                                  {
+                                    "value": "ship"
+                                  },
+                                  {
+                                    "value": "pos_y"
+                                  }
+                                ]
+                              }
+                            },
+                            "operator": "Add",
+                            "right": {
+                              "Identifier": {
+                                "value": "delta_y"
+                              }
                             }
                           }
                         }
                       }
-                    }
-                  ],
-                  "spread": {
-                    "PropertyAccess": {
-                      "object": {
-                        "value": "inputs"
-                      },
-                      "path": [
-                        {
-                          "value": "ship"
+                    ],
+                    "spread": {
+                      "PropertyAccess": {
+                        "object": {
+                          "value": "inputs"
                         },
-                        {
-                          "value": "datum"
-                        }
-                      ]
+                        "path": [
+                          {
+                            "value": "ship"
+                          },
+                          {
+                            "value": "datum"
+                          }
+                        ]
+                      }
                     }
                   }
                 }
@@ -385,80 +389,81 @@
   ],
   "types": [
     {
-      "Record": {
-        "name": "ShipState",
-        "fields": [
-          {
-            "name": "pos_x",
-            "typ": "Int"
-          },
-          {
-            "name": "pos_y",
-            "typ": "Int"
-          },
-          {
-            "name": "ship_token_name",
-            "typ": {
-              "Custom": {
-                "value": "AssetName"
+      "name": "ShipState",
+      "cases": [
+        {
+          "name": "Default",
+          "fields": [
+            {
+              "name": "pos_x",
+              "type": "Int"
+            },
+            {
+              "name": "pos_y",
+              "type": "Int"
+            },
+            {
+              "name": "ship_token_name",
+              "type": {
+                "Custom": {
+                  "value": "AssetName"
+                }
+              }
+            },
+            {
+              "name": "pilot_token_name",
+              "type": {
+                "Custom": {
+                  "value": "AssetName"
+                }
+              }
+            },
+            {
+              "name": "last_move_latest_time",
+              "type": {
+                "Custom": {
+                  "value": "PosixTime"
+                }
               }
             }
-          },
-          {
-            "name": "pilot_token_name",
-            "typ": {
-              "Custom": {
-                "value": "AssetName"
-              }
-            }
-          },
-          {
-            "name": "last_move_latest_time",
-            "typ": {
-              "Custom": {
-                "value": "PosixTime"
-              }
-            }
-          }
-        ]
-      }
+          ]
+        }
+      ]
     },
     {
-      "Variant": {
-        "name": "ShipCommand",
-        "cases": [
-          {
-            "name": "MoveShip",
-            "fields": [
-              {
-                "name": "delta_x",
-                "typ": "Int"
-              },
-              {
-                "name": "delta_y",
-                "typ": "Int"
-              }
-            ]
-          },
-          {
-            "name": "GatherFuel",
-            "fields": [
-              {
-                "name": "amount",
-                "typ": "Int"
-              }
-            ]
-          },
-          {
-            "name": "MineAsteria",
-            "fields": []
-          },
-          {
-            "name": "Quit",
-            "fields": []
-          }
-        ]
-      }
+      "name": "ShipCommand",
+      "cases": [
+        {
+          "name": "MoveShip",
+          "fields": [
+            {
+              "name": "delta_x",
+              "type": "Int"
+            },
+            {
+              "name": "delta_y",
+              "type": "Int"
+            }
+          ]
+        },
+        {
+          "name": "GatherFuel",
+          "fields": [
+            {
+              "name": "amount",
+              "type": "Int"
+            }
+          ]
+        },
+        {
+          "name": "MineAsteria",
+          "fields": []
+        },
+        {
+          "name": "Quit",
+          "fields": []
+        }
+      ]
     }
   ],
   "assets": [
