@@ -8,6 +8,7 @@ use pallas::{
     },
 };
 use plutus_data::IntoData as _;
+use tx3_lang::ir;
 
 use super::*;
 
@@ -180,12 +181,28 @@ impl<L: Ledger> Vm<L> {
         Ok(value!(amount as u64))
     }
 
+    fn eval_minutxo_constructor(
+        &mut self,
+        ctr: &ir::AssetConstructor,
+    ) -> Result<conway::Value, Error> {
+        // let ratio = self.ledger.get_pparams()?.coins_per_utxo_byte;
+        // let output = self.eval.find_output(ctr.name.as_str())?;
+        // let serialized = pallas_codec::minicbor::to_vec(output).unwrap();
+        // let min_lovelace = (160u64 + serialized.len() as u64) * ratio;
+        //
+        // Ok(value!(min_lovelace as u64))
+
+        todo!()
+    }
+
     fn eval_asset_constructor(
         &mut self,
         ir: &ir::AssetConstructor,
     ) -> Result<conway::Value, Error> {
         if &ir.policy == "Ada" {
             self.eval_ada_constructor(ir)
+        } else if ir.policy == "minutxo" {
+            self.eval_minutxo_constructor(ir)
         } else {
             self.eval_native_asset_constructor(ir)
         }
@@ -417,6 +434,21 @@ impl<L: Ledger> Vm<L> {
         Ok(())
     }
 
+    fn build_tx(&mut self) -> Result<conway::Tx, Error> {
+        let transaction_body = self.eval_tx_body()?;
+        let transaction_witness_set = self.eval_witness_set()?;
+        let auxiliary_data = self.eval_auxiliary_data()?;
+
+        let tx = conway::Tx {
+            transaction_body,
+            transaction_witness_set,
+            auxiliary_data: auxiliary_data.into(),
+            success: true,
+        };
+
+        Ok(tx)
+    }
+
     fn eval_pass(&mut self) -> Result<(), Error> {
         let tx = self.build_tx()?;
 
@@ -431,21 +463,6 @@ impl<L: Ledger> Vm<L> {
         };
 
         Ok(())
-    }
-
-    fn build_tx(&mut self) -> Result<conway::Tx, Error> {
-        let transaction_body = self.eval_tx_body()?;
-        let transaction_witness_set = self.eval_witness_set()?;
-        let auxiliary_data = self.eval_auxiliary_data()?;
-
-        let tx = conway::Tx {
-            transaction_body,
-            transaction_witness_set,
-            auxiliary_data: auxiliary_data.into(),
-            success: true,
-        };
-
-        Ok(tx)
     }
 
     pub fn execute(mut self) -> Result<TxEval, Error> {

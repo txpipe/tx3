@@ -24,7 +24,88 @@ pub enum Error {
     InvalidSymbol(&'static str, String),
 }
 
-trait Analyzable {
+impl Scope {
+    pub fn new(parent: Option<Rc<Scope>>) -> Self {
+        Self {
+            symbols: HashMap::new(),
+            parent,
+        }
+    }
+
+    pub fn track_type_def(&mut self, type_: &TypeDef) {
+        self.symbols
+            .insert(type_.name.clone(), Symbol::TypeDef(Box::new(type_.clone())));
+    }
+
+    pub fn track_variant_case(&mut self, case: &VariantCase) {
+        self.symbols.insert(
+            case.name.clone(),
+            Symbol::VariantCase(Box::new(case.clone())),
+        );
+    }
+
+    pub fn track_record_field(&mut self, field: &RecordField) {
+        self.symbols.insert(
+            field.name.clone(),
+            Symbol::RecordField(Box::new(field.clone())),
+        );
+    }
+
+    pub fn track_party_def(&mut self, party: &PartyDef) {
+        self.symbols.insert(
+            party.name.clone(),
+            Symbol::PartyDef(Box::new(party.clone())),
+        );
+    }
+
+    pub fn track_policy_def(&mut self, policy: &PolicyDef) {
+        self.symbols.insert(
+            policy.name.clone(),
+            Symbol::PolicyDef(Box::new(policy.clone())),
+        );
+    }
+
+    pub fn track_asset_def(&mut self, asset: &AssetDef) {
+        self.symbols.insert(
+            asset.name.clone(),
+            Symbol::AssetDef(Box::new(asset.clone())),
+        );
+    }
+
+    pub fn track_param_var(&mut self, param: &str) {
+        self.symbols
+            .insert(param.to_string(), Symbol::ParamVar(param.to_string()));
+    }
+
+    pub fn track_input(&mut self, input: &InputBlock) {
+        self.symbols
+            .insert(input.name.clone(), Symbol::Input(input.name.clone()));
+    }
+
+    pub fn resolve(&self, name: &str) -> Result<Symbol, Error> {
+        if let Some(symbol) = self.symbols.get(name) {
+            Ok(symbol.clone())
+        } else if let Some(parent) = &self.parent {
+            parent.resolve(name)
+        } else {
+            Err(Error::NotInScope(name.to_string()))
+        }
+    }
+}
+
+/// A trait for types that can be semantically analyzed.
+///
+/// Types implementing this trait can validate their semantic correctness and
+/// resolve symbol references within a given scope.
+pub trait Analyzable {
+    /// Performs semantic analysis on the type.
+    ///
+    /// # Arguments
+    /// * `parent` - Optional parent scope containing symbol definitions
+    ///
+    /// # Returns
+    /// * `Ok(())` if analysis succeeds
+    /// * `Err(Error)` if any semantic errors are found
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error>;
 }
 
@@ -333,119 +414,21 @@ impl Analyzable for Program {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct Scope {
-    symbols: HashMap<String, Symbol>,
-    parent: Option<Rc<Scope>>,
-}
-
-impl Scope {
-    pub fn new(parent: Option<Rc<Scope>>) -> Self {
-        Self {
-            symbols: HashMap::new(),
-            parent,
-        }
-    }
-
-    pub fn track_type_def(&mut self, type_: &TypeDef) {
-        self.symbols
-            .insert(type_.name.clone(), Symbol::TypeDef(Box::new(type_.clone())));
-    }
-
-    pub fn track_variant_case(&mut self, case: &VariantCase) {
-        self.symbols.insert(
-            case.name.clone(),
-            Symbol::VariantCase(Box::new(case.clone())),
-        );
-    }
-
-    pub fn track_record_field(&mut self, field: &RecordField) {
-        self.symbols.insert(
-            field.name.clone(),
-            Symbol::RecordField(Box::new(field.clone())),
-        );
-    }
-
-    pub fn track_party_def(&mut self, party: &PartyDef) {
-        self.symbols.insert(
-            party.name.clone(),
-            Symbol::PartyDef(Box::new(party.clone())),
-        );
-    }
-
-    pub fn track_policy_def(&mut self, policy: &PolicyDef) {
-        self.symbols.insert(
-            policy.name.clone(),
-            Symbol::PolicyDef(Box::new(policy.clone())),
-        );
-    }
-
-    pub fn track_asset_def(&mut self, asset: &AssetDef) {
-        self.symbols.insert(
-            asset.name.clone(),
-            Symbol::AssetDef(Box::new(asset.clone())),
-        );
-    }
-
-    pub fn track_param_var(&mut self, param: &str) {
-        self.symbols
-            .insert(param.to_string(), Symbol::ParamVar(param.to_string()));
-    }
-
-    pub fn track_input(&mut self, input: &InputBlock) {
-        self.symbols
-            .insert(input.name.clone(), Symbol::Input(input.name.clone()));
-    }
-
-    pub fn resolve(&self, name: &str) -> Result<Symbol, Error> {
-        if let Some(symbol) = self.symbols.get(name) {
-            Ok(symbol.clone())
-        } else if let Some(parent) = &self.parent {
-            parent.resolve(name)
-        } else {
-            Err(Error::NotInScope(name.to_string()))
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Symbol {
-    ParamVar(String),
-    Input(String),
-    PartyDef(Box<PartyDef>),
-    PolicyDef(Box<PolicyDef>),
-    AssetDef(Box<AssetDef>),
-    TypeDef(Box<TypeDef>),
-    RecordField(Box<RecordField>),
-    VariantCase(Box<VariantCase>),
-    Fees,
-}
-
-impl Symbol {
-    pub fn as_type_def(&self) -> Option<&TypeDef> {
-        match self {
-            Symbol::TypeDef(x) => Some(x.as_ref()),
-            _ => None,
-        }
-    }
-
-    pub fn as_variant_case(&self) -> Option<&VariantCase> {
-        match self {
-            Symbol::VariantCase(x) => Some(x.as_ref()),
-            _ => None,
-        }
-    }
-
-    pub fn as_field_def(&self) -> Option<&RecordField> {
-        match self {
-            Symbol::RecordField(x) => Some(x.as_ref()),
-            _ => None,
-        }
-    }
-}
-
+/// Performs semantic analysis on a Tx3 program AST.
+///
+/// This function validates the entire program structure, checking for:
+/// - Duplicate definitions
+/// - Unknown symbol references
+/// - Type correctness
+/// - Other semantic constraints
+///
+/// # Arguments
+/// * `ast` - Mutable reference to the program AST to analyze
+///
+/// # Returns
+/// * `Ok(())` if analysis succeeds
+/// * `Err(Error)` if any semantic errors are found
 pub fn analyze(ast: &mut Program) -> Result<(), Error> {
     ast.analyze(None)?;
-
     Ok(())
 }

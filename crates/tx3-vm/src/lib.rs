@@ -1,8 +1,5 @@
-use std::collections::HashMap;
-
 use pallas::ledger::primitives::conway;
-
-use tx3_lang::{analyze::Symbol, ast, ir};
+use std::collections::HashMap;
 
 #[cfg(feature = "cardano")]
 mod cardano;
@@ -52,7 +49,7 @@ pub enum Error {
     InputsNotResolved,
 
     #[error("can't resolve symbol '{0:?}'")]
-    CantResolveSymbol(Symbol),
+    CantResolveSymbol(tx3_lang::ast::Symbol),
 
     #[error("invalid asset expression '{0}'")]
     InvalidAssetExpression(String),
@@ -100,18 +97,19 @@ pub type Address = String;
 struct PParams {
     a: u64,
     b: u64,
+    coins_per_utxo_byte: u64,
     // TODO: cost models, execution prices
 }
 
 pub trait Ledger {
     fn get_network(&self) -> pallas::ledger::addresses::Network;
     fn get_pparams(&self) -> Result<PParams, Error>;
-    fn resolve_input(&self, input: &ir::InputQuery) -> Result<Vec<Utxo>, Error>;
+    fn resolve_input(&self, input: &tx3_lang::ir::InputQuery) -> Result<Vec<Utxo>, Error>;
 }
 
 pub struct Vm<L: Ledger> {
     ledger: L,
-    entrypoint: ir::Tx,
+    entrypoint: tx3_lang::ir::Tx,
     parties: HashMap<String, Address>,
     inputs: HashMap<String, Vec<Utxo>>,
     args: HashMap<String, ArgValue>,
@@ -121,7 +119,7 @@ pub struct Vm<L: Ledger> {
 
 impl<L: Ledger> Vm<L> {
     pub fn new(
-        entrypoint: ir::Tx,
+        entrypoint: tx3_lang::ir::Tx,
         parties: HashMap<String, Address>,
         args: HashMap<String, ArgValue>,
         ledger: L,
@@ -147,6 +145,16 @@ impl<L: Ledger> Vm<L> {
 mod tests {
     use super::*;
 
+    tx3_lang::load_file!(TRANSFER, {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        format!("{manifest_dir}/../../examples/transfer.tx3")
+    });
+
+    tx3_lang::load_file!(VESTING, {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        format!("{manifest_dir}/../../examples/vesting.tx3")
+    });
+
     struct TestContext;
 
     impl Ledger for TestContext {
@@ -155,10 +163,14 @@ mod tests {
         }
 
         fn get_pparams(&self) -> Result<PParams, Error> {
-            Ok(PParams { a: 1, b: 2 })
+            Ok(PParams {
+                a: 1,
+                b: 2,
+                coins_per_utxo_byte: 1,
+            })
         }
 
-        fn resolve_input(&self, input: &ir::InputQuery) -> Result<Vec<Utxo>, Error> {
+        fn resolve_input(&self, input: &tx3_lang::ir::InputQuery) -> Result<Vec<Utxo>, Error> {
             Ok(vec![
                 (
                     conway::TransactionInput {
@@ -188,19 +200,9 @@ mod tests {
         }
     }
 
-    fn load_example(name: &str) -> Result<ir::Program, Error> {
-        let manifest_dir = env!("CARGO_MANIFEST_DIR");
-        let test_file = format!("{}/../../examples/{}.tx3", manifest_dir, name);
-        let mut program = tx3_lang::parse::parse_file(&test_file).unwrap();
-        tx3_lang::analyze::analyze(&mut program).unwrap();
-        let ir = tx3_lang::lowering::lower(&mut program).unwrap();
-
-        Ok(ir)
-    }
-
     #[test]
     fn smoke_test_transfer() {
-        let program = load_example("transfer").unwrap();
+        let program = TRANSFER;
 
         let parties = HashMap::from([
             ("Sender".to_string(), "addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2".to_string()),
@@ -222,7 +224,7 @@ mod tests {
 
     #[test]
     fn smoke_test_vesting() {
-        let program = load_example("vesting").unwrap();
+        let program = VESTING;
 
         let parties = HashMap::from([
             ("Owner".to_string(), "addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2".to_string()),
@@ -235,8 +237,6 @@ mod tests {
         ]);
 
         let context = TestContext;
-
-        println!("{:?}", program);
 
         let entrypoint = program.txs.iter().find(|tx| tx.name == "lock").unwrap();
 
