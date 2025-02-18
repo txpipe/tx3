@@ -1,4 +1,8 @@
-use crate::analyze::Symbol;
+//! Lowers the Tx3 language to the intermediate representation.
+//!
+//! This module takes an AST and performs lowering on it. It converts the AST
+//! into the intermediate representation (IR) of the Tx3 language.
+
 use crate::ast;
 use crate::ir;
 
@@ -39,7 +43,7 @@ fn expect_field_def(ident: &ast::Identifier) -> Result<&ast::RecordField, Error>
 }
 
 fn coerce_identifier_into_asset_def(identifier: &ast::Identifier) -> Result<ast::AssetDef, Error> {
-    if let Some(Symbol::AssetDef(x)) = &identifier.symbol {
+    if let Some(ast::Symbol::AssetDef(x)) = &identifier.symbol {
         Ok(x.as_ref().clone())
     } else {
         Err(Error::InvalidSymbol(identifier.value.clone(), "AssetDef"))
@@ -50,8 +54,8 @@ fn coerce_identifier_into_asset_expr(
     identifier: &ast::Identifier,
 ) -> Result<ir::Expression, Error> {
     match &identifier.symbol {
-        Some(Symbol::Input(x)) => Ok(ir::Expression::EvalInputAssets(x.clone())),
-        Some(Symbol::Fees) => Ok(ir::Expression::EvalFees),
+        Some(ast::Symbol::Input(x)) => Ok(ir::Expression::EvalInputAssets(x.clone())),
+        Some(ast::Symbol::Fees) => Ok(ir::Expression::EvalFees),
         _ => Err(Error::InvalidSymbol(identifier.value.clone(), "AssetExpr")),
     }
 }
@@ -139,9 +143,9 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::Constructor(x) => ir::Expression::Struct(x.into_lower()?),
             ast::DataExpr::Unit => ir::Expression::Struct(ir::StructExpr::unit()),
             ast::DataExpr::Identifier(x) => match &x.symbol {
-                Some(Symbol::ParamVar(x)) => ir::Expression::EvalParameter(x.clone()),
-                Some(Symbol::PartyDef(x)) => ir::Expression::EvalParty(x.name.clone()),
-                Some(Symbol::PolicyDef(x)) => x.into_lower()?,
+                Some(ast::Symbol::ParamVar(x)) => ir::Expression::EvalParameter(x.clone()),
+                Some(ast::Symbol::PartyDef(x)) => ir::Expression::EvalParty(x.name.clone()),
+                Some(ast::Symbol::PolicyDef(x)) => x.into_lower()?,
                 _ => {
                     dbg!(&x);
                     todo!();
@@ -284,6 +288,18 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
     Ok(ir)
 }
 
+/// Lowers the Tx3 language to the intermediate representation.
+///
+/// This function takes an AST and converts it into the intermediate
+/// representation (IR) of the Tx3 language.
+///
+/// # Arguments
+///
+/// * `ast` - The AST to lower
+///
+/// # Returns
+///
+/// * `Result<ir::Program, Error>` - The lowered intermediate representation
 pub fn lower(ast: &ast::Program) -> Result<ir::Program, Error> {
     let ir = ir::Program {
         txs: ast
@@ -304,8 +320,8 @@ mod tests {
     fn test_lower() {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let test_file = format!("{}/../../examples/transfer.tx3", manifest_dir);
-        let mut ast = crate::parse::parse_file(&test_file).unwrap();
-        crate::analyze::analyze(&mut ast).unwrap();
+        let mut ast = crate::parsing::parse_file(&test_file).unwrap();
+        crate::analyzing::analyze(&mut ast).unwrap();
         let ir = lower(&ast).unwrap();
 
         dbg!(ir);

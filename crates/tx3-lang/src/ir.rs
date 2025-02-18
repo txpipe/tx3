@@ -1,7 +1,12 @@
-use crate::{
-    analyze::Symbol,
-    ast::{self, PolicyDef},
-};
+//! The Tx3 language intermediate representation (IR).
+//!
+//! This module defines the intermediate representation (IR) for the Tx3
+//! language. It provides the structure for representing Tx3 programs in a more
+//! abstract form, suitable for further processing or execution.
+//!
+//! This module is not intended to be used directly by end-users. See
+//! [`lower`](crate::lower) for lowering an AST to the intermediate
+//! representation.
 
 #[derive(Debug, Clone)]
 pub struct StructExpr {
