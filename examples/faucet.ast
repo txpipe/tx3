@@ -1,0 +1,140 @@
+{
+  "txs": [
+    {
+      "name": "claim_with_password",
+      "parameters": {
+        "parameters": [
+          {
+            "name": "password_hash",
+            "type": "Bytes"
+          },
+          {
+            "name": "quantity",
+            "type": "Int"
+          }
+        ]
+      },
+      "inputs": [
+        {
+          "name": "provided_gas",
+          "is_many": false,
+          "fields": [
+            {
+              "From": {
+                "Identifier": {
+                  "value": "Requester"
+                }
+              }
+            },
+            {
+              "MinAmount": {
+                "Identifier": {
+                  "value": "fees"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": null,
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "Requester"
+                }
+              }
+            },
+            {
+              "Amount": {
+                "BinaryOp": {
+                  "left": {
+                    "BinaryOp": {
+                      "left": {
+                        "Identifier": {
+                          "value": "provided_gas"
+                        }
+                      },
+                      "operator": "Subtract",
+                      "right": {
+                        "Identifier": {
+                          "value": "fees"
+                        }
+                      }
+                    }
+                  },
+                  "operator": "Add",
+                  "right": {
+                    "Constructor": {
+                      "type": {
+                        "value": "MyToken"
+                      },
+                      "amount": {
+                        "Identifier": {
+                          "value": "quantity"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "burn": null,
+      "mint": {
+        "fields": [
+          {
+            "Amount": {
+              "Constructor": {
+                "type": {
+                  "value": "MyToken"
+                },
+                "amount": {
+                  "Identifier": {
+                    "value": "quantity"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "Redeemer": {
+              "Identifier": {
+                "value": "password_hash"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [],
+  "assets": [
+    {
+      "name": "MyToken",
+      "policy": {
+        "value": "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe"
+      },
+      "asset_name": "MYTOKEN"
+    }
+  ],
+  "parties": [
+    {
+      "name": "Requester"
+    }
+  ],
+  "policies": [
+    {
+      "name": "PasswordPolicy",
+      "value": {
+        "HexString": {
+          "value": "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe"
+        }
+      }
+    }
+  ]
+}

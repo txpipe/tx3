@@ -4,9 +4,9 @@ party Game;
 
 asset Fuel = 0x11111.FUEL;
 
-asset Ship = 0x33333.*;
+asset Ship = 0x33333.SHIP;
 
-asset Pilot = 0x33333.*;
+asset Pilot = 0x33333.PILOT;
 
 type ShipState {
     pos_x: Int,

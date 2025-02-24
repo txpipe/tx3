@@ -269,26 +269,37 @@ impl AstNode for OutputBlock {
     }
 }
 
+impl AstNode for MintBlockField {
+    const RULE: Rule = Rule::mint_block_field;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        match pair.as_rule() {
+            Rule::mint_block_amount => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = MintBlockField::Amount(AssetExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            Rule::mint_block_redeemer => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = MintBlockField::Redeemer(DataExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            x => unreachable!("Unexpected rule in output_block_field: {:?}", x),
+        }
+    }
+}
+
 impl AstNode for MintBlock {
     const RULE: Rule = Rule::mint_block;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         let inner = pair.into_inner();
 
-        let mut amount = None;
+        let fields = inner
+            .map(|x| MintBlockField::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
 
-        for item in inner {
-            match item.as_rule() {
-                Rule::mint_block_amount => {
-                    amount = Some(AssetExpr::parse(item.into_inner().next().unwrap())?.into());
-                }
-                x => unreachable!("Unexpected rule in mint_block: {:?}", x),
-            }
-        }
-
-        Ok(MintBlock {
-            amount: amount.unwrap(),
-        })
+        Ok(MintBlock { fields })
     }
 }
 
@@ -298,20 +309,11 @@ impl AstNode for BurnBlock {
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         let inner = pair.into_inner();
 
-        let mut amount = None;
+        let fields = inner
+            .map(|x| MintBlockField::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
 
-        for item in inner {
-            match item.as_rule() {
-                Rule::burn_block_amount => {
-                    amount = Some(AssetExpr::parse(item.into_inner().next().unwrap())?.into());
-                }
-                x => unreachable!("Unexpected rule in burn_block: {:?}", x),
-            }
-        }
-
-        Ok(BurnBlock {
-            amount: amount.unwrap(),
-        })
+        Ok(BurnBlock { fields })
     }
 }
 
@@ -364,12 +366,10 @@ impl AstNode for AssetConstructor {
 
         let r#type = Identifier::parse(inner.next().unwrap())?;
         let amount = DataExpr::parse(inner.next().unwrap())?;
-        let name = inner.next().map(|x| DataExpr::parse(x)).transpose()?;
 
         Ok(AssetConstructor {
             r#type,
             amount: Box::new(amount),
-            asset_name: name.map(|x| Box::new(x)),
         })
     }
 }
@@ -725,8 +725,8 @@ impl AstNode for AssetDef {
         let mut inner = pair.into_inner();
 
         let identifier = inner.next().unwrap().as_str().to_string();
-        let policy = inner.next().unwrap().as_str().to_string();
-        let asset_name = inner.next().map(|x| x.as_str().to_string());
+        let policy = HexStringLiteral::parse(inner.next().unwrap())?;
+        let asset_name = inner.next().unwrap().as_str().to_string();
 
         Ok(AssetDef {
             name: identifier,
@@ -736,12 +736,55 @@ impl AstNode for AssetDef {
     }
 }
 
+/// Parses a Tx3 source file into a Program AST.
+///
+/// # Arguments
+///
+/// * `path` - Path to the Tx3 source file to parse
+///
+/// # Returns
+///
+/// * `Result<Program, Error>` - The parsed Program AST or an error
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The file cannot be read
+/// - The file contents are not valid Tx3 syntax
+/// - The AST construction fails
+///
+/// # Example
+///
+/// ```no_run
+/// let program = parse_file("path/to/program.tx3").unwrap();
+/// ```
 pub fn parse_file(path: &str) -> Result<Program, Error> {
     let input = std::fs::read_to_string(path)?;
     let pairs = Tx3Grammar::parse(Rule::program, &input)?;
     Ok(Program::parse(pairs.into_iter().next().unwrap())?)
 }
 
+/// Parses a Tx3 source string into a Program AST.
+///
+/// # Arguments
+///
+/// * `input` - String containing Tx3 source code
+///
+/// # Returns
+///
+/// * `Result<Program, Error>` - The parsed Program AST or an error
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The input string is not valid Tx3 syntax
+/// - The AST construction fails
+///
+/// # Example
+///
+/// ```
+/// let program = parse_string("tx swap() {}").unwrap();
+/// ```
 pub fn parse_string(input: &str) -> Result<Program, Error> {
     let pairs = Tx3Grammar::parse(Rule::program, input)?;
     Ok(Program::parse(pairs.into_iter().next().unwrap())?)
@@ -905,26 +948,38 @@ mod tests {
     );
 
     input_to_ast_check!(
+        AssetDef,
+        "hex_hex",
+        "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.0xef7a1ceb;",
+        AssetDef {
+            name: "MyToken".to_string(),
+            policy: HexStringLiteral::new(
+                "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
+            ),
+            asset_name: "0xef7a1ceb".to_string(),
+        }
+    );
+
+    input_to_ast_check!(
+        AssetDef,
+        "hex_ascii",
+        "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.MYTOKEN;",
+        AssetDef {
+            name: "MyToken".to_string(),
+            policy: HexStringLiteral::new(
+                "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
+            ),
+            asset_name: "MYTOKEN".to_string(),
+        }
+    );
+
+    input_to_ast_check!(
         AssetConstructor,
         "type_and_literal",
         "MyToken(15)",
         AssetConstructor {
             r#type: Identifier::new("MyToken"),
             amount: Box::new(DataExpr::Number(15)),
-            asset_name: None,
-        }
-    );
-
-    input_to_ast_check!(
-        AssetConstructor,
-        "type_and_literal_with_name",
-        "MyClass(15, \"TokenName\")",
-        AssetConstructor {
-            r#type: Identifier::new("MyClass"),
-            amount: Box::new(DataExpr::Number(15)),
-            asset_name: Some(Box::new(DataExpr::String(StringLiteral::new(
-                "TokenName".to_string(),
-            )))),
         }
     );
 
@@ -1042,7 +1097,6 @@ mod tests {
                 OutputBlockField::Amount(Box::new(AssetExpr::Constructor(AssetConstructor {
                     r#type: Identifier::new("Ada"),
                     amount: Box::new(DataExpr::Number(100)),
-                    asset_name: None,
                 }))),
             ],
         }
@@ -1095,6 +1149,5 @@ mod tests {
 
     test_parsing!(vesting);
 
-    // TODO
-    // test_parsing!(faucet);
+    test_parsing!(faucet);
 }

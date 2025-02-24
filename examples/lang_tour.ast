@@ -39,8 +39,7 @@
                     "Identifier": {
                       "value": "quantity"
                     }
-                  },
-                  "asset_name": null
+                  }
                 }
               }
             },
