@@ -1,0 +1,985 @@
+use std::collections::{HashMap, HashSet};
+
+use crate::{
+    ast,
+    ir::{self, BinaryOp},
+    ArgValue, Utxo,
+};
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("cannot coerce {0:?} into {1}")]
+    CoerceError(ArgValue, String),
+
+    #[error("invalid binary operation {0:?}")]
+    InvalidBinaryOp(BinaryOp),
+}
+
+fn coerce_arg_into_address(arg: ArgValue) -> Result<Vec<u8>, Error> {
+    match arg {
+        ArgValue::Address(x) => Ok(x),
+        _ => Err(Error::CoerceError(arg, "Address".to_string())),
+    }
+}
+
+fn coerce_arg_into_utxo(arg: ArgValue) -> Result<Utxo, Error> {
+    match arg {
+        ArgValue::UtxoSet(x) if x.len() == 1 => Ok(x.into_iter().next().unwrap()),
+        _ => Err(Error::CoerceError(arg, "UtxoSet".to_string())),
+    }
+}
+
+fn coerce_arg_into_utxo_set(arg: ArgValue) -> Result<HashSet<Utxo>, Error> {
+    match arg {
+        ArgValue::UtxoSet(x) => Ok(x),
+        _ => Err(Error::CoerceError(arg, "UtxoSet".to_string())),
+    }
+}
+
+pub trait Apply: Sized + std::fmt::Debug {
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error>;
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error>;
+    fn apply_fees(self, fees: u64) -> Result<Self, Error>;
+    fn is_constant(&self) -> bool;
+    fn params(&self) -> HashMap<String, ast::Type>;
+    fn queries(&self) -> HashMap<String, ir::InputQuery>;
+
+    fn reduce_self(self) -> Result<Self, Error>;
+    fn reduce_nested(self) -> Result<Self, Error>;
+
+    fn reduce(self) -> Result<Self, Error> {
+        let reduced = self.reduce_nested()?;
+
+        if reduced.is_constant() {
+            reduced.reduce_self()
+        } else {
+            Ok(reduced)
+        }
+    }
+}
+
+impl<T> Apply for Option<T>
+where
+    T: Apply,
+{
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        self.map(|x| x.apply_args(args)).transpose()
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        self.map(|x| x.apply_inputs(args)).transpose()
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        self.map(|x| x.apply_fees(fees)).transpose()
+    }
+
+    fn is_constant(&self) -> bool {
+        match self {
+            Some(x) => x.is_constant(),
+            None => true,
+        }
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        match self {
+            Some(x) => x.params(),
+            None => HashMap::new(),
+        }
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        match self {
+            Some(x) => x.queries(),
+            None => HashMap::new(),
+        }
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(self.map(|x| x.reduce()).transpose()?)
+    }
+}
+
+impl<T> Apply for Box<T>
+where
+    T: Apply,
+{
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        let x = *self;
+        Ok(Box::new(x.apply_args(args)?))
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        let x = *self;
+        Ok(Box::new(x.apply_inputs(args)?))
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        let x = *self;
+        Ok(Box::new(x.apply_fees(fees)?))
+    }
+
+    fn is_constant(&self) -> bool {
+        self.as_ref().is_constant()
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        self.as_ref().params()
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        self.as_ref().queries()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        let x = (*self).reduce()?;
+        Ok(Box::new(x))
+    }
+}
+
+impl<T> Apply for Vec<T>
+where
+    T: Apply,
+{
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        self.into_iter().map(|x| x.apply_args(args)).collect()
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        self.into_iter().map(|x| x.apply_inputs(args)).collect()
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        self.into_iter().map(|x| x.apply_fees(fees)).collect()
+    }
+
+    fn is_constant(&self) -> bool {
+        self.iter().all(|x| x.is_constant())
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        // TODO: what happens if there's a conflict on types?
+
+        self.iter()
+            .map(|x| x.params())
+            .fold(HashMap::new(), |mut acc, map| {
+                acc.extend(map);
+                acc
+            })
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        self.iter()
+            .map(|x| x.queries())
+            .fold(HashMap::new(), |mut acc, map| {
+                acc.extend(map);
+                acc
+            })
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        let reduced = self
+            .into_iter()
+            .map(|x| x.reduce())
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(reduced)
+    }
+}
+
+impl Apply for ir::StructExpr {
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            constructor: self.constructor,
+            fields: self
+                .fields
+                .into_iter()
+                .map(|x| x.apply_args(args))
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            constructor: self.constructor,
+            fields: self
+                .fields
+                .into_iter()
+                .map(|x| x.apply_inputs(args))
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            constructor: self.constructor,
+            fields: self
+                .fields
+                .into_iter()
+                .map(|x| x.apply_fees(fees))
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.fields.iter().all(|x| x.is_constant())
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        self.fields
+            .iter()
+            .map(|x| x.params())
+            .fold(HashMap::new(), |mut acc, map| {
+                acc.extend(map);
+                acc
+            })
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        // structs don't have queries
+        HashMap::new()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            constructor: self.constructor,
+            fields: self
+                .fields
+                .into_iter()
+                .map(|x| x.reduce())
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+}
+
+impl Apply for ir::AssetExpr {
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            policy: self.policy,
+            asset_name: self.asset_name.apply_args(args)?,
+            amount: self.amount.apply_args(args)?,
+        })
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            policy: self.policy,
+            asset_name: self.asset_name.apply_inputs(args)?,
+            amount: self.amount.apply_inputs(args)?,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            policy: self.policy,
+            asset_name: self.asset_name.apply_fees(fees)?,
+            amount: self.amount.apply_fees(fees)?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.asset_name.is_constant() && self.amount.is_constant()
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        let mut params = HashMap::new();
+        params.extend(self.asset_name.params());
+        params.extend(self.amount.params());
+        params
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        // assets don't have queries
+        HashMap::new()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            policy: self.policy,
+            asset_name: self.asset_name.reduce()?,
+            amount: self.amount.reduce()?,
+        })
+    }
+}
+
+impl Apply for ir::BinaryOp {
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        let left = self.left.apply_args(args)?;
+        let right = self.right.apply_args(args)?;
+
+        let op = Self {
+            left,
+            right,
+            op: self.op,
+        };
+
+        // TODO: reduce if both sides are constants
+
+        Ok(op)
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        let left = self.left.apply_inputs(args)?;
+        let right = self.right.apply_inputs(args)?;
+
+        Ok(Self {
+            left,
+            right,
+            op: self.op,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            left: self.left.apply_fees(fees)?,
+            right: self.right.apply_fees(fees)?,
+            op: self.op,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.left.is_constant() && self.right.is_constant()
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        let mut params = HashMap::new();
+        params.extend(self.left.params());
+        params.extend(self.right.params());
+        params
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        // binary ops don't have queries
+        HashMap::new()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            left: self.left.reduce()?,
+            right: self.right.reduce()?,
+            op: self.op,
+        })
+    }
+}
+
+fn build_assets(aggregated: HashMap<AssetClass, i128>) -> Vec<ir::AssetExpr> {
+    // Convert back to Vec<AssetExpr>
+    aggregated
+        .into_iter()
+        .map(|((policy, asset_name), amount)| ir::AssetExpr {
+            policy: policy.to_vec(),
+            asset_name: ir::Expression::Bytes(asset_name.to_vec()),
+            amount: ir::Expression::Number(amount),
+        })
+        .collect()
+}
+
+type AssetClass<'a> = (&'a [u8], &'a [u8]);
+
+impl ir::AssetExpr {
+    fn expect_constant_name(&self) -> &[u8] {
+        match &self.asset_name {
+            ir::Expression::Bytes(x) => x.as_slice(),
+            _ => unreachable!("asset_name expected to be Bytes"),
+        }
+    }
+
+    fn expect_constant_amount(&self) -> i128 {
+        match &self.amount {
+            ir::Expression::Number(x) => *x,
+            _ => unreachable!("amount expected to be Number"),
+        }
+    }
+
+    fn aggregate(items: &[Self]) -> HashMap<AssetClass, i128> {
+        let mut aggregated: HashMap<AssetClass, i128> = HashMap::new();
+
+        // Group assets by policy and asset_name, summing their amounts
+        for asset in items.iter() {
+            let asset_name = asset.expect_constant_name();
+            let amount = asset.expect_constant_amount();
+
+            let key = (asset.policy.as_slice(), asset_name);
+            *aggregated.entry(key).or_default() += amount;
+        }
+
+        aggregated
+    }
+
+    fn sum<'a>(
+        a: HashMap<AssetClass<'a>, i128>,
+        b: HashMap<AssetClass<'a>, i128>,
+    ) -> HashMap<AssetClass<'a>, i128> {
+        let mut aggregated = a;
+
+        for (key, value) in b {
+            *aggregated.entry(key).or_default() += value;
+        }
+
+        aggregated
+    }
+
+    fn sub<'a>(
+        a: HashMap<AssetClass<'a>, i128>,
+        b: HashMap<AssetClass<'a>, i128>,
+    ) -> HashMap<AssetClass<'a>, i128> {
+        let mut aggregated = a;
+
+        for (key, value) in b {
+            *aggregated.entry(key).or_default() -= value;
+        }
+
+        aggregated
+    }
+}
+
+impl Apply for ir::InputQuery {
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            name: self.name,
+            address: self.address.apply_args(args)?,
+            min_amount: self.min_amount.apply_args(args)?,
+        })
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            name: self.name,
+            address: self.address.apply_inputs(args)?,
+            min_amount: self.min_amount.apply_inputs(args)?,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            name: self.name,
+            address: self.address.apply_fees(fees)?,
+            min_amount: self.min_amount.apply_fees(fees)?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.address.is_constant() && self.min_amount.is_constant()
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        let mut params = HashMap::new();
+        params.extend(self.address.params());
+        params.extend(self.min_amount.params());
+        params
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        // input queries itself don't have inner queries. This is assuming that an
+        // expression higher up the tree will return this as a required query.
+        HashMap::new()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            name: self.name,
+            address: self.address.reduce()?,
+            min_amount: self.min_amount.reduce()?,
+        })
+    }
+}
+
+impl Apply for ir::Expression {
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        match self {
+            ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.apply_args(args)?)),
+            ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.apply_args(args)?)),
+            ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.apply_args(args)?)),
+            ir::Expression::InputQuery(x) => Ok(ir::Expression::InputQuery(x.apply_args(args)?)),
+            ir::Expression::EvalParty(x) => {
+                let defined = args.get(&x).cloned();
+
+                match defined {
+                    Some(x) => Ok(ir::Expression::Address(coerce_arg_into_address(x)?)),
+                    None => Ok(ir::Expression::EvalParty(x)),
+                }
+            }
+            ir::Expression::EvalParameter(name, ty) => {
+                let defined = args.get(&name).cloned();
+
+                match defined {
+                    Some(ArgValue::Int(x)) => Ok(ir::Expression::Number(x)),
+                    Some(ArgValue::Bool(x)) => Ok(ir::Expression::Bool(x)),
+                    Some(ArgValue::String(x)) => Ok(ir::Expression::String(x)),
+                    Some(ArgValue::Bytes(x)) => Ok(ir::Expression::Bytes(x)),
+                    Some(ArgValue::Address(x)) => Ok(ir::Expression::Address(x)),
+                    Some(ArgValue::UtxoSet(x)) => Ok(ir::Expression::UtxoSet(x)),
+                    None => Ok(ir::Expression::EvalParameter(name, ty)),
+                }
+            }
+
+            // the remaining cases are constants, so we can just return them
+            x => Ok(x),
+        }
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        match self {
+            ir::Expression::InputQuery(x) => {
+                let defined = args.get(&x.name).cloned();
+
+                match defined {
+                    Some(x) => {
+                        let x = x.into_iter().map(|x| x.r#ref).collect();
+                        Ok(ir::Expression::UtxoRefs(x))
+                    }
+                    None => Ok(ir::Expression::InputQuery(x)),
+                }
+            }
+            ir::Expression::EvalInputDatum(x) => {
+                let defined = args.get(&x).cloned();
+
+                match defined {
+                    Some(x) => {
+                        let datum = x
+                            .into_iter()
+                            .flat_map(|x| x.datum)
+                            .next()
+                            .unwrap_or(ir::Expression::None);
+
+                        Ok(datum)
+                    }
+                    None => Ok(ir::Expression::EvalInputDatum(x)),
+                }
+            }
+            ir::Expression::EvalInputAssets(x) => {
+                let defined = args.get(&x).cloned();
+
+                match defined {
+                    Some(x) => {
+                        let assets = x.into_iter().flat_map(|x| x.assets).collect();
+
+                        Ok(ir::Expression::Assets(assets))
+                    }
+                    None => Ok(ir::Expression::EvalInputAssets(x)),
+                }
+            }
+            ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.apply_inputs(args)?)),
+            ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.apply_inputs(args)?)),
+            ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.apply_inputs(args)?)),
+            _ => Ok(self),
+        }
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        match self {
+            ir::Expression::FeeQuery => Ok(ir::Expression::Assets(vec![ir::AssetExpr {
+                policy: vec![],
+                asset_name: ir::Expression::Bytes(b"".to_vec()),
+                amount: ir::Expression::Number(fees as i128),
+            }])),
+            ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.apply_fees(fees)?)),
+            ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.apply_fees(fees)?)),
+            ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.apply_fees(fees)?)),
+            ir::Expression::InputQuery(x) => Ok(ir::Expression::InputQuery(x.apply_fees(fees)?)),
+            _ => Ok(self),
+        }
+    }
+
+    fn is_constant(&self) -> bool {
+        match self {
+            Self::Bytes(_) => true,
+            Self::Number(_) => true,
+            Self::Bool(_) => true,
+            Self::String(_) => true,
+            Self::Address(_) => true,
+            Self::Policy(_) => true,
+            Self::Struct(x) => x.is_constant(),
+            Self::Assets(x) => x.is_constant(),
+            Self::EvalCustom(x) => x.is_constant(),
+            _ => false,
+        }
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        match self {
+            ir::Expression::Struct(x) => x.params(),
+            ir::Expression::Assets(x) => x.params(),
+            ir::Expression::EvalCustom(x) => x.params(),
+            ir::Expression::InputQuery(x) => x.params(),
+            ir::Expression::EvalParty(x) => HashMap::from([(x.to_string(), ast::Type::Bytes)]),
+            ir::Expression::EvalParameter(x, ty) => HashMap::from([(x.to_string(), ty.clone())]),
+
+            // the remaining cases are constants, so we can just return them
+            _ => HashMap::new(),
+        }
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        match self {
+            ir::Expression::InputQuery(x) => HashMap::from([(x.name.clone(), x.as_ref().clone())]),
+
+            // the remaining cases are constants, so we can just return them
+            _ => HashMap::new(),
+        }
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        match self {
+            ir::Expression::EvalCustom(op) => match (&op.left, &op.right) {
+                (ir::Expression::Number(x), ir::Expression::Number(y)) => {
+                    let result = match &op.op {
+                        ir::BinaryOpKind::Add => x + y,
+                        ir::BinaryOpKind::Sub => x - y,
+                    };
+
+                    Ok(ir::Expression::Number(result))
+                }
+                (ir::Expression::Assets(x), ir::Expression::Assets(y)) => {
+                    let x = ir::AssetExpr::aggregate(&x);
+                    let y = ir::AssetExpr::aggregate(&y);
+
+                    let result = match &op.op {
+                        ir::BinaryOpKind::Add => ir::AssetExpr::sum(x, y),
+                        ir::BinaryOpKind::Sub => ir::AssetExpr::sub(x, y),
+                    };
+
+                    Ok(ir::Expression::Assets(build_assets(result)))
+                }
+                _ => Err(Error::InvalidBinaryOp(*op)),
+            },
+            _ => Ok(self),
+        }
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        match self {
+            ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.reduce()?)),
+            ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.reduce()?)),
+            ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.reduce()?)),
+            ir::Expression::InputQuery(x) => Ok(ir::Expression::InputQuery(x.reduce()?)),
+            _ => Ok(self),
+        }
+    }
+}
+
+impl Apply for ir::Output {
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            address: self.address.apply_args(args)?,
+            datum: self.datum.apply_args(args)?,
+            amount: self.amount.apply_args(args)?,
+        })
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            address: self.address.apply_inputs(args)?,
+            datum: self.datum.apply_inputs(args)?,
+            amount: self.amount.apply_inputs(args)?,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            address: self.address.apply_fees(fees)?,
+            datum: self.datum.apply_fees(fees)?,
+            amount: self.amount.apply_fees(fees)?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.address.is_constant() && self.datum.is_constant() && self.amount.is_constant()
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        let mut params = HashMap::new();
+        params.extend(self.address.params());
+        params.extend(self.datum.params());
+        params.extend(self.amount.params());
+        params
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        // outputs don't have queries
+        HashMap::new()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            address: self.address.reduce()?,
+            datum: self.datum.reduce()?,
+            amount: self.amount.reduce()?,
+        })
+    }
+}
+
+impl Apply for ir::Mint {
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            amount: self.amount.apply_args(args)?,
+        })
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            amount: self.amount.apply_inputs(args)?,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            amount: self.amount.apply_fees(fees)?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.amount.is_constant()
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        let mut params = HashMap::new();
+        params.extend(self.amount.params());
+        params
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        // mints don't have queries
+        HashMap::new()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            amount: self.amount.reduce()?,
+        })
+    }
+}
+
+impl Apply for ir::Tx {
+    fn apply_args(self, args: &HashMap<String, ArgValue>) -> Result<Self, Error> {
+        let tx = ir::Tx {
+            inputs: self.inputs.apply_args(args)?,
+            outputs: self.outputs.apply_args(args)?,
+            mints: self.mints.apply_args(args)?,
+            fees: self.fees.apply_args(args)?,
+        };
+
+        Ok(tx)
+    }
+
+    fn apply_inputs(self, args: &HashMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            inputs: self.inputs.apply_inputs(args)?,
+            outputs: self.outputs.apply_inputs(args)?,
+            mints: self.mints.apply_inputs(args)?,
+            fees: self.fees.apply_inputs(args)?,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            inputs: self.inputs.apply_fees(fees)?,
+            outputs: self.outputs.apply_fees(fees)?,
+            mints: self.mints.apply_fees(fees)?,
+            fees: self.fees.apply_fees(fees)?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.inputs.iter().all(|x| x.is_constant())
+            && self.outputs.iter().all(|x| x.is_constant())
+            && self.mints.iter().all(|x| x.is_constant())
+            && self.fees.is_constant()
+    }
+
+    fn params(&self) -> HashMap<String, ast::Type> {
+        let mut params = HashMap::new();
+        params.extend(self.inputs.params());
+        params.extend(self.outputs.params());
+        params.extend(self.mints.params());
+        params.extend(self.fees.params());
+        params
+    }
+
+    fn queries(&self) -> HashMap<String, ir::InputQuery> {
+        let mut queries = HashMap::new();
+        queries.extend(self.inputs.queries());
+        queries.extend(self.outputs.queries());
+        queries.extend(self.mints.queries());
+        queries.extend(self.fees.queries());
+        queries
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            inputs: self.inputs.reduce()?,
+            outputs: self.outputs.reduce()?,
+            mints: self.mints.reduce()?,
+            fees: self.fees.reduce()?,
+        })
+    }
+}
+
+pub fn apply_args(template: ir::Tx, args: &HashMap<String, ArgValue>) -> Result<ir::Tx, Error> {
+    template.apply_args(args)
+}
+
+pub fn apply_inputs(
+    template: ir::Tx,
+    args: &HashMap<String, HashSet<Utxo>>,
+) -> Result<ir::Tx, Error> {
+    template.apply_inputs(args)
+}
+
+pub fn apply_fees(template: ir::Tx, fees: u64) -> Result<ir::Tx, Error> {
+    template.apply_fees(fees)
+}
+
+pub fn reduce(template: ir::Tx) -> Result<ir::Tx, Error> {
+    template.reduce()
+}
+
+pub fn find_params(template: &ir::Tx) -> HashMap<String, ast::Type> {
+    template.params()
+}
+
+pub fn find_queries(template: &ir::Tx) -> HashMap<String, ir::InputQuery> {
+    template.queries()
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    const SUBJECT_PROTOCOL: &str = r#"
+    party Sender;
+
+    tx swap(a: Int, b: Int) {
+        input source {
+            from: Sender,
+            min_amount: Ada(a) + Ada(b),
+        }
+    }
+    "#;
+
+    #[test]
+    fn test_apply_args() {
+        let mut ast = crate::parsing::parse_string(SUBJECT_PROTOCOL).unwrap();
+        crate::analyzing::analyze(&mut ast).unwrap();
+
+        let before = crate::lowering::lower(&ast, "swap").unwrap();
+
+        let params = find_params(&before);
+        assert_eq!(params.len(), 3);
+        assert_eq!(params.get("Sender"), Some(&ast::Type::Bytes));
+        assert_eq!(params.get("a"), Some(&ast::Type::Int));
+        assert_eq!(params.get("b"), Some(&ast::Type::Int));
+
+        let args = HashMap::from([
+            ("Sender".to_string(), ArgValue::Address(b"abc".to_vec())),
+            ("a".to_string(), ArgValue::Int(100)),
+            ("b".to_string(), ArgValue::Int(200)),
+        ]);
+
+        let after = apply_args(before, &args).unwrap();
+
+        let params = find_params(&after);
+        assert_eq!(params.len(), 0);
+
+        assert!(after.is_constant());
+    }
+
+    #[test]
+    fn test_reduce_numeric_binary_op() {
+        let op = ir::Expression::EvalCustom(
+            ir::BinaryOp {
+                op: ir::BinaryOpKind::Add,
+                left: ir::Expression::Number(1),
+                right: ir::Expression::EvalCustom(
+                    ir::BinaryOp {
+                        op: ir::BinaryOpKind::Sub,
+                        left: ir::Expression::Number(5),
+                        right: ir::Expression::Number(3),
+                    }
+                    .into(),
+                ),
+            }
+            .into(),
+        );
+
+        let reduced = op.reduce().unwrap();
+
+        match reduced {
+            ir::Expression::Number(3) => (),
+            _ => panic!("Expected number 3"),
+        };
+    }
+
+    #[test]
+    fn test_reduce_assets_binary_op() {
+        let op = ir::Expression::EvalCustom(
+            ir::BinaryOp {
+                op: ir::BinaryOpKind::Add,
+                left: ir::Expression::Assets(vec![ir::AssetExpr {
+                    policy: b"abc".to_vec(),
+                    asset_name: ir::Expression::Bytes(b"111".to_vec()),
+                    amount: ir::Expression::Number(100),
+                }]),
+                right: ir::Expression::Assets(vec![ir::AssetExpr {
+                    policy: b"abc".to_vec(),
+                    asset_name: ir::Expression::Bytes(b"111".to_vec()),
+                    amount: ir::Expression::Number(200),
+                }]),
+            }
+            .into(),
+        );
+
+        let reduced = op.reduce().unwrap();
+
+        match reduced {
+            ir::Expression::Assets(assets) => {
+                assert_eq!(assets.len(), 1);
+                assert_eq!(assets[0].policy, b"abc".to_vec());
+                assert_eq!(assets[0].asset_name, ir::Expression::Bytes(b"111".to_vec()));
+                assert_eq!(assets[0].amount, ir::Expression::Number(300));
+            }
+            _ => panic!("Expected assets"),
+        };
+    }
+}

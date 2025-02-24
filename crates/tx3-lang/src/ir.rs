@@ -8,7 +8,13 @@
 //! [`lower`](crate::lower) for lowering an AST to the intermediate
 //! representation.
 
-#[derive(Debug, Clone)]
+use std::collections::HashSet;
+
+use serde::{Deserialize, Serialize};
+
+use crate::{ast, Utxo, UtxoRef};
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct StructExpr {
     pub constructor: usize,
     pub fields: Vec<Expression>,
@@ -23,70 +29,71 @@ impl StructExpr {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum BinaryOpKind {
     Add,
     Sub,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BinaryOp {
     pub left: Expression,
     pub right: Expression,
     pub op: BinaryOpKind,
 }
 
-#[derive(Debug, Clone)]
-pub struct AssetConstructor {
-    pub policy: String,
-    pub asset_name: Option<Box<Expression>>,
-    pub amount: Option<Box<Expression>>,
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct AssetExpr {
+    pub policy: Vec<u8>,
+    pub asset_name: Expression,
+    pub amount: Expression,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Expression {
+    None,
     Struct(StructExpr),
     Bytes(Vec<u8>),
     Number(i128),
-    Address(String),
-    Policy(String),
-    BuildAsset(AssetConstructor),
+    Bool(bool),
+    String(String),
+    Address(Vec<u8>),
+    Policy(Vec<u8>),
+    UtxoRefs(Vec<UtxoRef>),
+    UtxoSet(HashSet<Utxo>),
+    Assets(Vec<AssetExpr>),
     EvalParty(String),
-    EvalParameter(String),
+    EvalParameter(String, ast::Type),
     EvalInputDatum(String),
     EvalInputAssets(String),
     EvalCustom(Box<BinaryOp>),
-    EvalFees,
+    InputQuery(Box<InputQuery>),
+    FeeQuery,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct InputQuery {
     pub name: String,
     pub address: Option<Expression>,
     pub min_amount: Option<Expression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Output {
     pub address: Option<Expression>,
     pub datum: Option<Expression>,
     pub amount: Option<Expression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mint {
     pub amount: Option<Expression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
-    pub name: String,
-    pub inputs: Vec<InputQuery>,
+    pub fees: Expression,
+    pub inputs: Vec<Expression>,
     pub outputs: Vec<Output>,
     pub mints: Vec<Mint>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Program {
-    pub txs: Vec<Tx>,
 }

@@ -72,9 +72,11 @@ impl Scope {
         );
     }
 
-    pub fn track_param_var(&mut self, param: &str) {
-        self.symbols
-            .insert(param.to_string(), Symbol::ParamVar(param.to_string()));
+    pub fn track_param_var(&mut self, param: &str, r#type: Type) {
+        self.symbols.insert(
+            param.to_string(),
+            Symbol::ParamVar(param.to_string(), Box::new(r#type)),
+        );
     }
 
     pub fn track_input(&mut self, input: &InputBlock) {
@@ -220,7 +222,6 @@ impl Analyzable for AssetConstructor {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
         self.amount.analyze(parent.clone())?;
         self.r#type.analyze(parent.clone())?;
-        self.asset_name.analyze(parent.clone())?;
 
         Ok(())
     }
@@ -351,7 +352,7 @@ impl Analyzable for TxDef {
         scope.symbols.insert("fees".to_string(), Symbol::Fees);
 
         for param in self.parameters.parameters.iter() {
-            scope.track_param_var(&param.name);
+            scope.track_param_var(&param.name, param.r#type.clone());
         }
 
         for input in self.inputs.iter() {
@@ -374,8 +375,8 @@ impl Analyzable for TxDef {
 
 static ADA: std::sync::LazyLock<AssetDef> = std::sync::LazyLock::new(|| AssetDef {
     name: "Ada".to_string(),
-    policy: "Ada".to_string(),
-    asset_name: Some("ada".to_string()),
+    policy: HexStringLiteral::new("".to_string()),
+    asset_name: "".to_string(),
 });
 
 impl Analyzable for Program {

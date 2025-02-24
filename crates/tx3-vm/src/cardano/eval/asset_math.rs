@@ -5,7 +5,7 @@ use pallas::ledger::primitives::{
 };
 use std::collections::{hash_map::Entry, HashMap};
 
-use crate::Error;
+use super::Error;
 
 fn fold_assets<T>(
     acc: &mut HashMap<pallas::codec::utils::Bytes, T>,

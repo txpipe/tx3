@@ -19,7 +19,7 @@ pub struct Scope {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Symbol {
-    ParamVar(String),
+    ParamVar(String, Box<Type>),
     Input(String),
     PartyDef(Box<PartyDef>),
     PolicyDef(Box<PolicyDef>),
@@ -199,13 +199,19 @@ impl OutputBlock {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum MintBlockField {
+    Amount(Box<AssetExpr>),
+    Redeemer(Box<DataExpr>),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MintBlock {
-    pub amount: Box<AssetExpr>,
+    pub fields: Vec<MintBlockField>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BurnBlock {
-    pub amount: Box<AssetExpr>,
+    pub fields: Vec<MintBlockField>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -250,7 +256,6 @@ pub enum PolicyValue {
 pub struct AssetConstructor {
     pub r#type: Identifier,
     pub amount: Box<DataExpr>,
-    pub asset_name: Option<Box<DataExpr>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -414,6 +419,6 @@ impl VariantCase {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct AssetDef {
     pub name: String,
-    pub policy: String,
-    pub asset_name: Option<String>,
+    pub policy: HexStringLiteral,
+    pub asset_name: String,
 }

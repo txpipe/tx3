@@ -57,9 +57,6 @@
                         "Identifier": {
                           "value": "ship_name"
                         }
-                      },
-                      "asset_name": {
-                        "Number": 1
                       }
                     }
                   },
@@ -73,8 +70,7 @@
                         "Identifier": {
                           "value": "required_fuel"
                         }
-                      },
-                      "asset_name": null
+                      }
                     }
                   }
                 }
@@ -140,9 +136,6 @@
                     "Identifier": {
                       "value": "ship_name"
                     }
-                  },
-                  "asset_name": {
-                    "Number": 1
                   }
                 }
               }
@@ -209,8 +202,7 @@
                         "Identifier": {
                           "value": "required_fuel"
                         }
-                      },
-                      "asset_name": null
+                      }
                     }
                   }
                 }
@@ -370,19 +362,22 @@
         }
       ],
       "burn": {
-        "amount": {
-          "Constructor": {
-            "type": {
-              "value": "Fuel"
-            },
-            "amount": {
-              "Identifier": {
-                "value": "required_fuel"
+        "fields": [
+          {
+            "Amount": {
+              "Constructor": {
+                "type": {
+                  "value": "Fuel"
+                },
+                "amount": {
+                  "Identifier": {
+                    "value": "required_fuel"
+                  }
+                }
               }
-            },
-            "asset_name": null
+            }
           }
-        }
+        ]
       },
       "mint": null
     }
@@ -469,18 +464,24 @@
   "assets": [
     {
       "name": "Fuel",
-      "policy": "0x11111",
+      "policy": {
+        "value": "11111"
+      },
       "asset_name": "FUEL"
     },
     {
       "name": "Ship",
-      "policy": "0x33333",
-      "asset_name": "*"
+      "policy": {
+        "value": "33333"
+      },
+      "asset_name": "SHIP"
     },
     {
       "name": "Pilot",
-      "policy": "0x33333",
-      "asset_name": "*"
+      "policy": {
+        "value": "33333"
+      },
+      "asset_name": "PILOT"
     }
   ],
   "parties": [

@@ -3,6 +3,7 @@ COMMENT = _{ "//" ~ (!"\n" ~ ANY)* | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 
 // Identifiers and basic types
 identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+ascii_text = @{ ASCII_ALPHANUMERIC+ }
 number = @{ "-"? ~ ASCII_DIGIT+ }
 string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 bool = @{ "true" | "false" }
@@ -15,11 +16,11 @@ type = { "Int" | "Bool" | "Bytes" | identifier }
 
 // Parameters
 parameter = { identifier ~ ":" ~ type }
-parameter_list = { "(" ~ (parameter ~ ("," ~ parameter)*)? ~ ")" }
+parameter_list = { "(" ~ (parameter ~ ("," ~ parameter)* ~ ","?)? ~ ")" }
 
 // Asset definitions
 asset_def = {
-    "asset" ~ identifier ~ "=" ~ hex_string ~ ("." ~ (identifier | hex_string | wildcard))? ~ ";"
+    "asset" ~ identifier ~ "=" ~ hex_string ~ "." ~ ascii_text ~ ";"
 }
 
 // Party definitions
@@ -170,19 +171,23 @@ output_block = {
     "}"
 }
 
-burn_block_amount = { "amount" ~ ":" ~ asset_expr }
-
-burn_block = {
-    "burn" ~ "{" ~
-    burn_block_amount ~ "," ~
-    "}"
-}
-
 mint_block_amount = { "amount" ~ ":" ~ asset_expr }
+mint_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
+
+mint_block_field = _{ 
+    mint_block_amount |
+    mint_block_redeemer
+}
 
 mint_block = {
     "mint" ~ "{" ~
-    mint_block_amount ~ "," ~
+    (mint_block_field ~ ",")* ~
+    "}"
+}
+
+burn_block = {
+    "burn" ~ "{" ~
+    (mint_block_field ~ ",")* ~
     "}"
 }
 

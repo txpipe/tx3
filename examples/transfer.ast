@@ -32,8 +32,7 @@
                     "Identifier": {
                       "value": "quantity"
                     }
-                  },
-                  "asset_name": null
+                  }
                 }
               }
             }
@@ -61,8 +60,7 @@
                     "Identifier": {
                       "value": "quantity"
                     }
-                  },
-                  "asset_name": null
+                  }
                 }
               }
             }
@@ -98,8 +96,7 @@
                             "Identifier": {
                               "value": "quantity"
                             }
-                          },
-                          "asset_name": null
+                          }
                         }
                       }
                     }

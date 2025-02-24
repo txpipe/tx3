@@ -10,7 +10,7 @@ macro_rules! constr {
     ($tag:expr, $($field:expr),*) => {
         {
             let fields = vec![$($field.into_data()),*];
-            $crate::cardano::plutus_data::constr($tag, fields)
+            $crate::cardano::eval::plutus_data::constr($tag, fields)
         }
     };
 }
@@ -38,6 +38,12 @@ impl IntoData for PlutusData {
 impl IntoData for bool {
     fn into_data(&self) -> PlutusData {
         PlutusData::BoundedBytes(BoundedBytes::from(vec![*self as u8]))
+    }
+}
+
+impl IntoData for &str {
+    fn into_data(&self) -> PlutusData {
+        PlutusData::BoundedBytes(BoundedBytes::from(self.as_bytes().to_vec()))
     }
 }
 

@@ -1,11 +1,6 @@
-asset MyToken;
+policy PasswordPolicy = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe;
 
-policy PasswordPolicy;
-
-asset MyToken {
-    policy: PasswordPolicy;
-    name: "MY_TOKEN";
-}
+asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.MYTOKEN;
 
 party Requester;
 

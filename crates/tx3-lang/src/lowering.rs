@@ -16,6 +16,9 @@ pub enum Error {
 
     #[error("invalid ast: {0}")]
     InvalidAst(String),
+
+    #[error("failed to decode hex string: {0}")]
+    DecodeHexError(#[from] hex::FromHexError),
 }
 
 fn expect_type_def(ident: &ast::Identifier) -> Result<&ast::TypeDef, Error> {
@@ -55,7 +58,7 @@ fn coerce_identifier_into_asset_expr(
 ) -> Result<ir::Expression, Error> {
     match &identifier.symbol {
         Some(ast::Symbol::Input(x)) => Ok(ir::Expression::EvalInputAssets(x.clone())),
-        Some(ast::Symbol::Fees) => Ok(ir::Expression::EvalFees),
+        Some(ast::Symbol::Fees) => Ok(ir::Expression::FeeQuery),
         _ => Err(Error::InvalidSymbol(identifier.value.clone(), "AssetExpr")),
     }
 }
@@ -124,7 +127,7 @@ impl IntoLower for ast::PolicyDef {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         match &self.value {
-            ast::PolicyValue::HexString(x) => Ok(ir::Expression::Policy(x.value.clone())),
+            ast::PolicyValue::HexString(x) => Ok(ir::Expression::Policy(hex::decode(&x.value)?)),
             ast::PolicyValue::Import(_) => todo!(),
         }
     }
@@ -143,7 +146,9 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::Constructor(x) => ir::Expression::Struct(x.into_lower()?),
             ast::DataExpr::Unit => ir::Expression::Struct(ir::StructExpr::unit()),
             ast::DataExpr::Identifier(x) => match &x.symbol {
-                Some(ast::Symbol::ParamVar(x)) => ir::Expression::EvalParameter(x.clone()),
+                Some(ast::Symbol::ParamVar(n, ty)) => {
+                    ir::Expression::EvalParameter(n.clone(), ty.as_ref().clone())
+                }
                 Some(ast::Symbol::PartyDef(x)) => ir::Expression::EvalParty(x.name.clone()),
                 Some(ast::Symbol::PolicyDef(x)) => x.into_lower()?,
                 _ => {
@@ -165,19 +170,15 @@ impl IntoLower for ast::AssetConstructor {
     fn into_lower(&self) -> Result<Self::Output, Error> {
         let asset_def = coerce_identifier_into_asset_def(&self.r#type)?;
 
-        let asset_name = match (self.asset_name.as_ref(), asset_def.asset_name) {
-            (Some(x), _) => x.into_lower()?,
-            (_, Some(x)) => ir::Expression::Bytes(x.as_bytes().to_vec()),
-            _ => return Err(Error::InvalidAst("no asset name".to_string())),
-        };
+        let asset_name = ir::Expression::Bytes(asset_def.asset_name.as_bytes().to_vec());
 
         let amount = self.amount.into_lower()?;
 
-        Ok(ir::Expression::BuildAsset(ir::AssetConstructor {
-            policy: asset_def.policy,
-            asset_name: Some(Box::new(asset_name)),
-            amount: Some(Box::new(amount)),
-        }))
+        Ok(ir::Expression::Assets(vec![ir::AssetExpr {
+            policy: hex::decode(&asset_def.policy.value)?,
+            asset_name,
+            amount,
+        }]))
     }
 }
 
@@ -229,7 +230,7 @@ impl IntoLower for ast::InputBlockField {
 }
 
 impl IntoLower for ast::InputBlock {
-    type Output = ir::InputQuery;
+    type Output = ir::Expression;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         let ir = ir::InputQuery {
@@ -241,7 +242,7 @@ impl IntoLower for ast::InputBlock {
                 .transpose()?,
         };
 
-        Ok(ir)
+        Ok(ir::Expression::InputQuery(Box::new(ir)))
     }
 }
 
@@ -271,7 +272,6 @@ impl IntoLower for ast::OutputBlock {
 
 pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
     let ir = ir::Tx {
-        name: ast.name.clone(),
         inputs: ast
             .inputs
             .iter()
@@ -283,6 +283,7 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
         mints: vec![],
+        fees: ir::Expression::FeeQuery,
     };
 
     Ok(ir)
@@ -300,16 +301,14 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
 /// # Returns
 ///
 /// * `Result<ir::Program, Error>` - The lowered intermediate representation
-pub fn lower(ast: &ast::Program) -> Result<ir::Program, Error> {
-    let ir = ir::Program {
-        txs: ast
-            .txs
-            .iter()
-            .map(lower_tx)
-            .collect::<Result<Vec<_>, _>>()?,
-    };
+pub fn lower(ast: &ast::Program, template: &str) -> Result<ir::Tx, Error> {
+    let tx = ast
+        .txs
+        .iter()
+        .find(|x| x.name == template)
+        .ok_or(Error::InvalidAst("tx not found".to_string()))?;
 
-    Ok(ir)
+    lower_tx(tx)
 }
 
 #[cfg(test)]
@@ -322,7 +321,7 @@ mod tests {
         let test_file = format!("{}/../../examples/transfer.tx3", manifest_dir);
         let mut ast = crate::parsing::parse_file(&test_file).unwrap();
         crate::analyzing::analyze(&mut ast).unwrap();
-        let ir = lower(&ast).unwrap();
+        let ir = lower(&ast, "transfer").unwrap();
 
         dbg!(ir);
     }
