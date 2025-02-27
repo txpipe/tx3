@@ -8,7 +8,7 @@
 //! [`lower`](crate::lower) for lowering an AST to the intermediate
 //! representation.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -49,6 +49,18 @@ pub struct AssetExpr {
     pub amount: Expression,
 }
 
+/// An ad-hoc compile directive.
+///
+/// It's a generic, pass-through structure that the final chain-specific
+/// compiler can use to compile custom structures. Tx3 won't attempt to process
+/// this IR structure for anything other than trying to apply / reduce its
+/// expressions.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct AdHocDirective {
+    pub name: String,
+    pub data: HashMap<String, Expression>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Expression {
     None,
@@ -62,13 +74,18 @@ pub enum Expression {
     UtxoRefs(Vec<UtxoRef>),
     UtxoSet(HashSet<Utxo>),
     Assets(Vec<AssetExpr>),
-    EvalParty(String),
+
     EvalParameter(String, ast::Type),
     EvalInputDatum(String),
     EvalInputAssets(String),
     EvalCustom(Box<BinaryOp>),
+
+    // queries
     InputQuery(Box<InputQuery>),
     FeeQuery,
+
+    // pass-through
+    AdHocDirective(Box<AdHocDirective>),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -88,6 +105,7 @@ pub struct Output {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mint {
     pub amount: Option<Expression>,
+    pub redeemer: Option<Expression>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -95,5 +113,6 @@ pub struct Tx {
     pub fees: Expression,
     pub inputs: Vec<Expression>,
     pub outputs: Vec<Output>,
-    pub mints: Vec<Mint>,
+    pub mint: Option<Mint>,
+    pub adhoc: Vec<AdHocDirective>,
 }

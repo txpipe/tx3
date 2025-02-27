@@ -63,7 +63,7 @@ fn coerce_identifier_into_asset_expr(
     }
 }
 
-trait IntoLower {
+pub(crate) trait IntoLower {
     type Output;
 
     fn into_lower(&self) -> Result<Self::Output, Error>;
@@ -138,18 +138,20 @@ impl IntoLower for ast::DataExpr {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         let out = match self {
-            ast::DataExpr::None => todo!(),
+            ast::DataExpr::None => ir::Expression::None,
             ast::DataExpr::Number(x) => Self::Output::Number(*x as i128),
-            ast::DataExpr::Bool(_) => todo!(),
-            ast::DataExpr::String(_) => todo!(),
-            ast::DataExpr::HexString(_) => todo!(),
+            ast::DataExpr::Bool(x) => ir::Expression::Bool(*x),
+            ast::DataExpr::String(x) => ir::Expression::Bytes(x.value.as_bytes().to_vec()),
+            ast::DataExpr::HexString(x) => ir::Expression::Bytes(hex::decode(&x.value)?),
             ast::DataExpr::Constructor(x) => ir::Expression::Struct(x.into_lower()?),
             ast::DataExpr::Unit => ir::Expression::Struct(ir::StructExpr::unit()),
             ast::DataExpr::Identifier(x) => match &x.symbol {
                 Some(ast::Symbol::ParamVar(n, ty)) => {
-                    ir::Expression::EvalParameter(n.clone(), ty.as_ref().clone())
+                    ir::Expression::EvalParameter(n.to_lowercase().clone(), ty.as_ref().clone())
                 }
-                Some(ast::Symbol::PartyDef(x)) => ir::Expression::EvalParty(x.name.clone()),
+                Some(ast::Symbol::PartyDef(x)) => {
+                    ir::Expression::EvalParameter(x.name.to_lowercase().clone(), ast::Type::Address)
+                }
                 Some(ast::Symbol::PolicyDef(x)) => x.into_lower()?,
                 _ => {
                     dbg!(&x);
@@ -234,7 +236,7 @@ impl IntoLower for ast::InputBlock {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         let ir = ir::InputQuery {
-            name: self.name.clone(),
+            name: self.name.to_lowercase().clone(),
             address: self.find("from").map(|x| x.into_lower()).transpose()?,
             min_amount: self
                 .find("min_amount")
@@ -270,6 +272,38 @@ impl IntoLower for ast::OutputBlock {
     }
 }
 
+impl IntoLower for ast::MintBlockField {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::MintBlockField::Amount(x) => x.into_lower(),
+            ast::MintBlockField::Redeemer(x) => x.into_lower(),
+        }
+    }
+}
+
+impl IntoLower for ast::MintBlock {
+    type Output = ir::Mint;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        Ok(ir::Mint {
+            amount: self.find("amount").map(|x| x.into_lower()).transpose()?,
+            redeemer: self.find("redeemer").map(|x| x.into_lower()).transpose()?,
+        })
+    }
+}
+
+impl IntoLower for ast::ChainSpecificBlock {
+    type Output = ir::AdHocDirective;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::ChainSpecificBlock::Cardano(x) => x.into_lower(),
+        }
+    }
+}
+
 pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
     let ir = ir::Tx {
         inputs: ast
@@ -282,7 +316,12 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
-        mints: vec![],
+        mint: ast.mint.as_ref().map(|x| x.into_lower()).transpose()?,
+        adhoc: ast
+            .adhoc
+            .iter()
+            .map(|x| x.into_lower())
+            .collect::<Result<Vec<_>, _>>()?,
         fees: ir::Expression::FeeQuery,
     };
 

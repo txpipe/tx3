@@ -155,7 +155,7 @@ impl Analyzable for VariantCaseConstructor {
 
         let case = match &self.name.symbol {
             Some(Symbol::VariantCase(x)) => x,
-            Some(x) => return Err(Error::InvalidSymbol("VariantCase", self.name.value.clone())),
+            Some(x) => return Err(Error::InvalidSymbol("VariantCase", format!("{:?}", x))),
             _ => unreachable!(),
         };
 
@@ -181,7 +181,7 @@ impl Analyzable for DatumConstructor {
 
         let type_def = match &self.r#type.symbol {
             Some(Symbol::TypeDef(x)) => x,
-            Some(x) => return Err(Error::InvalidSymbol("TypeDef", self.r#type.value.clone())),
+            Some(x) => return Err(Error::InvalidSymbol("TypeDef", format!("{:?}", x))),
             _ => unreachable!(),
         };
 
@@ -345,6 +345,35 @@ impl Analyzable for TypeDef {
     }
 }
 
+impl Analyzable for MintBlockField {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        match self {
+            MintBlockField::Amount(x) => x.analyze(parent.clone())?,
+            MintBlockField::Redeemer(x) => x.analyze(parent.clone())?,
+        }
+
+        Ok(())
+    }
+}
+
+impl Analyzable for MintBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        for field in self.fields.iter_mut() {
+            field.analyze(parent.clone())?;
+        }
+
+        Ok(())
+    }
+}
+
+impl Analyzable for ChainSpecificBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        match self {
+            ChainSpecificBlock::Cardano(x) => x.analyze(parent),
+        }
+    }
+}
+
 impl Analyzable for TxDef {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
         let mut scope = Scope::new(parent);
@@ -367,6 +396,14 @@ impl Analyzable for TxDef {
 
         for output in self.outputs.iter_mut() {
             output.analyze(self.scope.clone())?;
+        }
+
+        if let Some(mint) = &mut self.mint {
+            mint.analyze(self.scope.clone())?;
+        }
+
+        for directive in self.adhoc.iter_mut() {
+            directive.analyze(self.scope.clone())?;
         }
 
         Ok(())

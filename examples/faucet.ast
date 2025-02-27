@@ -5,7 +5,7 @@
       "parameters": {
         "parameters": [
           {
-            "name": "password_hash",
+            "name": "password",
             "type": "Bytes"
           },
           {
@@ -104,12 +104,13 @@
           {
             "Redeemer": {
               "Identifier": {
-                "value": "password_hash"
+                "value": "password"
               }
             }
           }
         ]
-      }
+      },
+      "adhoc": []
     }
   ],
   "types": [],

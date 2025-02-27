@@ -379,7 +379,8 @@
           }
         ]
       },
-      "mint": null
+      "mint": null,
+      "adhoc": []
     }
   ],
   "types": [

@@ -103,6 +103,7 @@ pub struct TxDef {
     pub outputs: Vec<OutputBlock>,
     pub burn: Option<BurnBlock>,
     pub mint: Option<MintBlock>,
+    pub adhoc: Vec<ChainSpecificBlock>,
 
     // analysis
     #[serde(skip)]
@@ -204,9 +205,24 @@ pub enum MintBlockField {
     Redeemer(Box<DataExpr>),
 }
 
+impl MintBlockField {
+    fn key(&self) -> &str {
+        match self {
+            MintBlockField::Amount(_) => "amount",
+            MintBlockField::Redeemer(_) => "redeemer",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MintBlock {
     pub fields: Vec<MintBlockField>,
+}
+
+impl MintBlock {
+    pub(crate) fn find(&self, key: &str) -> Option<&MintBlockField> {
+        self.fields.iter().find(|x| x.key() == key)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -375,6 +391,7 @@ pub enum Type {
     Int,
     Bool,
     Bytes,
+    Address,
     Custom(Identifier),
 }
 
@@ -421,4 +438,9 @@ pub struct AssetDef {
     pub name: String,
     pub policy: HexStringLiteral,
     pub asset_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ChainSpecificBlock {
+    Cardano(crate::cardano::CardanoBlock),
 }

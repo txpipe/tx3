@@ -103,6 +103,7 @@ impl AstNode for TxDef {
         let mut outputs = Vec::new();
         let mut burn = None;
         let mut mint = None;
+        let mut adhoc = Vec::new();
 
         for item in inner {
             match item.as_rule() {
@@ -110,6 +111,7 @@ impl AstNode for TxDef {
                 Rule::output_block => outputs.push(OutputBlock::parse(item)?),
                 Rule::burn_block => burn = Some(BurnBlock::parse(item)?),
                 Rule::mint_block => mint = Some(MintBlock::parse(item)?),
+                Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
         }
@@ -121,6 +123,7 @@ impl AstNode for TxDef {
             outputs,
             burn,
             mint,
+            adhoc,
             scope: None,
         })
     }
@@ -736,6 +739,24 @@ impl AstNode for AssetDef {
     }
 }
 
+impl AstNode for ChainSpecificBlock {
+    const RULE: Rule = Rule::chain_specific_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let mut inner = pair.into_inner();
+
+        let block = inner.next().unwrap();
+
+        match block.as_rule() {
+            Rule::cardano_block => {
+                let block = crate::cardano::CardanoBlock::parse(block)?;
+                Ok(ChainSpecificBlock::Cardano(block))
+            }
+            x => unreachable!("Unexpected rule in chain_specific_block: {:?}", x),
+        }
+    }
+}
+
 /// Parses a Tx3 source file into a Program AST.
 ///
 /// # Arguments
@@ -756,6 +777,7 @@ impl AstNode for AssetDef {
 /// # Example
 ///
 /// ```no_run
+/// use tx3_lang::parsing::parse_file;
 /// let program = parse_file("path/to/program.tx3").unwrap();
 /// ```
 pub fn parse_file(path: &str) -> Result<Program, Error> {
@@ -783,6 +805,7 @@ pub fn parse_file(path: &str) -> Result<Program, Error> {
 /// # Example
 ///
 /// ```
+/// use tx3_lang::parsing::parse_string;
 /// let program = parse_string("tx swap() {}").unwrap();
 /// ```
 pub fn parse_string(input: &str) -> Result<Program, Error> {
@@ -1100,6 +1123,21 @@ mod tests {
                 }))),
             ],
         }
+    );
+
+    input_to_ast_check!(
+        ChainSpecificBlock,
+        "chain_specific_block_cardano",
+        "cardano::vote_delegation_certificate {
+            drep: 0x1234567890,
+            stake: 0x1234567890,
+        }",
+        ChainSpecificBlock::Cardano(crate::cardano::CardanoBlock::VoteDelegationCertificate(
+            crate::cardano::VoteDelegationCertificate {
+                drep: DataExpr::HexString(HexStringLiteral::new("1234567890".to_string())),
+                stake: DataExpr::HexString(HexStringLiteral::new("1234567890".to_string())),
+            },
+        ))
     );
 
     fn make_snapshot_if_missing(example: &str, program: &Program) {

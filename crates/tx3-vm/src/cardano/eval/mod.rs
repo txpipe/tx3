@@ -3,7 +3,7 @@ use std::str::FromStr;
 use pallas::{
     codec::utils::{Bytes, CborWrap},
     ledger::{
-        addresses::Address as PallasAddress,
+        addresses::{Address as PallasAddress, ShelleyAddress},
         primitives::{conway, Hash, NonEmptyKeyValuePairs, PlutusData, PositiveCoin},
     },
 };
@@ -17,16 +17,17 @@ mod plutus_data;
 
 macro_rules! asset {
     ($policy:expr, $asset:expr, $amount:expr) => {
-        ($policy, NonEmptyKeyValuePairs::Def(vec![($asset, $amount)]))
+        pallas::ledger::primitives::conway::NonEmptyKeyValuePairs::from_vec(vec![(
+            $policy,
+            NonEmptyKeyValuePairs::from_vec(vec![($asset, $amount)]).unwrap(),
+        )])
+        .unwrap()
     };
 }
 
 macro_rules! value {
-    ($coin:expr, $($asset:expr),*) => {
-        {
-            let assets = NonEmptyKeyValuePairs::from_vec(vec![$(($asset.0, $asset.1)),*]).unwrap();
-            pallas::ledger::primitives::conway::Value::Multiasset($coin, assets)
-        }
+    ($coin:expr, $assets:expr) => {
+        pallas::ledger::primitives::conway::Value::Multiasset($coin, $assets)
     };
     ($coin:expr) => {
         pallas::ledger::primitives::conway::Value::Coin($coin)
@@ -89,6 +90,52 @@ fn coerce_expr_into_assets(ir: &ir::Expression) -> Result<Vec<ir::AssetExpr>, Er
     }
 }
 
+fn coerce_address_into_stake_credential(
+    address: &PallasAddress,
+) -> Result<conway::StakeCredential, Error> {
+    match address {
+        PallasAddress::Shelley(x) => match x.delegation() {
+            pallas::ledger::addresses::ShelleyDelegationPart::Key(x) => {
+                Ok(conway::StakeCredential::AddrKeyhash(*x))
+            }
+            pallas::ledger::addresses::ShelleyDelegationPart::Script(x) => {
+                Ok(conway::StakeCredential::ScriptHash(*x))
+            }
+            _ => Err(Error::CoerceError(
+                format!("{:?}", address),
+                "StakeCredential".to_string(),
+            )),
+        },
+        PallasAddress::Stake(x) => match x.payload() {
+            pallas::ledger::addresses::StakePayload::Stake(x) => {
+                Ok(conway::StakeCredential::AddrKeyhash(*x))
+            }
+            pallas::ledger::addresses::StakePayload::Script(x) => {
+                Ok(conway::StakeCredential::ScriptHash(*x))
+            }
+        },
+        _ => Err(Error::CoerceError(
+            format!("{:?}", address),
+            "StakeCredential".to_string(),
+        )),
+    }
+}
+
+fn coerce_expr_into_stake_credential(
+    expr: &ir::Expression,
+) -> Result<conway::StakeCredential, Error> {
+    match expr {
+        ir::Expression::Address(x) => {
+            let address = coerce_bytes_into_address(x)?;
+            coerce_address_into_stake_credential(&address)
+        }
+        _ => Err(Error::CoerceError(
+            format!("{:?}", expr),
+            "StakeCredential".to_string(),
+        )),
+    }
+}
+
 fn coerce_expr_into_address(
     expr: &ir::Expression,
     pparams: &PParams,
@@ -96,6 +143,8 @@ fn coerce_expr_into_address(
     match expr {
         ir::Expression::Address(x) => coerce_bytes_into_address(x),
         ir::Expression::Policy(x) => coerce_policy_into_address(x, pparams),
+        ir::Expression::Bytes(x) => coerce_bytes_into_address(x),
+        ir::Expression::String(x) => coerce_string_into_address(x),
         _ => Err(Error::CoerceError(
             format!("{:?}", expr),
             "Address".to_string(),
@@ -147,6 +196,7 @@ fn compile_data_expr(ir: &ir::Expression) -> Result<PlutusData, Error> {
         ir::Expression::Bool(x) => Ok(x.into_data()),
         ir::Expression::String(x) => Ok(x.as_str().into_data()),
         ir::Expression::Struct(x) => compile_struct(x),
+        ir::Expression::Address(x) => Ok(x.into_data()),
         _ => Err(Error::CoerceError(
             format!("{:?}", ir),
             "DataExpr".to_string(),
@@ -154,22 +204,45 @@ fn compile_data_expr(ir: &ir::Expression) -> Result<PlutusData, Error> {
     }
 }
 
-fn compile_native_asset(ir: &ir::AssetExpr) -> Result<conway::Value, Error> {
-    let policy = ir.policy.as_slice().into();
-
+fn compile_native_asset_for_output(
+    ir: &ir::AssetExpr,
+) -> Result<conway::Multiasset<conway::PositiveCoin>, Error> {
+    let policy = Hash::from(ir.policy.as_slice());
     let asset_name = coerce_expr_into_bytes(&ir.asset_name)?;
-
     let amount = coerce_expr_into_number(&ir.amount)?;
+    let amount = conway::PositiveCoin::try_from(amount as u64).unwrap();
 
-    let amount = PositiveCoin::try_from(amount as u64).unwrap();
+    let asset = asset!(policy, asset_name.clone(), amount);
 
-    Ok(value!(0, asset!(policy, asset_name.clone(), amount)))
+    Ok(asset)
 }
 
-fn compile_ada_asset(ir: &ir::AssetExpr) -> Result<conway::Value, Error> {
+fn compile_native_asset_for_mint(
+    ir: &ir::AssetExpr,
+) -> Result<conway::Multiasset<conway::NonZeroInt>, Error> {
+    let policy = Hash::from(ir.policy.as_slice());
+    let asset_name = coerce_expr_into_bytes(&ir.asset_name)?;
+    let amount = coerce_expr_into_number(&ir.amount)?;
+    let amount = conway::NonZeroInt::try_from(amount as i64).unwrap();
+
+    let asset = asset!(policy, asset_name.clone(), amount);
+
+    Ok(asset)
+}
+
+fn compile_ada_value(ir: &ir::AssetExpr) -> Result<conway::Value, Error> {
     let amount = coerce_expr_into_number(&ir.amount)?;
 
     Ok(value!(amount as u64))
+}
+
+fn compile_value(ir: &ir::AssetExpr) -> Result<conway::Value, Error> {
+    if ir.policy.is_empty() {
+        compile_ada_value(ir)
+    } else {
+        let asset = compile_native_asset_for_output(ir)?;
+        Ok(value!(0, asset))
+    }
 }
 
 // calculate min utxo lovelace according to spec
@@ -188,14 +261,6 @@ fn eval_minutxo_constructor(&self, ctr: &ir::AssetConstructor) -> Result<conway:
 }
     */
 
-fn compile_asset(ir: &ir::AssetExpr) -> Result<conway::Value, Error> {
-    if ir.policy.is_empty() {
-        compile_ada_asset(ir)
-    } else {
-        compile_native_asset(ir)
-    }
-}
-
 fn compile_output_block(
     ir: &ir::Output,
     pparams: &PParams,
@@ -213,13 +278,13 @@ fn compile_output_block(
         .map(coerce_expr_into_assets)
         .collect::<Result<Vec<_>, _>>()?;
 
-    let assets = asset_list
+    let values = asset_list
         .iter()
         .flatten()
-        .map(compile_asset)
+        .map(compile_value)
         .collect::<Result<Vec<_>, _>>()?;
 
-    let value = asset_math::aggregate_values(assets);
+    let value = asset_math::aggregate_values(values);
 
     let datum_option = ir
         .datum
@@ -238,11 +303,25 @@ fn compile_output_block(
 }
 
 fn compile_mint_block(tx: &ir::Tx) -> Result<Option<conway::Mint>, Error> {
-    if tx.mints.is_empty() {
-        return Ok(None);
-    }
+    let mint = if let Some(mint) = tx.mint.as_ref() {
+        let assets = mint
+            .amount
+            .as_ref()
+            .map(coerce_expr_into_assets)
+            .transpose()?
+            .iter()
+            .flatten()
+            .map(compile_native_asset_for_mint)
+            .collect::<Result<Vec<_>, _>>()?;
 
-    todo!()
+        let value = asset_math::aggregate_assets(assets).unwrap();
+
+        Some(value)
+    } else {
+        None
+    };
+
+    Ok(mint)
 }
 
 fn compile_inputs(tx: &ir::Tx) -> Result<Vec<conway::TransactionInput>, Error> {
@@ -278,6 +357,29 @@ fn compile_outputs(
     Ok(resolved)
 }
 
+fn compile_vote_delegation_certificate(
+    x: &ir::AdHocDirective,
+) -> Result<conway::Certificate, Error> {
+    let stake = coerce_expr_into_stake_credential(&x.data["stake"])?;
+    let drep = coerce_expr_into_bytes(&x.data["drep"])?;
+    let drep = conway::DRep::Key(drep.as_slice().into());
+
+    Ok(conway::Certificate::VoteDeleg(stake, drep))
+}
+
+fn compile_certs(tx: &ir::Tx) -> Result<Vec<conway::Certificate>, Error> {
+    tx.adhoc
+        .iter()
+        .filter_map(|x| match x.name.as_str() {
+            "vote_delegation_certificate" => {
+                let cert = compile_vote_delegation_certificate(x);
+                Some(cert)
+            }
+            _ => None,
+        })
+        .collect::<Result<Vec<_>, _>>()
+}
+
 fn compile_tx_body(tx: &ir::Tx, pparams: &PParams) -> Result<conway::TransactionBody, Error> {
     let out = conway::TransactionBody {
         inputs: compile_inputs(tx)?.into(),
@@ -285,7 +387,7 @@ fn compile_tx_body(tx: &ir::Tx, pparams: &PParams) -> Result<conway::Transaction
         fee: coerce_expr_into_number(&tx.fees)? as u64,
         ttl: None,
         validity_interval_start: None,
-        certificates: None,
+        certificates: conway::NonEmptySet::from_vec(compile_certs(tx)?),
         withdrawals: None,
         auxiliary_data_hash: None,
         mint: compile_mint_block(tx)?,
@@ -318,21 +420,20 @@ fn compile_tx_body(tx: &ir::Tx, pparams: &PParams) -> Result<conway::Transaction
 }
 
 fn compile_auxiliary_data(tx: &ir::Tx) -> Result<Option<conway::AuxiliaryData>, Error> {
-    Ok(Some(conway::AuxiliaryData::PostAlonzo(
-        pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
-            metadata: None,
-            native_scripts: None,
-            plutus_scripts: None,
-        },
-    )))
+    // Ok(Some(conway::AuxiliaryData::PostAlonzo(
+    //     pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
+    //         metadata: None,
+    //         native_scripts: None,
+    //         plutus_scripts: None,
+    //     },
+    // )))
+
+    Ok(None)
 }
 
 fn compile_mint_redeemers(tx: &ir::Tx) -> Result<Vec<conway::Redeemer>, Error> {
-    if tx.mints.is_empty() {
-        return Ok(vec![]);
-    }
-
-    todo!()
+    // TODO
+    Ok(vec![])
 }
 
 fn compile_redeemers(tx: &ir::Tx) -> Result<Option<conway::Redeemers>, Error> {
@@ -382,7 +483,8 @@ pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<conway::Tx, Error> {
 
 pub fn eval_pass(tx: &conway::Tx, pparams: &PParams) -> Result<TxEval, Error> {
     let payload = pallas::codec::minicbor::to_vec(tx).unwrap();
-    let fee = (payload.len() as u64 * pparams.min_fee_coefficient) + pparams.min_fee_constant;
+    let fee =
+        (payload.len() as u64 * pparams.min_fee_coefficient) + pparams.min_fee_constant + 200_000;
 
     Ok(TxEval {
         payload,
