@@ -5,8 +5,8 @@ asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.MYTOK
 party Requester;
 
 tx claim_with_password(
-    password_hash: Bytes,
-    quantity: Int,
+    password: Bytes,
+    quantity: Int
 ) {
     input provided_gas {
         from: Requester,
@@ -15,7 +15,7 @@ tx claim_with_password(
 
     mint {
         amount: MyToken(quantity),
-        redeemer: password_hash,
+        redeemer: password,
     }
     
     output {
@@ -23,3 +23,4 @@ tx claim_with_password(
         amount: provided_gas - fees + MyToken(quantity),
     }
 }
+

@@ -6,22 +6,22 @@
 //! # Parsing
 //!
 //! ```
-//! let program = tx3_lang::parse_string("tx swap() {}").unwrap();
+//! let program = tx3_lang::parsing::parse_string("tx swap() {}").unwrap();
 //! ```
 //!
 //! # Analyzing
 //!
 //! ```
-//! let mut program = tx3_lang::parse_string("tx swap() {}").unwrap();
-//! tx3_lang::analyze(&mut program).unwrap();
+//! let mut program = tx3_lang::parsing::parse_string("tx swap() {}").unwrap();
+//! tx3_lang::analyzing::analyze(&mut program).unwrap();
 //! ```
 //!
 //! # Lowering
 //!
 //! ```
-//! let mut program = tx3_lang::parse_string("tx swap() {}").unwrap();
-//! tx3_lang::analyze(&mut program).unwrap();
-//! let ir = tx3_lang::lower(&program).unwrap();
+//! let mut program = tx3_lang::parsing::parse_string("tx swap() {}").unwrap();
+//! tx3_lang::analyzing::analyze(&mut program).unwrap();
+//! let ir = tx3_lang::lowering::lower(&program, "swap").unwrap();
 //! ```
 
 pub mod analyzing;
@@ -30,6 +30,9 @@ pub mod ast;
 pub mod ir;
 pub mod lowering;
 pub mod parsing;
+
+// chain specific
+pub mod cardano;
 
 #[macro_export]
 macro_rules! include_tx3_build {
@@ -78,6 +81,44 @@ pub enum ArgValue {
     UtxoSet(UtxoSet),
 }
 
+impl From<Vec<u8>> for ArgValue {
+    fn from(value: Vec<u8>) -> Self {
+        Self::Bytes(value)
+    }
+}
+
+impl From<String> for ArgValue {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl From<&str> for ArgValue {
+    fn from(value: &str) -> Self {
+        Self::String(value.to_string())
+    }
+}
+
+impl From<bool> for ArgValue {
+    fn from(value: bool) -> Self {
+        Self::Bool(value)
+    }
+}
+
+macro_rules! impl_from_int_for_arg_value {
+    ($($t:ty),*) => {
+        $(
+            impl From<$t> for ArgValue {
+                fn from(value: $t) -> Self {
+                    Self::Int(value as i128)
+                }
+            }
+        )*
+    };
+}
+
+impl_from_int_for_arg_value!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
+
 pub struct Protocol {
     ast: ast::Program,
     global_args: std::collections::HashMap<String, ArgValue>,
@@ -125,6 +166,14 @@ impl Protocol {
 
         Ok(tx.into())
     }
+
+    pub fn ast(&self) -> &ast::Program {
+        &self.ast
+    }
+
+    pub fn txs(&self) -> impl Iterator<Item = &ast::TxDef> {
+        self.ast.txs.iter()
+    }
 }
 
 use std::collections::HashSet;
@@ -135,23 +184,23 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProtoTx {
     ir: ir::Tx,
-    args: std::collections::HashMap<String, ArgValue>,
-    inputs: std::collections::HashMap<String, UtxoSet>,
+    args: std::collections::BTreeMap<String, ArgValue>,
+    inputs: std::collections::BTreeMap<String, UtxoSet>,
     fees: Option<u64>,
 
     #[serde(skip)]
-    params: std::sync::OnceLock<std::collections::HashMap<String, ast::Type>>,
+    params: std::sync::OnceLock<std::collections::BTreeMap<String, ast::Type>>,
 
     #[serde(skip)]
-    queries: std::sync::OnceLock<std::collections::HashMap<String, ir::InputQuery>>,
+    queries: std::sync::OnceLock<std::collections::BTreeMap<String, ir::InputQuery>>,
 }
 
 impl From<ir::Tx> for ProtoTx {
     fn from(ir: ir::Tx) -> Self {
         Self {
             ir,
-            args: std::collections::HashMap::new(),
-            inputs: std::collections::HashMap::new(),
+            args: std::collections::BTreeMap::new(),
+            inputs: std::collections::BTreeMap::new(),
             fees: None,
             params: std::sync::OnceLock::new(),
             queries: std::sync::OnceLock::new(),
@@ -160,38 +209,29 @@ impl From<ir::Tx> for ProtoTx {
 }
 
 impl ProtoTx {
-    pub fn params(&self) -> &std::collections::HashMap<String, ast::Type> {
+    pub fn params(&self) -> &std::collections::BTreeMap<String, ast::Type> {
         self.params.get_or_init(|| find_params(&self.ir))
     }
 
-    pub fn queries(&self) -> &std::collections::HashMap<String, ir::InputQuery> {
+    pub fn queries(&self) -> &std::collections::BTreeMap<String, ir::InputQuery> {
         self.queries.get_or_init(|| find_queries(&self.ir))
     }
 
     pub fn set_arg(&mut self, name: &str, value: ArgValue) {
-        self.args.insert(name.to_string(), value);
+        self.args.insert(name.to_lowercase().to_string(), value);
+    }
+
+    pub fn with_arg(mut self, name: &str, value: ArgValue) -> Self {
+        self.args.insert(name.to_lowercase().to_string(), value);
+        self
     }
 
     pub fn set_input(&mut self, name: &str, value: UtxoSet) {
-        self.inputs.insert(name.to_string(), value);
+        self.inputs.insert(name.to_lowercase().to_string(), value);
     }
 
     pub fn set_fees(&mut self, value: u64) {
         self.fees = Some(value);
-    }
-
-    pub fn missing_args(&self) -> impl Iterator<Item = (&str, &ast::Type)> {
-        self.params()
-            .iter()
-            .filter(|(k, _)| !self.args.contains_key(k.as_str()))
-            .map(|(k, v)| (k.as_str(), v))
-    }
-
-    pub fn missing_queries(&self) -> impl Iterator<Item = (&str, &ir::InputQuery)> {
-        self.queries()
-            .iter()
-            .filter(|(k, _)| !self.inputs.contains_key(k.as_str()))
-            .map(|(k, v)| (k.as_str(), v))
     }
 
     pub fn apply(self) -> Result<Self, applying::Error> {
@@ -208,6 +248,15 @@ impl ProtoTx {
         let tx = reduce(tx)?;
 
         Ok(tx.into())
+    }
+
+    pub fn ir_bytes(&self) -> Vec<u8> {
+        bincode::serialize(&self.ir).unwrap()
+    }
+
+    pub fn from_ir_bytes(bytes: &[u8]) -> Result<Self, bincode::Error> {
+        let ir: ir::Tx = bincode::deserialize(bytes)?;
+        Ok(Self::from(ir))
     }
 }
 
@@ -256,7 +305,7 @@ mod tests {
                 datum: None,
                 assets: vec![ir::AssetExpr {
                     policy: b"abababa".to_vec(),
-                    asset_name: ir::Expression::String("asset".to_string()),
+                    asset_name: ir::Expression::Bytes(b"asset".to_vec()),
                     amount: ir::Expression::Number(100),
                 }],
             }]),

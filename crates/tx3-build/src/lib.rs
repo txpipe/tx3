@@ -1,3 +1,4 @@
+use convert_case::Casing;
 use proc_macro2::Ident;
 use quote::{format_ident, quote};
 
@@ -6,6 +7,7 @@ fn to_syn_type(ty: &tx3_lang::ast::Type) -> syn::Type {
         tx3_lang::ast::Type::Int => syn::parse_str("i64").unwrap(),
         tx3_lang::ast::Type::Bool => syn::parse_str("bool").unwrap(),
         tx3_lang::ast::Type::Bytes => syn::parse_str("Vec<u8>").unwrap(),
+        tx3_lang::ast::Type::Address => syn::parse_str("tx3_lang::ArgValue").unwrap(),
         tx3_lang::ast::Type::Custom(name) => syn::parse_str(&format!("{}", name.value)).unwrap(),
     }
 }
@@ -15,8 +17,9 @@ pub fn compile_tx3(path: &str) {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed={}", path);
 
-    let mut ast = tx3_lang::parse_file(path).unwrap();
-    tx3_lang::analyze(&mut ast).unwrap();
+    let mut protocol = tx3_lang::Protocol::load_file(path).unwrap();
+
+    protocol.analyze().unwrap();
 
     // Create output file
     let out_dir = std::env::var("OUT_DIR").unwrap();
@@ -24,36 +27,46 @@ pub fn compile_tx3(path: &str) {
     let dest_path = std::path::Path::new(&out_dir).join(filename);
     let mut output = String::new();
 
-    for tx in ast.txs.iter() {
-        let ir = tx3_lang::lower(&ast, &tx.name).unwrap();
-        let ir_bytes: Vec<u8> = bincode::serialize(&ir).unwrap();
+    for tx_def in protocol.txs() {
+        let proto_tx = protocol.new_tx(&tx_def.name).unwrap();
+        let proto_bytes: Vec<u8> = proto_tx.ir_bytes();
 
-        let ir_name = format_ident!("IR_{}", tx.name.to_uppercase());
+        let bytes_name = format_ident!("PROTO_{}", tx_def.name.to_uppercase());
+
+        let struct_name =
+            format_ident!("{}Params", tx_def.name.to_case(convert_case::Case::Pascal));
 
         // Convert bytes to a byte string literal
-        let ir_bytes_literal = syn::LitByteStr::new(&ir_bytes, proc_macro2::Span::call_site());
+        let proto_bytes_literal =
+            syn::LitByteStr::new(&proto_bytes, proc_macro2::Span::call_site());
 
-        let fn_name = format_ident!("execute_{}", tx.name.to_lowercase());
+        let fn_name = format_ident!("new_{}_tx", tx_def.name.to_lowercase());
 
-        let param_names: Vec<Ident> = tx
-            .parameters
-            .parameters
+        let param_names: Vec<Ident> = proto_tx
+            .params()
             .iter()
-            .map(|p| format_ident!("{}", p.name))
+            .map(|(name, _)| format_ident!("{}", name.to_case(convert_case::Case::Snake)))
             .collect();
 
-        let param_types: Vec<syn::Type> = tx
-            .parameters
-            .parameters
+        let param_types: Vec<syn::Type> = proto_tx
+            .params()
             .iter()
-            .map(|p| to_syn_type(&p.r#type))
+            .map(|(_, ty)| to_syn_type(ty))
             .collect();
 
         let tokens = quote! {
-            pub const #ir_name: &[u8] = #ir_bytes_literal;
+            pub const #bytes_name: &[u8] = #proto_bytes_literal;
 
-            pub fn #fn_name(#(#param_names: #param_types),*) -> Result<ProtoTx, VMError> {
+            pub struct #struct_name {
+                #(#param_names: #param_types),*
+            }
 
+            pub fn #fn_name(params: #struct_name) -> Result<tx3_lang::ProtoTx, tx3_lang::applying::Error> {
+                let mut proto_tx = tx3_lang::ProtoTx::from_ir_bytes(#bytes_name).unwrap();
+
+                #(proto_tx.set_arg(stringify!(#param_names), params.#param_names.into());)*
+
+                proto_tx.apply()
             }
         };
 

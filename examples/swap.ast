@@ -273,7 +273,8 @@
         }
       ],
       "burn": null,
-      "mint": null
+      "mint": null,
+      "adhoc": []
     }
   ],
   "types": [

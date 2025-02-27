@@ -1,0 +1,29 @@
+
+party Participant;
+
+party EventOrganizer;
+
+tx purchase_ticket(
+    drep: Bytes,
+    ticket_price: Int
+) {
+    input source {
+        from: Participant,
+        min_amount: Ada(ticket_price),
+    }
+    
+    output ticket_payment {
+        to: EventOrganizer,
+        amount: Ada(ticket_price),
+    }
+
+    output change_return {
+        to: Participant,
+        amount: source - Ada(ticket_price) - fees,
+    }
+
+    cardano::vote_delegation_certificate {
+        drep: drep,
+        stake: Participant,
+    }
+}

@@ -165,7 +165,8 @@
         }
       ],
       "burn": null,
-      "mint": null
+      "mint": null,
+      "adhoc": []
     },
     {
       "name": "unlock",
@@ -261,7 +262,8 @@
         }
       ],
       "burn": null,
-      "mint": null
+      "mint": null,
+      "adhoc": []
     }
   ],
   "types": [

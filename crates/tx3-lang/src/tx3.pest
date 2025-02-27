@@ -191,6 +191,32 @@ burn_block = {
     "}"
 }
 
+cardano_stake_delegation_certificate = {
+    "stake_delegation_certificate" ~ "{" ~
+    (record_constructor_field ~ ",")* ~
+    "}"
+}
+
+cardano_vote_delegation_certificate = {
+    "vote_delegation_certificate" ~ "{" ~
+    "drep" ~ ":" ~ data_expr ~ "," ~
+    "stake" ~ ":" ~ data_expr ~ "," ~
+    "}"
+}
+
+cardano_block = {
+    "cardano" ~ "::" ~ (cardano_stake_delegation_certificate | cardano_vote_delegation_certificate)
+}
+
+bitcoin_block = {
+    "bitcoin" ~ "::" ~ identifier
+}
+
+chain_specific_block = {
+    cardano_block |
+    bitcoin_block
+}
+
 // Transaction definition
 tx_def = {
     "tx" ~ identifier ~ parameter_list ~ "{" ~
@@ -198,6 +224,7 @@ tx_def = {
     burn_block? ~
     mint_block? ~
     output_block* ~
+    chain_specific_block* ~
     "}"
 }
 

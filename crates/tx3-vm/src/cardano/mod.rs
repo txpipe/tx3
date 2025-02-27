@@ -1,14 +1,10 @@
-use std::collections::HashSet;
-
 use eval::{compile_tx, eval_pass};
-use tx3_lang::{
-    ir::{AssetExpr, InputQuery},
-    Utxo, UtxoRef, UtxoSet,
-};
+use tx3_lang::{ir::InputQuery, UtxoRef, UtxoSet};
 
 use crate::Error;
 
 mod eval;
+pub mod ledgers;
 
 #[derive(Debug, Default)]
 pub struct TxEval {
@@ -28,11 +24,11 @@ pub struct PParams {
 }
 
 pub trait Ledger {
-    fn get_pparams(&self) -> Result<PParams, Error>;
-    fn resolve_input(&self, query: &InputQuery) -> Result<UtxoSet, Error>;
+    async fn get_pparams(&self) -> Result<PParams, Error>;
+    async fn resolve_input(&self, query: &InputQuery) -> Result<UtxoSet, Error>;
 }
 
-fn optimize_tx<L: Ledger>(
+async fn optimize_tx<L: Ledger>(
     tx: &tx3_lang::ProtoTx,
     pparams: &PParams,
     ledger: &L,
@@ -40,8 +36,8 @@ fn optimize_tx<L: Ledger>(
 ) -> Result<Option<TxEval>, Error> {
     let mut attempt = tx.clone();
 
-    for (name, query) in tx.missing_queries() {
-        let utxos = ledger.resolve_input(query)?;
+    for (name, query) in tx.queries() {
+        let utxos = ledger.resolve_input(query).await?;
         attempt.set_input(name, utxos);
     }
 
@@ -59,16 +55,16 @@ fn optimize_tx<L: Ledger>(
     Ok(None)
 }
 
-pub fn build_tx<T: Ledger>(
+pub async fn build_tx<T: Ledger>(
     tx: tx3_lang::ProtoTx,
     ledger: T,
     max_optimize_rounds: usize,
 ) -> Result<TxEval, Error> {
-    let pparams = ledger.get_pparams()?;
+    let pparams = ledger.get_pparams().await?;
     let mut last_eval = TxEval::default();
     let mut rounds = 0;
 
-    while let Some(better) = optimize_tx(&tx, &pparams, &ledger, last_eval.fee)? {
+    while let Some(better) = optimize_tx(&tx, &pparams, &ledger, last_eval.fee).await? {
         last_eval = better;
 
         if rounds > max_optimize_rounds {
@@ -81,57 +77,12 @@ pub fn build_tx<T: Ledger>(
     Ok(last_eval)
 }
 
-pub struct MockLedger;
-
-impl Ledger for MockLedger {
-    fn get_pparams(&self) -> Result<PParams, Error> {
-        Ok(PParams {
-            network: pallas::ledger::addresses::Network::Testnet,
-            min_fee_coefficient: 1,
-            min_fee_constant: 2,
-            coins_per_utxo_byte: 1,
-        })
-    }
-
-    fn resolve_input(&self, input: &InputQuery) -> Result<UtxoSet, Error> {
-        let utxos = vec![
-            Utxo {
-                r#ref: UtxoRef {
-                    txid: hex::decode("267aae354f0d14d82877fa5720f7ddc9b0e3eea3cd2a0757af77db4d975ba81c").unwrap(),
-                    index: 0,
-                },
-                address: pallas::ledger::addresses::Address::from_bech32("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2").unwrap().to_vec().into(),
-                assets: vec![AssetExpr {
-                    policy: vec![],
-                    asset_name: tx3_lang::ir::Expression::Bytes(b"".to_vec()),
-                    amount: tx3_lang::ir::Expression::Number(500_000_000)
-                }],
-                datum: None,
-            },
-            Utxo {
-                r#ref: UtxoRef {
-                    txid: hex::decode("267aae354f0d14d82877fa5720f7ddc9b0e3eea3cd2a0757af77db4d975ba81c").unwrap(),
-                    index: 1,
-                },
-                address: pallas::ledger::addresses::Address::from_bech32("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2").unwrap().to_vec().into(),
-                assets: vec![AssetExpr {
-                    policy: vec![],
-                    asset_name: tx3_lang::ir::Expression::Bytes(b"".to_vec()),
-                    amount: tx3_lang::ir::Expression::Number(301_000_000)
-                }],
-                datum: None,
-            },
-        ];
-
-        Ok(HashSet::from_iter(utxos))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use tx3_lang::{ArgValue, Protocol};
 
     use super::*;
+    use crate::cardano::ledgers::mock::MockLedger;
 
     fn load_protocol(example_name: &str) -> Result<Protocol, Error> {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -150,40 +101,87 @@ mod tests {
         )
     }
 
-    #[test]
-    fn smoke_test_transfer() {
+    #[tokio::test]
+    async fn smoke_test_transfer() {
         let protocol = load_protocol("transfer").unwrap();
 
-        let mut tx = protocol.new_tx("transfer").unwrap();
+        let tx = protocol.new_tx("transfer")
+            .unwrap()
+            .with_arg("Sender", address_to_bytes("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2"))
+            .with_arg("Receiver", address_to_bytes("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2"))
+            .with_arg("quantity", ArgValue::Int(100_000_000))
+            .apply()
+            .unwrap();
 
-        tx.set_arg("Sender", address_to_bytes("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2"));
-        tx.set_arg("Receiver", address_to_bytes("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2"));
-        tx.set_arg("quantity", ArgValue::Int(100_000_000));
-
-        let tx = tx.apply().unwrap();
-
-        let tx = build_tx(tx, MockLedger, 3).unwrap();
+        let tx = build_tx(tx, MockLedger, 3).await.unwrap();
 
         println!("{}", hex::encode(tx.payload));
         println!("{}", tx.fee);
     }
 
-    #[test]
-    fn smoke_test_vesting() {
+    #[tokio::test]
+    async fn smoke_test_vesting() {
         let protocol = load_protocol("vesting").unwrap();
 
-        let mut tx = protocol.new_tx("lock").unwrap();
+        let tx = protocol.new_tx("lock")
+            .unwrap()
+            .with_arg("Owner", address_to_bytes("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2"))
+            .with_arg("Beneficiary", address_to_bytes("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2"))
+            .with_arg("quantity", ArgValue::Int(100_000_000))
+            .with_arg("until", ArgValue::Int(1713288000))
+            .apply()
+            .unwrap();
 
-        tx.set_arg("Owner", address_to_bytes("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2"));
-        tx.set_arg("Beneficiary", address_to_bytes("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2"));
-        tx.set_arg("quantity", ArgValue::Int(100_000_000));
-        tx.set_arg("until", ArgValue::Int(1713288000));
-
-        let tx = tx.apply().unwrap();
-
-        let tx = build_tx(tx, MockLedger, 3).unwrap();
+        let tx = build_tx(tx, MockLedger, 3).await.unwrap();
 
         println!("{}", hex::encode(tx.payload));
+        println!("{}", tx.fee);
+    }
+
+    #[tokio::test]
+    async fn buidlr_fest() {
+        let protocol = load_protocol("buidlr_fest").unwrap();
+
+        let tx = protocol.new_tx("purchase_ticket")
+            .unwrap()
+            .with_arg("Participant", address_to_bytes("addr1q9mjjtht4tqffckvmnacjv0hw9xvh7ts25hfvejcj75dza3zm8mrlcdv4atxwl3fpl6y8fwe9d2zjcsja9a353dsntdqlu3vxk"))
+            .with_arg("EventOrganizer", address_to_bytes("addr1zyzpenlg0vywj7zdh9dzdeggaer94zvckfncv9c3886c36yafhxhu32dys6pvn6wlw8dav6cmp4pmtv7cc3yel9uu0nqhcjd29"))
+            .with_arg("drep", ArgValue::Bytes(hex::decode("55215f98aa7d9e289d215a55f62d258c6c3a71ab847b76de9ddbe661").unwrap().to_vec()))
+            .with_arg("ticket_price", ArgValue::Int(150_000_000))
+            .apply()
+            .unwrap();
+
+        let ledger = ledgers::u5c::Ledger::new(ledgers::u5c::Config {
+            endpoint_url: "https://mainnet.utxorpc-v0.demeter.run".to_string(),
+            api_key: "dmtr_utxorpc1wgnnj0qcfj32zxsz2uc8d4g7uclm2s2w".to_string(),
+            network_id: 1,
+        })
+        .await
+        .unwrap();
+
+        let tx = build_tx(tx, ledger, 5).await.unwrap();
+
+        println!("{}", hex::encode(&tx.payload));
+        println!("{}", tx.fee);
+    }
+
+    #[tokio::test]
+    async fn faucet_test() {
+        let protocol = load_protocol("faucet").unwrap();
+
+        let mut tx = protocol
+            .new_tx("claim_with_password")
+            .unwrap()
+            .apply()
+            .unwrap();
+
+        tx.set_arg("quantity", 1.into());
+        tx.set_arg("password", hex::decode("abc1").unwrap().into());
+        tx.set_arg("requester", "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x".into());
+
+        let tx = build_tx(tx, MockLedger, 3).await.unwrap();
+
+        println!("{}", hex::encode(&tx.payload));
         println!("{}", tx.fee);
     }
 }
