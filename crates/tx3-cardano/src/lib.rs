@@ -1,8 +1,25 @@
-#[cfg(feature = "cardano")]
-pub mod cardano;
+mod compile;
+mod resolve;
+
+pub mod ledgers;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("error coercing {0} into {1}")]
+    CoerceError(String, String),
+
+    #[error("invalid asset expression '{0}'")]
+    InvalidAssetExpression(String),
+
+    #[error("missing address")]
+    MissingAddress,
+
+    #[error("invalid address expression '{0}'")]
+    InvalidAddressExpression(String),
+
+    #[error("ledger internal error: {0}")]
+    LedgerInternalError(String),
+
     #[error("tx '{0}' not found")]
     TxNotFound(String),
 
@@ -27,17 +44,11 @@ pub enum Error {
     #[error("missing asset name")]
     MissingAssetName,
 
-    #[error("missing address")]
-    MissingAddress,
-
     #[error("asset value too high")]
     AssetValueTooHigh,
 
     #[error("outputs too high")]
     OutputsTooHigh,
-
-    #[error("error coercing {0} into {1}")]
-    CoerceError(String, String),
 
     #[error("error applying tx values")]
     ApplyError(#[from] tx3_lang::applying::Error),
@@ -51,15 +62,19 @@ pub enum Error {
     #[error("can't resolve symbol '{0:?}'")]
     CantResolveSymbol(tx3_lang::ast::Symbol),
 
-    #[error("invalid asset expression '{0}'")]
-    InvalidAssetExpression(String),
-
-    #[error("invalid address expression '{0}'")]
-    InvalidAddressExpression(String),
-
-    #[error("ledger internal error: {0}")]
-    LedgerInternalError(String),
-
     #[error("max optimize rounds reached")]
     MaxOptimizeRoundsReached,
 }
+
+pub type Network = pallas::ledger::addresses::Network;
+
+pub struct PParams {
+    pub network: Network,
+    pub min_fee_coefficient: u64,
+    pub min_fee_constant: u64,
+    pub coins_per_utxo_byte: u64,
+    // TODO: cost models, execution prices
+}
+
+pub use compile::compile_tx;
+pub use resolve::resolve_tx;

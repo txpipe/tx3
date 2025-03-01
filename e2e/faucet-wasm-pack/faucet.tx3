@@ -1,0 +1,26 @@
+policy PasswordPolicy = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe;
+
+asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.MYTOKEN;
+
+party Requester;
+
+tx claim_with_password(
+    password: Bytes,
+    quantity: Int
+) {
+    input provided_gas {
+        from: Requester,
+        min_amount: fees,
+    }
+
+    mint {
+        amount: MyToken(quantity),
+        redeemer: password,
+    }
+    
+    output {
+        to: Requester,
+        amount: provided_gas - fees + MyToken(quantity),
+    }
+}
+

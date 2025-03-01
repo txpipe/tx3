@@ -281,14 +281,15 @@ mod tests {
 
         protocol.set_global_arg("Sender", ArgValue::Address(b"sender".to_vec()));
 
-        let mut tx = protocol.new_tx("transfer").unwrap();
+        let tx = protocol.new_tx("transfer").unwrap();
 
         dbg!(&tx.params());
         dbg!(&tx.queries());
 
-        tx.set_arg("quantity", ArgValue::Int(100_000_000));
-
-        let mut tx = tx.apply().unwrap();
+        let mut tx = tx
+            .with_arg("quantity", ArgValue::Int(100_000_000))
+            .apply()
+            .unwrap();
 
         dbg!(&tx.params());
         dbg!(&tx.queries());

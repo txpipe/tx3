@@ -1,5 +1,5 @@
 [package]
-name = "tx3-build"
+name = "tx3-bindgen"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,4 +10,3 @@ proc-macro2 = "1.0.93"
 quote = "1.0.38"
 syn = "2.0.98"
 tx3-lang = { path = "../tx3-lang" }
-tx3-vm = { version = "0.1.0", path = "../tx3-vm" }
