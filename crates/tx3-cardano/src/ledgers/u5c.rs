@@ -125,8 +125,6 @@ impl crate::resolve::Ledger for Ledger {
             ..Default::default()
         };
 
-        dbg!(&pattern);
-
         let utxos = self
             .queries
             .lock()

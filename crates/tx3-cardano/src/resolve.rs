@@ -31,13 +31,12 @@ async fn eval_pass<L: Ledger>(
 
     for (name, query) in tx.queries() {
         let utxos = ledger.resolve_input(query).await?;
-        dbg!((name, query, &utxos));
         attempt.set_input(name, utxos);
     }
 
     let attempt = attempt.apply()?;
 
-    let tx = compile_tx(attempt.as_ref(), pparams).unwrap();
+    let tx = compile_tx(attempt.as_ref(), pparams)?;
 
     let payload = pallas::codec::minicbor::to_vec(&tx).unwrap();
 

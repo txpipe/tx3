@@ -1,0 +1,35 @@
+{
+  "name": "tx3",
+  "version": "0.1.0",
+  "description": "JS client to interact with Tx3 transaction",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.esm.js",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "jest",
+    "clean": "rimraf dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/txpipe/tx3.git"
+  },
+  "author": "TxPipe",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/txpipe/tx3/issues"
+  },
+  "homepage": "https://github.com/txpipe/tx3#readme",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.2",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "rollup": "^4.34.9",
+    "tslib": "^2.8.1",
+    "typescript": "^5.8.2"
+  }
+}
