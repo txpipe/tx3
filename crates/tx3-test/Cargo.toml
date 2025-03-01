@@ -1,5 +1,5 @@
 [package]
-name = "tx3-vm"
+name = "tx3-test"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,10 @@ edition = "2021"
 tx3-lang = { version = "0.1.0", path = "../tx3-lang" }
 hex = "0.4.3"
 thiserror = "2.0.11"
+tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
+warp = "0.3.7"
+serde_json = "1.0.139"
+tokio-util = "0.7.13"
+tracing = "0.1.41"
+serde = "1.0.218"
+tx3-cardano = { version = "0.1.0", path = "../tx3-cardano" }
