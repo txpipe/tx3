@@ -37,6 +37,7 @@ fn expect_case_def(ident: &ast::Identifier) -> Result<&ast::VariantCase, Error> 
         .ok_or(Error::InvalidSymbol(ident.value.clone(), "VariantCase"))
 }
 
+#[allow(dead_code)]
 fn expect_field_def(ident: &ast::Identifier) -> Result<&ast::RecordField, Error> {
     let symbol = ident.symbol.as_ref().ok_or(Error::MissingAnalyzePhase)?;
 
@@ -158,8 +159,8 @@ impl IntoLower for ast::DataExpr {
                     todo!();
                 }
             },
-            ast::DataExpr::PropertyAccess(x) => todo!(),
-            ast::DataExpr::BinaryOp(x) => todo!(),
+            ast::DataExpr::PropertyAccess(_x) => todo!(),
+            ast::DataExpr::BinaryOp(_x) => todo!(),
         };
 
         Ok(out)
@@ -212,7 +213,7 @@ impl IntoLower for ast::AssetExpr {
                 Ok(ir::Expression::EvalCustom(Box::new(x.into_lower()?)))
             }
             ast::AssetExpr::Identifier(x) => coerce_identifier_into_asset_expr(x),
-            ast::AssetExpr::PropertyAccess(x) => todo!(),
+            ast::AssetExpr::PropertyAccess(_x) => todo!(),
         }
     }
 }

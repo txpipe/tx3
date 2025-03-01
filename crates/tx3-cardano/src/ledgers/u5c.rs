@@ -4,6 +4,8 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use utxorpc::CardanoQueryClient;
 
+use crate::PParams;
+
 impl From<utxorpc::Error> for crate::Error {
     fn from(error: utxorpc::Error) -> Self {
         crate::Error::LedgerInternalError(error.to_string())
@@ -15,6 +17,17 @@ fn expr_to_address_pattern(
 ) -> utxorpc::spec::cardano::AddressPattern {
     match value {
         tx3_lang::ir::Expression::Address(address) => utxorpc::spec::cardano::AddressPattern {
+            exact_address: address.clone().into(),
+            ..Default::default()
+        },
+        tx3_lang::ir::Expression::String(address) => utxorpc::spec::cardano::AddressPattern {
+            exact_address: pallas::ledger::addresses::Address::from_bech32(address)
+                .unwrap()
+                .to_vec()
+                .into(),
+            ..Default::default()
+        },
+        tx3_lang::ir::Expression::Bytes(address) => utxorpc::spec::cardano::AddressPattern {
             exact_address: address.clone().into(),
             ..Default::default()
         },
@@ -75,8 +88,8 @@ impl Ledger {
     // }
 }
 
-impl crate::cardano::Ledger for Ledger {
-    async fn get_pparams(&self) -> Result<crate::cardano::PParams, crate::Error> {
+impl crate::resolve::Ledger for Ledger {
+    async fn get_pparams(&self) -> Result<PParams, crate::Error> {
         let req = utxorpc::spec::query::ReadParamsRequest::default();
 
         let res = self
@@ -92,17 +105,12 @@ impl crate::cardano::Ledger for Ledger {
         )?;
 
         match params {
-            utxorpc::spec::query::any_chain_params::Params::Cardano(params) => {
-                Ok(crate::cardano::PParams {
-                    network: pallas::ledger::addresses::Network::from(self.network_id),
-                    min_fee_coefficient: params.min_fee_coefficient,
-                    min_fee_constant: params.min_fee_constant,
-                    coins_per_utxo_byte: params.coins_per_utxo_byte,
-                })
-            }
-            _ => Err(crate::Error::LedgerInternalError(
-                "unexpected response from read_params".to_string(),
-            )),
+            utxorpc::spec::query::any_chain_params::Params::Cardano(params) => Ok(PParams {
+                network: pallas::ledger::addresses::Network::from(self.network_id),
+                min_fee_coefficient: params.min_fee_coefficient,
+                min_fee_constant: params.min_fee_constant,
+                coins_per_utxo_byte: params.coins_per_utxo_byte,
+            }),
         }
     }
 
@@ -116,6 +124,8 @@ impl crate::cardano::Ledger for Ledger {
             address: address,
             ..Default::default()
         };
+
+        dbg!(&pattern);
 
         let utxos = self
             .queries

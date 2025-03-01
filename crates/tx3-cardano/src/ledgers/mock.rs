@@ -5,10 +5,7 @@ use tx3_lang::{
     Utxo, UtxoRef, UtxoSet,
 };
 
-use crate::{
-    cardano::{Ledger, PParams},
-    Error,
-};
+use crate::{resolve::Ledger, Error, PParams};
 
 pub struct MockLedger;
 
@@ -22,7 +19,7 @@ impl Ledger for MockLedger {
         })
     }
 
-    async fn resolve_input(&self, input: &InputQuery) -> Result<UtxoSet, Error> {
+    async fn resolve_input(&self, _input: &InputQuery) -> Result<UtxoSet, Error> {
         let utxos = vec![
             Utxo {
                 r#ref: UtxoRef {

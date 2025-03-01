@@ -1,0 +1,9 @@
+[package]
+name = "tx3-vm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tx3-lang = { version = "0.1.0", path = "../tx3-lang" }
+hex = "0.4.3"
+thiserror = "2.0.11"

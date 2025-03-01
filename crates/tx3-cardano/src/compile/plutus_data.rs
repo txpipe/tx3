@@ -5,12 +5,11 @@ pub trait IntoData {
     fn into_data(&self) -> PlutusData;
 }
 
-#[macro_export]
 macro_rules! constr {
     ($tag:expr, $($field:expr),*) => {
         {
             let fields = vec![$($field.into_data()),*];
-            $crate::cardano::eval::plutus_data::constr($tag, fields)
+            $crate::compile::plutus_data::constr($tag, fields)
         }
     };
 }
@@ -75,13 +74,5 @@ impl IntoData for i128 {
     fn into_data(&self) -> PlutusData {
         let int = Int::try_from(*self).unwrap();
         PlutusData::BigInt(BigInt::Int(int))
-    }
-}
-
-mod test {
-    use super::*;
-
-    fn construct_constr() {
-        let x = constr!(0, b"abc", vec![1, 2, 3]);
     }
 }

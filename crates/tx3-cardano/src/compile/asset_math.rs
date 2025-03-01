@@ -1,11 +1,8 @@
-use pallas::crypto::hash::Hash;
 use pallas::ledger::primitives::{
     conway::{self, Value},
-    AssetName, NonEmptyKeyValuePairs, NonZeroInt, PolicyId, PositiveCoin,
+    Hash, NonEmptyKeyValuePairs, NonZeroInt, PositiveCoin,
 };
 use std::collections::{hash_map::Entry, HashMap};
-
-use super::Error;
 
 fn fold_assets<T>(
     acc: &mut HashMap<pallas::codec::utils::Bytes, T>,
@@ -85,113 +82,6 @@ pub fn aggregate_values(items: impl IntoIterator<Item = Value>) -> Value {
         Value::Multiasset(total_coin, total_assets)
     } else {
         Value::Coin(total_coin)
-    }
-}
-
-pub fn add_values(lhs: &Value, rhs: &Value) -> Result<Value, Error> {
-    Ok(aggregate_values(vec![lhs.clone(), rhs.clone()]))
-}
-
-pub fn subtract_value(lhs: &Value, rhs: &Value) -> Result<Value, Error> {
-    let (lhs_coin, lhs_assets) = match lhs {
-        Value::Coin(c) => (*c, vec![]),
-        Value::Multiasset(c, a) => (*c, a.iter().collect()),
-    };
-
-    let (rhs_coin, mut rhs_assets) = match rhs {
-        Value::Coin(c) => (*c, HashMap::new()),
-        Value::Multiasset(c, a) => {
-            let flattened: HashMap<(&PolicyId, &AssetName), u64> = a
-                .iter()
-                .flat_map(|(policy, assets)| {
-                    assets
-                        .iter()
-                        .map(move |(name, value)| ((policy, name), value.into()))
-                })
-                .collect();
-            (*c, flattened)
-        }
-    };
-
-    let Some(final_coin) = lhs_coin.checked_sub(rhs_coin) else {
-        return Err(Error::OutputsTooHigh);
-    };
-
-    let mut final_assets = vec![];
-    for (policy, assets) in lhs_assets {
-        let mut policy_assets = vec![];
-        for (name, value) in assets.iter() {
-            let lhs_value: u64 = value.into();
-            let rhs_value: u64 = rhs_assets.remove(&(policy, name)).unwrap_or_default();
-            let Some(final_value) = lhs_value.checked_sub(rhs_value) else {
-                return Err(Error::OutputsTooHigh);
-            };
-            if let Ok(final_coin) = final_value.try_into() {
-                policy_assets.push((name.clone(), final_coin));
-            }
-        }
-        if let Some(assets) = NonEmptyKeyValuePairs::from_vec(policy_assets) {
-            final_assets.push((*policy, assets));
-        }
-    }
-
-    if !rhs_assets.is_empty() {
-        // We have an output which didn't come from any inputs
-        return Err(Error::OutputsTooHigh);
-    }
-
-    if let Some(assets) = NonEmptyKeyValuePairs::from_vec(final_assets) {
-        Ok(Value::Multiasset(final_coin, assets))
-    } else {
-        Ok(Value::Coin(final_coin))
-    }
-}
-
-pub fn value_coin(value: &Value) -> u64 {
-    match value {
-        Value::Coin(x) => *x,
-        Value::Multiasset(x, _) => *x,
-    }
-}
-
-fn try_to_mint<F>(assets: conway::Multiasset<PositiveCoin>, f: F) -> Result<conway::Mint, Error>
-where
-    F: Fn(i64) -> Result<NonZeroInt, i64>,
-{
-    let mut new_assets = vec![];
-    for (policy, asset) in assets {
-        let mut new_asset = vec![];
-        for (name, quantity) in asset {
-            let quantity: u64 = quantity.into();
-            if quantity > i64::MAX as u64 {
-                return Err(Error::AssetValueTooHigh);
-            }
-            let quantity: NonZeroInt = f(quantity as i64).unwrap();
-            new_asset.push((name, quantity));
-        }
-        let asset = NonEmptyKeyValuePairs::from_vec(new_asset).unwrap();
-        new_assets.push((policy, asset));
-    }
-
-    Ok(NonEmptyKeyValuePairs::from_vec(new_assets).unwrap())
-}
-
-pub fn multiasset_coin_to_mint(
-    assets: conway::Multiasset<PositiveCoin>,
-) -> Result<conway::Mint, Error> {
-    try_to_mint(assets, |quantity| quantity.try_into())
-}
-
-pub fn multiasset_coin_to_burn(
-    assets: conway::Multiasset<PositiveCoin>,
-) -> Result<conway::Mint, Error> {
-    try_to_mint(assets, |quantity| (-quantity).try_into())
-}
-
-pub fn value_saturating_add_coin(value: Value, coin: i64) -> Value {
-    match value {
-        Value::Coin(x) => Value::Coin(x.saturating_add_signed(coin)),
-        Value::Multiasset(x, assets) => Value::Multiasset(x.saturating_add_signed(coin), assets),
     }
 }
 

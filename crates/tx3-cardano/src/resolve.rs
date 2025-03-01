@@ -1,10 +1,9 @@
-use eval::{compile_tx, eval_pass};
-use tx3_lang::{ir::InputQuery, UtxoRef, UtxoSet};
+use tx3_lang::{
+    ir::{self, InputQuery},
+    UtxoSet,
+};
 
-use crate::Error;
-
-mod eval;
-pub mod ledgers;
+use crate::{compile::compile_tx, Error, PParams};
 
 #[derive(Debug, Default)]
 pub struct TxEval {
@@ -13,40 +12,43 @@ pub struct TxEval {
     pub ex_units: u64,
 }
 
-pub type Network = pallas::ledger::addresses::Network;
-
-pub struct PParams {
-    pub network: pallas::ledger::addresses::Network,
-    pub min_fee_coefficient: u64,
-    pub min_fee_constant: u64,
-    pub coins_per_utxo_byte: u64,
-    // TODO: cost models, execution prices
-}
-
+#[trait_variant::make(Send)]
 pub trait Ledger {
     async fn get_pparams(&self) -> Result<PParams, Error>;
     async fn resolve_input(&self, query: &InputQuery) -> Result<UtxoSet, Error>;
 }
 
-async fn optimize_tx<L: Ledger>(
+async fn eval_pass<L: Ledger>(
     tx: &tx3_lang::ProtoTx,
     pparams: &PParams,
     ledger: &L,
     best_fees: u64,
 ) -> Result<Option<TxEval>, Error> {
     let mut attempt = tx.clone();
+    attempt.set_fees(best_fees);
+
+    attempt = attempt.apply()?;
 
     for (name, query) in tx.queries() {
         let utxos = ledger.resolve_input(query).await?;
+        dbg!((name, query, &utxos));
         attempt.set_input(name, utxos);
     }
 
-    attempt.set_fees(best_fees);
-
     let attempt = attempt.apply()?;
 
-    let attempt = compile_tx(attempt.as_ref(), pparams)?;
-    let eval = eval_pass(&attempt, pparams)?;
+    let tx = compile_tx(attempt.as_ref(), pparams).unwrap();
+
+    let payload = pallas::codec::minicbor::to_vec(&tx).unwrap();
+
+    let fee =
+        (payload.len() as u64 * pparams.min_fee_coefficient) + pparams.min_fee_constant + 200_000;
+
+    let eval = TxEval {
+        payload,
+        fee,
+        ex_units: 0,
+    };
 
     if eval.fee != best_fees {
         return Ok(Some(eval));
@@ -55,7 +57,7 @@ async fn optimize_tx<L: Ledger>(
     Ok(None)
 }
 
-pub async fn build_tx<T: Ledger>(
+pub async fn resolve_tx<T: Ledger>(
     tx: tx3_lang::ProtoTx,
     ledger: T,
     max_optimize_rounds: usize,
@@ -64,7 +66,10 @@ pub async fn build_tx<T: Ledger>(
     let mut last_eval = TxEval::default();
     let mut rounds = 0;
 
-    while let Some(better) = optimize_tx(&tx, &pparams, &ledger, last_eval.fee).await? {
+    // one initial pass to reduce any available params;
+    let tx = tx.apply()?;
+
+    while let Some(better) = eval_pass(&tx, &pparams, &ledger, last_eval.fee).await? {
         last_eval = better;
 
         if rounds > max_optimize_rounds {
@@ -82,7 +87,7 @@ mod tests {
     use tx3_lang::{ArgValue, Protocol};
 
     use super::*;
-    use crate::cardano::ledgers::mock::MockLedger;
+    use crate::ledgers::mock::MockLedger;
 
     fn load_protocol(example_name: &str) -> Result<Protocol, Error> {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -113,7 +118,7 @@ mod tests {
             .apply()
             .unwrap();
 
-        let tx = build_tx(tx, MockLedger, 3).await.unwrap();
+        let tx = resolve_tx(tx, MockLedger, 3).await.unwrap();
 
         println!("{}", hex::encode(tx.payload));
         println!("{}", tx.fee);
@@ -132,36 +137,9 @@ mod tests {
             .apply()
             .unwrap();
 
-        let tx = build_tx(tx, MockLedger, 3).await.unwrap();
+        let tx = resolve_tx(tx, MockLedger, 3).await.unwrap();
 
         println!("{}", hex::encode(tx.payload));
-        println!("{}", tx.fee);
-    }
-
-    #[tokio::test]
-    async fn buidlr_fest() {
-        let protocol = load_protocol("buidlr_fest").unwrap();
-
-        let tx = protocol.new_tx("purchase_ticket")
-            .unwrap()
-            .with_arg("Participant", address_to_bytes("addr1q9mjjtht4tqffckvmnacjv0hw9xvh7ts25hfvejcj75dza3zm8mrlcdv4atxwl3fpl6y8fwe9d2zjcsja9a353dsntdqlu3vxk"))
-            .with_arg("EventOrganizer", address_to_bytes("addr1zyzpenlg0vywj7zdh9dzdeggaer94zvckfncv9c3886c36yafhxhu32dys6pvn6wlw8dav6cmp4pmtv7cc3yel9uu0nqhcjd29"))
-            .with_arg("drep", ArgValue::Bytes(hex::decode("55215f98aa7d9e289d215a55f62d258c6c3a71ab847b76de9ddbe661").unwrap().to_vec()))
-            .with_arg("ticket_price", ArgValue::Int(150_000_000))
-            .apply()
-            .unwrap();
-
-        let ledger = ledgers::u5c::Ledger::new(ledgers::u5c::Config {
-            endpoint_url: "https://mainnet.utxorpc-v0.demeter.run".to_string(),
-            api_key: "dmtr_utxorpc1wgnnj0qcfj32zxsz2uc8d4g7uclm2s2w".to_string(),
-            network_id: 1,
-        })
-        .await
-        .unwrap();
-
-        let tx = build_tx(tx, ledger, 5).await.unwrap();
-
-        println!("{}", hex::encode(&tx.payload));
         println!("{}", tx.fee);
     }
 
@@ -179,7 +157,7 @@ mod tests {
         tx.set_arg("password", hex::decode("abc1").unwrap().into());
         tx.set_arg("requester", "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x".into());
 
-        let tx = build_tx(tx, MockLedger, 3).await.unwrap();
+        let tx = resolve_tx(tx, MockLedger, 3).await.unwrap();
 
         println!("{}", hex::encode(&tx.payload));
         println!("{}", tx.fee);

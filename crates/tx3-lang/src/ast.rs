@@ -412,6 +412,7 @@ impl TypeDef {
         self.cases.iter().position(|x| x.name == case)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn find_case(&self, case: &str) -> Option<&VariantCase> {
         self.cases.iter().find(|x| x.name == case)
     }
@@ -424,10 +425,12 @@ pub struct VariantCase {
 }
 
 impl VariantCase {
+    #[allow(dead_code)]
     pub(crate) fn find_field_index(&self, field: &str) -> Option<usize> {
         self.fields.iter().position(|x| x.name == field)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn find_field(&self, field: &str) -> Option<&RecordField> {
         self.fields.iter().find(|x| x.name == field)
     }
