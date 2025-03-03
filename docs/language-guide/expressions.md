@@ -29,8 +29,8 @@ false
 "world"
 
 // Bytes literals
-0x"deadbeef"
-0x"1234"
+0xDEADBEEF
+0x1234
 ```
 
 ### Constructors

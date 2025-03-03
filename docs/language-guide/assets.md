@@ -172,28 +172,6 @@ tx add_liquidity(
 }
 ```
 
-## Best Practices
-
-1. **Asset Naming**
-   - Use descriptive names
-   - Follow consistent conventions
-   - Document asset properties
-
-2. **Amount Validation**
-   - Check minimum amounts
-   - Validate asset combinations
-   - Consider decimals
-
-3. **Fee Handling**
-   - Account for transaction fees
-   - Include fee buffer
-   - Handle rounding
-
-4. **Asset Bundling**
-   - Group related assets
-   - Optimize bundle size
-   - Consider UTxO limits
-
 ## Common Use Cases
 
 ### Token Minting

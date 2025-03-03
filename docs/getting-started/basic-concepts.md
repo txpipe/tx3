@@ -4,7 +4,7 @@ This guide introduces the fundamental concepts you need to understand to work wi
 
 ## UTxO Model
 
-UTxO (Unspent Transaction Output) is the accounting model used by blockchains like Cardano. In this model:
+UTxO (Unspent Transaction Output) is the accounting model used by blockchains like Bitcoin & Cardano. In this model:
 
 - The blockchain state is represented by a set of unspent transaction outputs
 - Each UTxO has:
@@ -14,9 +14,9 @@ UTxO (Unspent Transaction Output) is the accounting model used by blockchains li
 - Transactions consume UTxOs and create new ones
 - Each UTxO can only be spent once
 
-## Transaction Templates
+## Tx3 Templates
 
-A transaction template is a pattern that describes how to construct a valid transaction. It includes:
+A transaction template in Tx3 is a pattern that describes how to construct a valid transaction. It includes:
 
 - Input requirements (which UTxOs to consume)
 - Output specifications (what new UTxOs to create)
@@ -25,6 +25,9 @@ A transaction template is a pattern that describes how to construct a valid tran
 
 Example:
 ```tx3
+party Sender;
+party Receiver;
+
 tx transfer(quantity: Int) {
     input source {
         from: Sender,
@@ -33,17 +36,16 @@ tx transfer(quantity: Int) {
     
     output {
         to: Receiver,
-        amount: Ada(quantity),
+        amount: Ada(quantity) - fees,
     }
 }
 ```
 
-## Parties
+## Party Definition
 
 Parties are the participants in a transaction. They can be:
 
 - Wallet addresses
-- Smart contracts
 - Script addresses
 
 Example:
@@ -52,43 +54,110 @@ party Sender;
 party Receiver;
 ```
 
-## Assets
-
-Assets represent the values that can be transferred in transactions:
-
-- Native tokens (like ADA)
-- Custom tokens
-- NFTs
-
-Example:
-```tx3
-asset MyToken = "policy_id" "asset_name";
-```
-
-## Policies
+## Policy Definition
 
 Policies are onchain validation scripts that enforce rules for transactions:
 
-- Time locks
 - Multi-signature requirements
 - Custom validation logic
 
 Example:
 ```tx3
-policy TimeLock = import("validators/vesting.ak");
+policy TimeLock = 0x01233456789ABCDEF;
 ```
 
-## Data Types
+## Asset Definition
 
-Tx3 supports various data types:
+Assets represent the values that can be transferred in transactions:
 
-- Basic types: `Int`, `Bool`, `Bytes`, `String`
-- Custom types through records and variants
-- Asset types for blockchain assets
+- Native tokens (like BTC or ADA)
+- Custom tokens
+- NFTs
+
+By defining an asset in your protocol, it enable its use as an [asset expression](#asset-expressions).
 
 Example:
 ```tx3
-record State {
+asset MyToken = 0x01233456789ABCDEF.MYTOKEN";
+```
+
+## Asset Expressions
+
+Asset expressions are used to compute and manipulate asset values in transactions. They support:
+
+- Basic arithmetic operations (addition, subtraction)
+- Asset constructors (chain native tokens & custom tokens)
+- Binary operations between assets (add, subtract, multiply, divide)
+
+Example:
+```tx3
+// Basic asset expressions
+Ada(1)  // 1 ADA
+Lovelace(1000000) // 1 ADA
+MyToken(50)   // 50 tokens of the MyToken asset definition
+
+// Arithmetic operations
+source - Ada(amount) - fees
+Ada(1000000) + MyToken(50)
+```
+
+
+## Data Expressions
+
+Data expressions are used to construct and manipulate data values in transactions. They support:
+
+- Literals (integers, booleans, strings, bytes)
+- Record construction
+- Variant construction
+- Binary operations
+- Property access
+
+Example:
+```tx3
+// Basic literals
+123
+true
+"hello"
+0x"deadbeef"
+
+// Record construction
+State {
+    lock_until: 1234567890,
+    owner: 0xDEADBEEF,
+    beneficiary: 0x12345678,
+}
+
+// Variant construction
+Result::Success(42)
+Result::Error("failed")
+
+// Binary operations
+a + b
+a - b
+
+// Property access
+record.field
+variant.field
+```
+
+Data expressions are commonly used for:
+- Constructing datums
+- Creating redeemers
+- Computing values
+- Validating conditions
+
+## Built-in Data Types
+
+Tx3 supports various data types which are built-in into the langage:
+
+- Basic types: `Int`, `Bool`, `Bytes`, `String`
+- Custom types through records and variants
+
+## Custom Type Definitions
+
+Example:
+```tx3
+type State {
     lock_until: Int,
     owner: Bytes,
     beneficiary: Bytes,
@@ -104,28 +173,3 @@ When a transaction template is used:
 3. Output values are computed
 4. The final transaction is constructed
 5. The transaction is validated
-
-## Visualization
-
-Tx3 provides three levels of visualization:
-
-1. **Interaction Level (L1)**
-   - High-level view of interactions
-   - Focus on business logic
-   - Abstract away technical details
-
-2. **Transaction Level (L2)**
-   - Detailed view of transactions
-   - Shows inputs, outputs, validation
-   - Includes script requirements
-
-3. **Validator Level (L3)**
-   - Complete UTxO graph
-   - Full technical details
-   - Transaction structure
-
-## Next Steps
-
-- [Quick Start Guide](quick-start.md) - Write your first Tx3 program
-- [Language Guide](../language-guide/index.md) - Learn the Tx3 language in detail
-- [Examples](../examples/index.md) - See more complex examples 

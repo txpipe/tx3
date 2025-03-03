@@ -26,23 +26,27 @@ tx name(param1: Type1, param2: Type2) {
     burn { ... }
     
     // Optional chain-specific blocks
-    cardano { ... }
+    cardano::stake_delegation { ... }
 }
 ```
 
 ## Input Blocks
 
-Input blocks define the UTxOs that must be consumed by the transaction:
+Input blocks define the UTxOs that must be consumed by the transaction.
 
 ```tx3
 input name {
     from: Party,           // Required: who owns the UTxO
     min_amount: AssetExpr, // Optional: minimum value required
     datum_is: Type,        // Optional: required datum type
-    redeemer: DataExpr,    // Optional: redeemer data
     ref: DataExpr,         // Optional: reference to specific UTxO
+    redeemer: DataExpr,    // Optional: redeemer data
 }
 ```
+
+The `from`, `min_amount`, `datum_is` and `ref` serve as criteria for selecting inputs during the resolution phase.
+
+The `redeemer` field is a data expressions that will be passed to the validator that controls the consumption of this particular input.
 
 ### Examples
 
@@ -60,9 +64,9 @@ input locked {
     redeemer: UnlockData { timestamp },
 }
 
-// Input with reference
+// Specific UTxO 
 input specific {
-    ref: utxo_ref,
+    ref: 0xABCDEF1234#0,
     from: Owner,
 }
 ```
@@ -237,28 +241,6 @@ tx transfer_multi(
     }
 }
 ```
-
-## Best Practices
-
-1. **Input Selection**
-   - Use clear input names
-   - Specify minimum amounts
-   - Validate datum types
-
-2. **Output Creation**
-   - Name outputs for reference
-   - Include change outputs
-   - Attach appropriate datums
-
-3. **Parameter Usage**
-   - Use descriptive names
-   - Validate parameter ranges
-   - Document requirements
-
-4. **Error Prevention**
-   - Check input sufficiency
-   - Validate datum formats
-   - Consider fee requirements
 
 ## Next Steps
 

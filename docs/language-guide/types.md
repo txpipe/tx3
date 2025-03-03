@@ -2,7 +2,7 @@
 
 This guide covers the data types available in Tx3 and how to use them.
 
-## Basic Types
+## Built-in Types
 
 ### Integer (`Int`)
 ```tx3
@@ -50,17 +50,16 @@ false
 ### Native Asset (`Ada`)
 ```tx3
 // ADA literals
-Ada(1000000)  // 1 ADA
-Ada(500000)   // 0.5 ADA
+Ada(1)  // 1 ADA
+Lovelace(500000)   // 0.5 ADA
 ```
 - Native blockchain currency
-- Fixed decimal places
 - Basic unit operations
 
 ### Custom Assets
 ```tx3
 // Asset definition
-asset MyToken = "policy_id" "asset_name";
+asset MyToken = 0xABCDEF123.MYTOKEN;
 
 // Asset literals
 MyToken(100)
@@ -74,7 +73,7 @@ MyToken(100)
 ### Records
 ```tx3
 // Record definition
-record State {
+type State {
     lock_until: Int,
     owner: Bytes,
     beneficiary: Bytes,
@@ -94,7 +93,7 @@ State {
 ### Variants
 ```tx3
 // Variant definition
-variant Result {
+type Result {
     Success: Int,
     Error: String,
 }
@@ -153,6 +152,7 @@ Tx3 provides several type safety features:
 
 2. **Type Inference**
    - Types can be inferred from context
+   - Different semantics for Data Expressions and Asset Expressions
    - Reduces type annotations
    - Maintains type safety
 
@@ -160,45 +160,6 @@ Tx3 provides several type safety features:
    - Custom validation rules
    - Range checks
    - Format validation
-
-## Common Patterns
-
-### State Management
-```tx3
-record State {
-    version: Int,
-    data: Bytes,
-    timestamp: Int,
-}
-
-tx update(new_data: Bytes) {
-    input current {
-        datum_is: State,
-    }
-    
-    output {
-        datum: State {
-            version: current.version + 1,
-            data: new_data,
-            timestamp: current.timestamp,
-        }
-    }
-}
-```
-
-### Error Handling
-```tx3
-variant Result {
-    Success: Int,
-    Error: String,
-}
-
-tx operation() {
-    output {
-        datum: Result::Success(42)
-    }
-}
-```
 
 ## Next Steps
 

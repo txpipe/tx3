@@ -1,17 +1,6 @@
-# Chain-Specific Features
+# Cardano-specific Features
 
-This guide covers blockchain-specific features in Tx3, with a focus on Cardano.
-
-## Overview
-
-Tx3 provides support for blockchain-specific features through:
-
-- Chain-specific blocks
-- Native asset handling
-- Protocol parameters
-- Network-specific features
-
-## Cardano Features
+This guide covers blockchain-specific features in Tx3 for the Cardano blockchain.
 
 ### Protocol Parameters
 ```tx3
@@ -127,28 +116,6 @@ tx withdraw_rewards(
     }
 }
 ```
-
-## Best Practices
-
-1. **Protocol Parameters**
-   - Check parameter values
-   - Handle parameter changes
-   - Consider hard forks
-
-2. **Native Scripts**
-   - Validate script logic
-   - Test script behavior
-   - Document requirements
-
-3. **Certificates**
-   - Verify certificate data
-   - Check certificate order
-   - Handle failures
-
-4. **Withdrawals**
-   - Validate amounts
-   - Check credentials
-   - Consider fees
 
 ## Common Use Cases
 

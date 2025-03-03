@@ -46,12 +46,12 @@ asset Name = "policy_id" "asset_name";
 
 ### Type Definitions
 ```tx3
-record Name {
+type Name {
     field1: Type1,
     field2: Type2,
 }
 
-variant Name {
+type Name {
     case1: Type1,
     case2: Type2,
 }
@@ -164,38 +164,6 @@ expr.amount
 - Semicolons are required after declarations
 - Commas separate record/variant fields
 
-## Common Patterns
-
-### Simple Transfer
-```tx3
-tx transfer(amount: Int) {
-    input source {
-        from: Sender,
-        min_amount: Ada(amount),
-    }
-    
-    output {
-        to: Receiver,
-        amount: Ada(amount),
-    }
-}
-```
-
-### Time-Locked Transaction
-```tx3
-tx lock(until: Int) {
-    input source {
-        from: Owner,
-        min_amount: Ada(amount),
-    }
-    
-    output {
-        to: TimeLock,
-        amount: Ada(amount),
-        datum: State { until },
-    }
-}
-```
 
 ## Next Steps
 

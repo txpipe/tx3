@@ -17,17 +17,40 @@ Tx3 is a domain-specific language designed specifically for describing transacti
 - Describe transaction patterns
 - Generate concrete transactions
 - Visualize transaction flows
-- Ensure transaction safety
 
 ## Why Tx3?
 
-In UTxO-based blockchains like Cardano, dapps are defined by transaction patterns rather than explicit function interfaces. This makes it challenging for:
+In UTxO-based blockchains like Bitcoin & Cardano, dapps are defined by transaction patterns rather than explicit function interfaces. This makes it challenging for:
 
 - Dapp authors to convey their dapp's interface
 - Users to understand how to interact with dapps
 - Developers to build tools that work with dapps
 
 Tx3 solves these challenges by providing a language specifically designed for describing transaction patterns and generating interfaces.
+
+## Language Design Principles
+
+Tx3 is designed with the following principles in mind:
+
+1. **Domain-Specific**
+   - Focused on UTxO transaction patterns
+   - Built-in support for blockchain concepts
+   - Clear transaction boundaries
+
+2. **Safety First**
+   - Type safety
+   - Deterministic execution
+   - No unbounded computation
+
+3. **Declarative**
+   - Clear transaction intent
+   - Explicit interfaces
+   - Self-documenting code
+
+4. **Extensible**
+   - Mainly chain-agnostic
+   - Chain-specific features
+
 
 ## Next Steps
 

@@ -7,7 +7,6 @@ This guide covers how to work with parties and validation policies in Tx3.
 Parties are the participants in transactions. They can represent:
 
 - Wallet addresses
-- Smart contracts
 - Script addresses
 - Other blockchain entities
 
