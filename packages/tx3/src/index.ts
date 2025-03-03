@@ -1,24 +1,41 @@
-type ArgValue = string | number | boolean | null;
+type ArgValue = string | number | boolean | null | Uint8Array;
 
 type Args = {
   [key: string]: ArgValue;
 };
 
-export async function resolveTx(
-  ir_base64: string,
-  args: Args
-): Promise<Uint8Array> {
-  const response = await fetch("http://localhost:8000/resolve", {
+export type IrEnvelope = {
+  version: string;
+  bytecode: string;
+  encoding: "base64" | "hex";
+};
+
+export type IRInstruction = {
+  name: string;
+  args: Args;
+};
+
+export type ProtoTx = {
+  ir: IrEnvelope;
+  args: Args;
+};
+
+export type Tx = {
+  hex: string;
+};
+
+export async function resolveProtoTx(protoTx: ProtoTx): Promise<Tx> {
+  const response = await fetch("http://localhost:8000/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       jsonrpc: "2.0",
-      method: "resolve_tx",
+      method: "tx3v1alpha1.resolve_proto_tx",
       params: {
-        ir: ir_base64,
-        args: args,
+        ir: protoTx.ir,
+        args: protoTx.args,
       },
       id: "1",
     }),
@@ -34,6 +51,5 @@ export async function resolveTx(
     throw new Error(`JSON-RPC error: ${result.error.message}`);
   }
 
-  // Expect the result to be a base64 or hex string representing the resolved transaction
-  return new Uint8Array(result.result.tx);
+  return result.result as Tx;
 }
