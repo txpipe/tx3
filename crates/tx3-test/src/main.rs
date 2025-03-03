@@ -55,12 +55,27 @@ struct AnyRequest {
 }
 
 #[derive(Deserialize)]
-struct ResolveTxRequest {
-    pub ir: String,
+enum IrEncoding {
+    #[serde(rename = "base64")]
+    Base64,
+    #[serde(rename = "hex")]
+    Hex,
+}
+
+#[derive(Deserialize)]
+struct IrEnvelope {
+    pub version: String,
+    pub bytecode: String,
+    pub encoding: IrEncoding,
+}
+
+#[derive(Deserialize)]
+struct ResolveProtoTxRequest {
+    pub ir: IrEnvelope,
     pub args: serde_json::Value,
 }
 
-impl TryFrom<AnyRequest> for ResolveTxRequest {
+impl TryFrom<AnyRequest> for ResolveProtoTxRequest {
     type Error = Error;
 
     fn try_from(request: AnyRequest) -> Result<Self, Self::Error> {
@@ -91,13 +106,20 @@ fn parse_request(body: serde_json::Value) -> Result<AnyRequest, ErrorResponse> {
     }
 }
 
-async fn handle_resolve_tx(
+async fn handle_resolve_proto_tx(
     ledger: tx3_cardano::ledgers::u5c::Ledger,
     request: AnyRequest,
 ) -> Result<warp::reply::Json, Error> {
-    let request = ResolveTxRequest::try_from(request)?;
+    let request = ResolveProtoTxRequest::try_from(request)?;
 
-    let tx = hex::decode(request.ir).map_err(|x| Error::InvalidIr(x.to_string()))?;
+    let tx = match request.ir.encoding {
+        IrEncoding::Base64 => {
+            base64::decode(request.ir.bytecode).map_err(|x| Error::InvalidIr(x.to_string()))?
+        }
+        IrEncoding::Hex => {
+            hex::decode(request.ir.bytecode).map_err(|x| Error::InvalidIr(x.to_string()))?
+        }
+    };
 
     let mut tx =
         tx3_lang::ProtoTx::from_ir_bytes(&tx).map_err(|x| Error::InvalidIr(x.to_string()))?;
@@ -129,7 +151,7 @@ pub async fn handle_request(
     debug!(id = request.id, method = request.method, "handling request");
 
     let result = match request.method.as_str() {
-        "resolve_tx" => handle_resolve_tx(ledger, request).await,
+        "tx3v1alpha1.resolve_proto_tx" => handle_resolve_proto_tx(ledger, request).await,
         x => Err(Error::UnknownMethod(x.to_string())),
     };
 
