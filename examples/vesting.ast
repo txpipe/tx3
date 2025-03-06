@@ -303,7 +303,7 @@
     {
       "name": "TimeLock",
       "value": {
-        "HexString": {
+        "Assign": {
           "value": "6b9c456aa650cb808a9ab54326e039d5235ed69f069c9664a8fe5b69"
         }
       }

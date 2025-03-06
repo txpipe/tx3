@@ -12,45 +12,6 @@ impl From<utxorpc::Error> for crate::Error {
     }
 }
 
-fn expr_to_address_pattern(
-    value: &tx3_lang::ir::Expression,
-) -> utxorpc::spec::cardano::AddressPattern {
-    match value {
-        tx3_lang::ir::Expression::Address(address) => utxorpc::spec::cardano::AddressPattern {
-            exact_address: address.clone().into(),
-            ..Default::default()
-        },
-        tx3_lang::ir::Expression::String(address) => utxorpc::spec::cardano::AddressPattern {
-            exact_address: pallas::ledger::addresses::Address::from_bech32(address)
-                .unwrap()
-                .to_vec()
-                .into(),
-            ..Default::default()
-        },
-        tx3_lang::ir::Expression::Bytes(address) => utxorpc::spec::cardano::AddressPattern {
-            exact_address: address.clone().into(),
-            ..Default::default()
-        },
-        _ => Default::default(),
-    }
-}
-
-fn utxo_from_u5c_to_tx3(u: utxorpc::ChainUtxo<utxorpc::spec::cardano::TxOutput>) -> tx3_lang::Utxo {
-    tx3_lang::Utxo {
-        r#ref: tx3_lang::UtxoRef {
-            txid: u.txo_ref.as_ref().unwrap().hash.clone().into(),
-            index: u.txo_ref.as_ref().unwrap().index as u32,
-        },
-        address: u.parsed.as_ref().unwrap().address.clone().into(),
-        datum: None, //u.parsed.unwrap().datum.into(),
-        assets: vec![tx3_lang::ir::AssetExpr {
-            policy: vec![],
-            asset_name: tx3_lang::ir::Expression::Bytes(vec![]),
-            amount: tx3_lang::ir::Expression::Number(u.parsed.as_ref().unwrap().coin as i128),
-        }], //u.parsed.unwrap().assets.into(),
-    }
-}
-
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Config {
     pub endpoint_url: String,
@@ -116,15 +77,8 @@ impl crate::resolve::Ledger for Ledger {
 
     async fn resolve_input(
         &self,
-        query: &tx3_lang::ir::InputQuery,
-    ) -> Result<tx3_lang::UtxoSet, crate::Error> {
-        let address = query.address.as_ref().map(|x| expr_to_address_pattern(x));
-
-        let pattern = utxorpc::spec::cardano::TxOutputPattern {
-            address: address,
-            ..Default::default()
-        };
-
+        pattern: utxorpc::spec::cardano::TxOutputPattern,
+    ) -> Result<utxorpc::UtxoPage<utxorpc::Cardano>, crate::Error> {
         let utxos = self
             .queries
             .lock()
@@ -132,9 +86,6 @@ impl crate::resolve::Ledger for Ledger {
             .match_utxos(pattern, None, 1)
             .await?;
 
-        let utxos = utxos.items.into_iter().map(utxo_from_u5c_to_tx3).take(1);
-
-        // TODO: actually filter utxos
-        Ok(utxos.collect())
+        Ok(utxos)
     }
 }

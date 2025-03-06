@@ -10,6 +10,9 @@ use crate::{
 pub enum Error {
     #[error("invalid binary operation {0:?}")]
     InvalidBinaryOp(BinaryOp),
+
+    #[error("invalid argument {0:?} for {1}")]
+    InvalidArgument(ArgValue, String),
 }
 
 fn arg_value_into_expr(arg: ArgValue) -> ir::Expression {
@@ -20,6 +23,7 @@ fn arg_value_into_expr(arg: ArgValue) -> ir::Expression {
         ArgValue::String(x) => ir::Expression::String(x),
         ArgValue::Bytes(x) => ir::Expression::Bytes(x),
         ArgValue::UtxoSet(x) => ir::Expression::UtxoSet(x),
+        ArgValue::UtxoRef(x) => ir::Expression::UtxoRefs(vec![x]),
     }
 }
 
@@ -28,7 +32,7 @@ pub trait Apply: Sized + std::fmt::Debug {
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error>;
     fn apply_fees(self, fees: u64) -> Result<Self, Error>;
     fn is_constant(&self) -> bool;
-    fn params(&self) -> BTreeMap<String, ast::Type>;
+    fn params(&self) -> BTreeMap<String, ir::Type>;
     fn queries(&self) -> BTreeMap<String, ir::InputQuery>;
 
     fn reduce_self(self) -> Result<Self, Error>;
@@ -68,7 +72,7 @@ where
         }
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         match self {
             Some(x) => x.params(),
             None => BTreeMap::new(),
@@ -114,7 +118,7 @@ where
         self.as_ref().is_constant()
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         self.as_ref().params()
     }
 
@@ -152,7 +156,7 @@ where
         self.iter().all(|x| x.is_constant())
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         // TODO: what happens if there's a conflict on types?
 
         self.iter()
@@ -227,7 +231,7 @@ where
         self.iter().all(|(_, v)| v.is_constant())
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         self.iter()
             .map(|(_, v)| v.params())
             .fold(BTreeMap::new(), |mut acc, map| {
@@ -258,6 +262,138 @@ where
             .collect();
 
         Ok(reduced)
+    }
+}
+
+impl Apply for ir::ScriptSource {
+    fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
+        match self {
+            ir::ScriptSource::Inline(x) => Ok(ir::ScriptSource::Inline(x.apply_args(args)?)),
+            ir::ScriptSource::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef(x.apply_args(args)?)),
+            ir::ScriptSource::InferParam(x) => {
+                let defined = args.get(&x);
+
+                if let Some(defined) = defined {
+                    match defined {
+                        ArgValue::UtxoRef(x) => {
+                            Ok(ir::ScriptSource::UtxoRef(ir::Expression::UtxoRefs(vec![
+                                x.clone()
+                            ])))
+                        }
+                        ArgValue::Bytes(x) => {
+                            Ok(ir::ScriptSource::Inline(ir::Expression::Bytes(x.clone())))
+                        }
+                        _ => Err(Error::InvalidArgument(defined.clone(), x.clone())),
+                    }
+                } else {
+                    Ok(ir::ScriptSource::InferParam(x))
+                }
+            }
+        }
+    }
+
+    fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        match self {
+            ir::ScriptSource::Inline(x) => Ok(ir::ScriptSource::Inline(x.apply_inputs(args)?)),
+            ir::ScriptSource::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef(x.apply_inputs(args)?)),
+            ir::ScriptSource::InferParam(x) => Ok(ir::ScriptSource::InferParam(x)),
+        }
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        match self {
+            ir::ScriptSource::Inline(x) => Ok(ir::ScriptSource::Inline(x.apply_fees(fees)?)),
+            ir::ScriptSource::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef(x.apply_fees(fees)?)),
+            ir::ScriptSource::InferParam(x) => Ok(ir::ScriptSource::InferParam(x)),
+        }
+    }
+
+    fn is_constant(&self) -> bool {
+        match self {
+            ir::ScriptSource::Inline(x) => x.is_constant(),
+            ir::ScriptSource::UtxoRef(x) => x.is_constant(),
+            ir::ScriptSource::InferParam(_) => false,
+        }
+    }
+
+    fn params(&self) -> BTreeMap<String, ir::Type> {
+        match self {
+            ir::ScriptSource::Inline(x) => x.params(),
+            ir::ScriptSource::UtxoRef(x) => x.params(),
+            ir::ScriptSource::InferParam(x) => BTreeMap::from([(x.clone(), ir::Type::UtxoRef)]),
+        }
+    }
+
+    fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        match self {
+            ir::ScriptSource::Inline(x) => x.queries(),
+            ir::ScriptSource::UtxoRef(x) => x.queries(),
+            ir::ScriptSource::InferParam(_) => BTreeMap::new(),
+        }
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        match self {
+            ir::ScriptSource::Inline(x) => Ok(ir::ScriptSource::Inline(x.reduce_nested()?)),
+            ir::ScriptSource::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef(x.reduce_nested()?)),
+            ir::ScriptSource::InferParam(x) => Ok(ir::ScriptSource::InferParam(x)),
+        }
+    }
+}
+
+impl Apply for ir::PolicyExpr {
+    fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            hash: self.hash.apply_args(args)?,
+            script: self.script.apply_args(args)?,
+        })
+    }
+
+    fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            hash: self.hash.apply_inputs(args)?,
+            script: self.script.apply_inputs(args)?,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            hash: self.hash.apply_fees(fees)?,
+            script: self.script.apply_fees(fees)?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.hash.is_constant() && self.script.is_constant()
+    }
+
+    fn params(&self) -> BTreeMap<String, ir::Type> {
+        let mut params = BTreeMap::new();
+        params.extend(self.hash.params());
+        params.extend(self.script.params());
+        params
+    }
+
+    fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        let mut queries = BTreeMap::new();
+        queries.extend(self.hash.queries());
+        queries.extend(self.script.queries());
+        queries
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            hash: self.hash.reduce_nested()?,
+            script: self.script.reduce_nested()?,
+        })
     }
 }
 
@@ -299,7 +435,7 @@ impl Apply for ir::StructExpr {
         self.fields.iter().all(|x| x.is_constant())
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         self.fields
             .iter()
             .map(|x| x.params())
@@ -359,7 +495,7 @@ impl Apply for ir::AssetExpr {
         self.asset_name.is_constant() && self.amount.is_constant()
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
         params.extend(self.asset_name.params());
         params.extend(self.amount.params());
@@ -423,7 +559,7 @@ impl Apply for ir::BinaryOp {
         self.left.is_constant() && self.right.is_constant()
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
         params.extend(self.left.params());
         params.extend(self.right.params());
@@ -522,7 +658,6 @@ impl ir::AssetExpr {
 impl Apply for ir::InputQuery {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         Ok(Self {
-            name: self.name,
             address: self.address.apply_args(args)?,
             min_amount: self.min_amount.apply_args(args)?,
         })
@@ -530,7 +665,6 @@ impl Apply for ir::InputQuery {
 
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
         Ok(Self {
-            name: self.name,
             address: self.address.apply_inputs(args)?,
             min_amount: self.min_amount.apply_inputs(args)?,
         })
@@ -538,7 +672,6 @@ impl Apply for ir::InputQuery {
 
     fn apply_fees(self, fees: u64) -> Result<Self, Error> {
         Ok(Self {
-            name: self.name,
             address: self.address.apply_fees(fees)?,
             min_amount: self.min_amount.apply_fees(fees)?,
         })
@@ -548,7 +681,7 @@ impl Apply for ir::InputQuery {
         self.address.is_constant() && self.min_amount.is_constant()
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
         params.extend(self.address.params());
         params.extend(self.min_amount.params());
@@ -567,9 +700,75 @@ impl Apply for ir::InputQuery {
 
     fn reduce_nested(self) -> Result<Self, Error> {
         Ok(Self {
-            name: self.name,
             address: self.address.reduce()?,
             min_amount: self.min_amount.reduce()?,
+        })
+    }
+}
+
+impl Apply for ir::Input {
+    fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            query: self.query.apply_args(args)?,
+            redeemer: self.redeemer.apply_args(args)?,
+            policy: self.policy.apply_args(args)?,
+            ..self
+        })
+    }
+
+    fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        let defined = args.get(&self.name).cloned();
+
+        if let Some(refs) = defined {
+            return Ok(Self {
+                query: None,
+                refs: refs.into_iter().map(|x| x.r#ref).collect(),
+                ..self
+            });
+        }
+
+        Ok(self)
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            query: self.query.apply_fees(fees)?,
+            redeemer: self.redeemer.apply_fees(fees)?,
+            policy: self.policy.apply_fees(fees)?,
+            ..self
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.query.is_constant() && self.redeemer.is_constant() && self.policy.is_constant()
+    }
+
+    fn params(&self) -> BTreeMap<String, ir::Type> {
+        let mut params = BTreeMap::new();
+        params.extend(self.query.params());
+        params.extend(self.redeemer.params());
+        params.extend(self.policy.params());
+        params
+    }
+
+    fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        self.query
+            .as_ref()
+            .map(|x| (self.name.clone(), x.clone()))
+            .into_iter()
+            .collect()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            query: self.query.reduce()?,
+            redeemer: self.redeemer.reduce()?,
+            policy: self.policy.reduce()?,
+            ..self
         })
     }
 }
@@ -580,7 +779,6 @@ impl Apply for ir::Expression {
             ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.apply_args(args)?)),
             ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.apply_args(args)?)),
             ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.apply_args(args)?)),
-            ir::Expression::InputQuery(x) => Ok(ir::Expression::InputQuery(x.apply_args(args)?)),
             ir::Expression::EvalParameter(name, ty) => {
                 let defined = args.get(&name).cloned();
 
@@ -597,17 +795,6 @@ impl Apply for ir::Expression {
 
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
         match self {
-            ir::Expression::InputQuery(x) => {
-                let defined = args.get(&x.name).cloned();
-
-                match defined {
-                    Some(x) => {
-                        let x = x.into_iter().map(|x| x.r#ref).collect();
-                        Ok(ir::Expression::UtxoRefs(x))
-                    }
-                    None => Ok(ir::Expression::InputQuery(x)),
-                }
-            }
             ir::Expression::EvalInputDatum(x) => {
                 let defined = args.get(&x).cloned();
 
@@ -653,7 +840,6 @@ impl Apply for ir::Expression {
             ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.apply_fees(fees)?)),
             ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.apply_fees(fees)?)),
             ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.apply_fees(fees)?)),
-            ir::Expression::InputQuery(x) => Ok(ir::Expression::InputQuery(x.apply_fees(fees)?)),
             _ => Ok(self),
         }
     }
@@ -665,7 +851,7 @@ impl Apply for ir::Expression {
             Self::Bool(_) => true,
             Self::String(_) => true,
             Self::Address(_) => true,
-            Self::Policy(_) => true,
+            Self::Hash(_) => true,
             Self::Struct(x) => x.is_constant(),
             Self::Assets(x) => x.is_constant(),
             Self::EvalCustom(x) => x.is_constant(),
@@ -673,12 +859,11 @@ impl Apply for ir::Expression {
         }
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         match self {
             ir::Expression::Struct(x) => x.params(),
             ir::Expression::Assets(x) => x.params(),
             ir::Expression::EvalCustom(x) => x.params(),
-            ir::Expression::InputQuery(x) => x.params(),
             ir::Expression::EvalParameter(x, ty) => BTreeMap::from([(x.to_string(), ty.clone())]),
 
             // the remaining cases are constants, so we can just return them
@@ -687,12 +872,7 @@ impl Apply for ir::Expression {
     }
 
     fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
-        match self {
-            ir::Expression::InputQuery(x) => BTreeMap::from([(x.name.clone(), x.as_ref().clone())]),
-
-            // the remaining cases are constants, so we can just return them
-            _ => BTreeMap::new(),
-        }
+        BTreeMap::new()
     }
 
     fn reduce_self(self) -> Result<Self, Error> {
@@ -728,7 +908,6 @@ impl Apply for ir::Expression {
             ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.reduce()?)),
             ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.reduce()?)),
             ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.reduce()?)),
-            ir::Expression::InputQuery(x) => Ok(ir::Expression::InputQuery(x.reduce()?)),
             _ => Ok(self),
         }
     }
@@ -763,7 +942,7 @@ impl Apply for ir::Output {
         self.address.is_constant() && self.datum.is_constant() && self.amount.is_constant()
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
         params.extend(self.address.params());
         params.extend(self.datum.params());
@@ -815,7 +994,7 @@ impl Apply for ir::Mint {
         self.amount.is_constant() && self.redeemer.is_constant()
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
         params.extend(self.amount.params());
         params.extend(self.redeemer.params());
@@ -865,7 +1044,7 @@ impl Apply for ir::AdHocDirective {
         self.data.is_constant()
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
         params.extend(self.data.params());
         params
@@ -928,7 +1107,7 @@ impl Apply for ir::Tx {
             && self.adhoc.iter().all(|x| x.is_constant())
     }
 
-    fn params(&self) -> BTreeMap<String, ast::Type> {
+    fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
         params.extend(self.inputs.params());
         params.extend(self.outputs.params());
@@ -982,7 +1161,7 @@ pub fn reduce(template: ir::Tx) -> Result<ir::Tx, Error> {
     template.reduce()
 }
 
-pub fn find_params(template: &ir::Tx) -> BTreeMap<String, ast::Type> {
+pub fn find_params(template: &ir::Tx) -> BTreeMap<String, ir::Type> {
     template.params()
 }
 
@@ -1015,9 +1194,9 @@ mod tests {
 
         let params = find_params(&before);
         assert_eq!(params.len(), 3);
-        assert_eq!(params.get("sender"), Some(&ast::Type::Address));
-        assert_eq!(params.get("a"), Some(&ast::Type::Int));
-        assert_eq!(params.get("b"), Some(&ast::Type::Int));
+        assert_eq!(params.get("sender"), Some(&ir::Type::Address));
+        assert_eq!(params.get("a"), Some(&ir::Type::Int));
+        assert_eq!(params.get("b"), Some(&ir::Type::Int));
 
         let args = BTreeMap::from([
             ("sender".to_string(), ArgValue::Address(b"abc".to_vec())),

@@ -9,9 +9,7 @@ pub fn build(path: &str) {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed={}", path);
 
-    let mut protocol = tx3_lang::Protocol::load_file(path).unwrap();
-
-    protocol.analyze().unwrap();
+    let protocol = tx3_lang::Protocol::from_file(path).load().unwrap();
 
     // Create output file
     let out_dir = std::env::var("OUT_DIR").unwrap();

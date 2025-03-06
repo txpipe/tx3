@@ -17,7 +17,7 @@ pub struct Scope {
     pub(crate) parent: Option<Rc<Scope>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Symbol {
     ParamVar(String, Box<Type>),
     Input(String),
@@ -51,9 +51,16 @@ impl Symbol {
             _ => None,
         }
     }
+
+    pub fn as_policy_def(&self) -> Option<&PolicyDef> {
+        match self {
+            Symbol::PolicyDef(x) => Some(x.as_ref()),
+            _ => None,
+        }
+    }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Identifier {
     pub value: String,
 
@@ -67,6 +74,13 @@ impl Identifier {
         Self {
             value: value.into(),
             symbol: None,
+        }
+    }
+
+    pub fn try_symbol(&self) -> Result<&Symbol, crate::lowering::Error> {
+        match &self.symbol {
+            Some(symbol) => Ok(symbol),
+            None => Err(crate::lowering::Error::MissingAnalyzePhase),
         }
     }
 }
@@ -138,7 +152,7 @@ impl HexStringLiteral {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum InputBlockField {
-    From(DataExpr),
+    From(AddressExpr),
     DatumIs(Type),
     MinAmount(AssetExpr),
     Redeemer(DataExpr),
@@ -153,6 +167,28 @@ impl InputBlockField {
             InputBlockField::MinAmount(_) => "min_amount",
             InputBlockField::Redeemer(_) => "redeemer",
             InputBlockField::Ref(_) => "ref",
+        }
+    }
+
+    pub fn as_address_expr(&self) -> Option<&AddressExpr> {
+        match self {
+            InputBlockField::From(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_asset_expr(&self) -> Option<&AssetExpr> {
+        match self {
+            InputBlockField::MinAmount(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_data_expr(&self) -> Option<&DataExpr> {
+        match self {
+            InputBlockField::Redeemer(x) => Some(x),
+            InputBlockField::Ref(x) => Some(x),
+            _ => None,
         }
     }
 }
@@ -172,7 +208,7 @@ impl InputBlock {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum OutputBlockField {
-    To(Box<DataExpr>),
+    To(Box<AddressExpr>),
     Amount(Box<AssetExpr>),
     Datum(Box<DataExpr>),
 }
@@ -230,7 +266,7 @@ pub struct BurnBlock {
     pub fields: Vec<MintBlockField>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RecordField {
     pub name: String,
     pub r#type: Type,
@@ -256,16 +292,38 @@ pub struct PartyField {
     pub party_type: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyDef {
     pub name: String,
     pub value: PolicyValue,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum PolicyField {
+    Hash(DataExpr),
+    Script(DataExpr),
+    Ref(DataExpr),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PolicyConstructor {
+    pub fields: Vec<PolicyField>,
+}
+
+impl PolicyConstructor {
+    pub(crate) fn find_field(&self, field: &str) -> Option<&PolicyField> {
+        self.fields.iter().find(|x| match x {
+            PolicyField::Hash(_) => field == "hash",
+            PolicyField::Script(_) => field == "script",
+            PolicyField::Ref(_) => field == "ref",
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PolicyValue {
-    Import(StringLiteral),
-    HexString(HexStringLiteral),
+    Constructor(PolicyConstructor),
+    Assign(HexStringLiteral),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -380,13 +438,37 @@ pub enum DataExpr {
     BinaryOp(DataBinaryOp),
 }
 
+impl DataExpr {
+    pub fn as_identifier(&self) -> Option<&Identifier> {
+        match self {
+            DataExpr::Identifier(x) => Some(x),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum AddressExpr {
+    String(StringLiteral),
+    HexString(HexStringLiteral),
+    Identifier(Identifier),
+}
+
+impl AddressExpr {
+    pub fn as_identifier(&self) -> Option<&Identifier> {
+        match self {
+            AddressExpr::Identifier(x) => Some(x),
+            _ => None,
+        }
+    }
+}
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum BinaryOperator {
     Add,
     Subtract,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Type {
     Int,
     Bool,
@@ -395,13 +477,13 @@ pub enum Type {
     Custom(Identifier),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ParamDef {
     pub name: String,
     pub r#type: Type,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TypeDef {
     pub name: String,
     pub cases: Vec<VariantCase>,
@@ -418,7 +500,7 @@ impl TypeDef {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct VariantCase {
     pub name: String,
     pub fields: Vec<RecordField>,

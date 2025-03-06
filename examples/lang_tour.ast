@@ -115,20 +115,24 @@
                     "fields": [
                       {
                         "name": {
-                          "value": "field3"
+                          "value": "field1"
                         },
                         "value": {
                           "Identifier": {
                             "value": "quantity"
                           }
                         }
+                      },
+                      {
+                        "name": {
+                          "value": "field2"
+                        },
+                        "value": {
+                          "Number": 54
+                        }
                       }
                     ],
-                    "spread": {
-                      "Identifier": {
-                        "value": "source"
-                      }
-                    }
+                    "spread": null
                   }
                 }
               }
@@ -193,5 +197,44 @@
       "name": "MyParty"
     }
   ],
-  "policies": []
+  "policies": [
+    {
+      "name": "OnlyHashPolicy",
+      "value": {
+        "Assign": {
+          "value": "ABCDEF1234"
+        }
+      }
+    },
+    {
+      "name": "FullyDefinedPolicy",
+      "value": {
+        "Constructor": {
+          "fields": [
+            {
+              "Hash": {
+                "HexString": {
+                  "value": "ABCDEF1234"
+                }
+              }
+            },
+            {
+              "Script": {
+                "HexString": {
+                  "value": "ABCDEF1234"
+                }
+              }
+            },
+            {
+              "Ref": {
+                "HexString": {
+                  "value": "ABCDEF1234"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
 }

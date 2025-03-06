@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{ast, Utxo, UtxoRef};
+use crate::{Utxo, UtxoRef};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct StructExpr {
@@ -62,6 +62,42 @@ pub struct AdHocDirective {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub enum ScriptSource {
+    Inline(Expression),
+    UtxoRef(Expression),
+    InferParam(String),
+}
+
+impl ScriptSource {
+    pub fn infer_param(policy_name: &str) -> Self {
+        Self::InferParam(format!("{}_script", policy_name.to_lowercase()))
+    }
+
+    pub fn as_utxo_ref(&self) -> Option<&Expression> {
+        match self {
+            Self::UtxoRef(x) => Some(x),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct PolicyExpr {
+    pub hash: Expression,
+    pub script: ScriptSource,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub enum Type {
+    Int,
+    Bool,
+    Bytes,
+    Address,
+    UtxoRef,
+    Custom(String),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Expression {
     None,
     Struct(StructExpr),
@@ -70,18 +106,17 @@ pub enum Expression {
     Bool(bool),
     String(String),
     Address(Vec<u8>),
-    Policy(Vec<u8>),
+    Hash(Vec<u8>),
     UtxoRefs(Vec<UtxoRef>),
     UtxoSet(HashSet<Utxo>),
     Assets(Vec<AssetExpr>),
 
-    EvalParameter(String, ast::Type),
+    EvalParameter(String, Type),
     EvalInputDatum(String),
     EvalInputAssets(String),
     EvalCustom(Box<BinaryOp>),
 
     // queries
-    InputQuery(Box<InputQuery>),
     FeeQuery,
 
     // pass-through
@@ -90,9 +125,17 @@ pub enum Expression {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct InputQuery {
-    pub name: String,
     pub address: Option<Expression>,
     pub min_amount: Option<Expression>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct Input {
+    pub name: String,
+    pub query: Option<InputQuery>,
+    pub refs: HashSet<UtxoRef>,
+    pub redeemer: Option<Expression>,
+    pub policy: Option<PolicyExpr>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -111,7 +154,7 @@ pub struct Mint {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
     pub fees: Expression,
-    pub inputs: Vec<Expression>,
+    pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub mint: Option<Mint>,
     pub adhoc: Vec<AdHocDirective>,

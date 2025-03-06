@@ -45,6 +45,7 @@ tx unlock(
 
     input locked {
         ref: locked_utxo,
+        from: TimeLock,
         redeemer: (),
     }
 

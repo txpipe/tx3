@@ -28,6 +28,7 @@ pub mod analyzing;
 pub mod applying;
 pub mod ast;
 pub mod ir;
+pub mod loading;
 pub mod lowering;
 pub mod parsing;
 
@@ -79,6 +80,7 @@ pub enum ArgValue {
     Bytes(Vec<u8>),
     Address(Vec<u8>),
     UtxoSet(UtxoSet),
+    UtxoRef(UtxoRef),
 }
 
 impl From<Vec<u8>> for ArgValue {
@@ -120,43 +122,25 @@ macro_rules! impl_from_int_for_arg_value {
 impl_from_int_for_arg_value!(i8, i16, i32, i64, i128, u8, u16, u32, u64, u128);
 
 pub struct Protocol {
-    ast: ast::Program,
-    global_args: std::collections::HashMap<String, ArgValue>,
+    pub(crate) ast: ast::Program,
+    pub(crate) env_args: std::collections::HashMap<String, ArgValue>,
 }
 
 impl Protocol {
-    pub fn load_file(path: &str) -> Result<Self, parsing::Error> {
-        let ast = parsing::parse_file(path)?;
-
-        Ok(Self {
-            ast,
-            global_args: std::collections::HashMap::new(),
-        })
+    pub fn from_file(path: impl AsRef<std::path::Path>) -> loading::ProtocolLoader {
+        loading::ProtocolLoader::from_file(path)
     }
 
-    pub fn load_string(code: &str) -> Result<Self, parsing::Error> {
-        let ast = parsing::parse_string(code)?;
-
-        Ok(Self {
-            ast,
-            global_args: std::collections::HashMap::new(),
-        })
-    }
-
-    pub fn analyze(&mut self) -> Result<(), analyzing::Error> {
-        analyzing::analyze(&mut self.ast)
-    }
-
-    pub fn set_global_arg(&mut self, name: &str, value: ArgValue) {
-        self.global_args.insert(name.to_string(), value);
+    pub fn from_string(code: String) -> loading::ProtocolLoader {
+        loading::ProtocolLoader::from_string(code)
     }
 
     pub fn new_tx(&self, template: &str) -> Result<ProtoTx, lowering::Error> {
         let ir = lowering::lower(&self.ast, template)?;
         let mut tx = ProtoTx::from(ir);
 
-        if !self.global_args.is_empty() {
-            for (k, v) in &self.global_args {
+        if !self.env_args.is_empty() {
+            for (k, v) in &self.env_args {
                 tx.set_arg(k, v.clone());
             }
         }
@@ -187,12 +171,6 @@ pub struct ProtoTx {
     args: std::collections::BTreeMap<String, ArgValue>,
     inputs: std::collections::BTreeMap<String, UtxoSet>,
     fees: Option<u64>,
-
-    #[serde(skip)]
-    params: std::sync::OnceLock<std::collections::BTreeMap<String, ast::Type>>,
-
-    #[serde(skip)]
-    queries: std::sync::OnceLock<std::collections::BTreeMap<String, ir::InputQuery>>,
 }
 
 impl From<ir::Tx> for ProtoTx {
@@ -202,19 +180,17 @@ impl From<ir::Tx> for ProtoTx {
             args: std::collections::BTreeMap::new(),
             inputs: std::collections::BTreeMap::new(),
             fees: None,
-            params: std::sync::OnceLock::new(),
-            queries: std::sync::OnceLock::new(),
         }
     }
 }
 
 impl ProtoTx {
-    pub fn params(&self) -> &std::collections::BTreeMap<String, ast::Type> {
-        self.params.get_or_init(|| find_params(&self.ir))
+    pub fn find_params(&self) -> std::collections::BTreeMap<String, ir::Type> {
+        find_params(&self.ir)
     }
 
-    pub fn queries(&self) -> &std::collections::BTreeMap<String, ir::InputQuery> {
-        self.queries.get_or_init(|| find_queries(&self.ir))
+    pub fn find_queries(&self) -> std::collections::BTreeMap<String, ir::InputQuery> {
+        find_queries(&self.ir)
     }
 
     pub fn set_arg(&mut self, name: &str, value: ArgValue) {
@@ -276,23 +252,24 @@ mod tests {
     fn happy_path() {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let code = format!("{manifest_dir}/../../examples/transfer.tx3");
-        let mut protocol = Protocol::load_file(&code).unwrap();
-        protocol.analyze().unwrap();
 
-        protocol.set_global_arg("Sender", ArgValue::Address(b"sender".to_vec()));
+        let protocol = Protocol::from_file(&code)
+            .with_env_arg("sender", ArgValue::Address(b"sender".to_vec()))
+            .load()
+            .unwrap();
 
         let tx = protocol.new_tx("transfer").unwrap();
 
-        dbg!(&tx.params());
-        dbg!(&tx.queries());
+        dbg!(&tx.find_params());
+        dbg!(&tx.find_queries());
 
         let mut tx = tx
             .with_arg("quantity", ArgValue::Int(100_000_000))
             .apply()
             .unwrap();
 
-        dbg!(&tx.params());
-        dbg!(&tx.queries());
+        dbg!(&tx.find_params());
+        dbg!(&tx.find_queries());
 
         tx.set_input(
             "source",
@@ -314,7 +291,7 @@ mod tests {
 
         let tx = tx.apply().unwrap();
 
-        dbg!(&tx.params());
-        dbg!(&tx.queries());
+        dbg!(&tx.find_params());
+        dbg!(&tx.find_queries());
     }
 }

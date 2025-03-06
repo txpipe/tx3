@@ -129,6 +129,35 @@ impl<T: Analyzable> Analyzable for Box<T> {
     }
 }
 
+impl Analyzable for PolicyField {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        match self {
+            PolicyField::Hash(x) => x.analyze(parent),
+            PolicyField::Script(x) => x.analyze(parent),
+            PolicyField::Ref(x) => x.analyze(parent),
+        }
+    }
+}
+impl Analyzable for PolicyConstructor {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        for field in self.fields.iter_mut() {
+            field.analyze(parent.clone())?;
+        }
+
+        Ok(())
+    }
+}
+impl Analyzable for PolicyDef {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        match &mut self.value {
+            PolicyValue::Constructor(x) => x.analyze(parent)?,
+            PolicyValue::Assign(_) => (),
+        }
+
+        Ok(())
+    }
+}
+
 impl Analyzable for DataBinaryOp {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
         self.left.analyze(parent.clone())?;
@@ -252,6 +281,14 @@ impl Analyzable for AssetExpr {
     }
 }
 
+impl Analyzable for AddressExpr {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+        match self {
+            AddressExpr::Identifier(x) => x.analyze(parent),
+            _ => Ok(()),
+        }
+    }
+}
 impl Analyzable for Identifier {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
         let symbol = parent.map(|p| p.resolve(&self.value)).transpose()?;

@@ -14,6 +14,14 @@ type MyVariant {
     Case2,
 }
 
+policy OnlyHashPolicy = 0xABCDEF1234;
+
+policy FullyDefinedPolicy {
+    hash: 0xABCDEF1234,
+    script: 0xABCDEF1234,
+    ref: 0xABCDEF1234,
+}
+
 tx my_tx(
     quantity: Int
 ) {
@@ -31,8 +39,8 @@ tx my_tx(
     output {
         to: MyParty,
         datum: MyRecord {
-            field3: quantity,
-            ...source
+            field1: quantity,
+            field2: 54,
         },
     }
 }
