@@ -29,14 +29,28 @@ party_def = {
 }
 
 // Policy definitions
-policy_import = {
-    "import" ~ "(" ~ string ~ ")"
+policy_def_assign = {
+    "=" ~ hex_string ~ ";"
 }
 
-policy_value = _{ policy_import | hex_string }
+policy_def_hash = { "hash" ~ ":" ~ data_expr }
+policy_def_script = { "script" ~ ":" ~ data_expr }
+policy_def_ref = { "ref" ~ ":" ~ data_expr }
+
+policy_def_field = _{ 
+    policy_def_hash |
+    policy_def_ref |
+    policy_def_script
+}
+
+policy_def_constructor = {
+    "{" ~ (policy_def_field ~ ",")* ~ "}"
+}
+
+policy_def_value = _{  policy_def_assign | policy_def_constructor }
 
 policy_def = {
-    "policy" ~ identifier ~ "=" ~ policy_value ~ ";"
+    "policy" ~ identifier ~ policy_def_value
 }
 
 // Type definitions
@@ -135,7 +149,15 @@ datum_constructor = {
     identifier ~ variant_case_constructor
 }
 
-input_block_from = { "from" ~ ":" ~ data_expr }
+address_expr = { 
+    identifier | 
+    hex_string | 
+    string
+}
+
+// input block
+
+input_block_from = { "from" ~ ":" ~ address_expr }
 input_block_datum_is = { "datum_is" ~ ":" ~ type }
 input_block_min_amount = { "min_amount" ~ ":" ~ asset_expr }
 input_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
@@ -155,7 +177,7 @@ input_block = {
     "}"
 }
 
-output_block_to = { "to" ~ ":" ~ data_expr }
+output_block_to = { "to" ~ ":" ~ address_expr }
 output_block_amount = { "amount" ~ ":" ~ asset_expr }
 output_block_datum = { "datum" ~ ":" ~ data_expr }
 

@@ -1,3 +1,3 @@
 fn main() {
-    tx3_bindgen::compile_tx3("faucet.tx3");
+    tx3_bindgen::build("faucet.tx3");
 }

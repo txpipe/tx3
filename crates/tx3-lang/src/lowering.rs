@@ -3,6 +3,8 @@
 //! This module takes an AST and performs lowering on it. It converts the AST
 //! into the intermediate representation (IR) of the Tx3 language.
 
+use std::collections::HashSet;
+
 use crate::ast;
 use crate::ir;
 
@@ -47,20 +49,33 @@ fn expect_field_def(ident: &ast::Identifier) -> Result<&ast::RecordField, Error>
 }
 
 fn coerce_identifier_into_asset_def(identifier: &ast::Identifier) -> Result<ast::AssetDef, Error> {
-    if let Some(ast::Symbol::AssetDef(x)) = &identifier.symbol {
-        Ok(x.as_ref().clone())
-    } else {
-        Err(Error::InvalidSymbol(identifier.value.clone(), "AssetDef"))
+    match identifier.try_symbol()? {
+        ast::Symbol::AssetDef(x) => Ok(x.as_ref().clone()),
+        _ => Err(Error::InvalidSymbol(identifier.value.clone(), "AssetDef")),
     }
 }
 
 fn coerce_identifier_into_asset_expr(
     identifier: &ast::Identifier,
 ) -> Result<ir::Expression, Error> {
-    match &identifier.symbol {
-        Some(ast::Symbol::Input(x)) => Ok(ir::Expression::EvalInputAssets(x.clone())),
-        Some(ast::Symbol::Fees) => Ok(ir::Expression::FeeQuery),
+    match identifier.try_symbol()? {
+        ast::Symbol::Input(x) => Ok(ir::Expression::EvalInputAssets(x.clone())),
+        ast::Symbol::Fees => Ok(ir::Expression::FeeQuery),
         _ => Err(Error::InvalidSymbol(identifier.value.clone(), "AssetExpr")),
+    }
+}
+
+fn lower_into_address_expr(identifier: &ast::Identifier) -> Result<ir::Expression, Error> {
+    match identifier.try_symbol()? {
+        ast::Symbol::PolicyDef(x) => Ok(x.into_lower()?.hash),
+        ast::Symbol::PartyDef(x) => Ok(ir::Expression::EvalParameter(
+            x.name.to_lowercase().clone(),
+            ir::Type::Address,
+        )),
+        _ => Err(Error::InvalidSymbol(
+            identifier.value.clone(),
+            "AddressExpr",
+        )),
     }
 }
 
@@ -70,14 +85,14 @@ pub(crate) trait IntoLower {
     fn into_lower(&self) -> Result<Self::Output, Error>;
 }
 
-impl<T> IntoLower for Option<T>
+impl<T> IntoLower for Option<&T>
 where
     T: IntoLower,
 {
     type Output = Option<T::Output>;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
-        self.as_ref().map(|x| x.into_lower()).transpose()
+        self.map(|x| x.into_lower()).transpose()
     }
 }
 
@@ -123,13 +138,63 @@ impl IntoLower for ast::DatumConstructor {
     }
 }
 
-impl IntoLower for ast::PolicyDef {
+impl IntoLower for ast::PolicyField {
     type Output = ir::Expression;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::PolicyField::Hash(x) => x.into_lower(),
+            ast::PolicyField::Script(x) => x.into_lower(),
+            ast::PolicyField::Ref(x) => x.into_lower(),
+        }
+    }
+}
+
+impl IntoLower for ast::PolicyDef {
+    type Output = ir::PolicyExpr;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
         match &self.value {
-            ast::PolicyValue::HexString(x) => Ok(ir::Expression::Policy(hex::decode(&x.value)?)),
-            ast::PolicyValue::Import(_) => todo!(),
+            ast::PolicyValue::Assign(x) => Ok(ir::PolicyExpr {
+                hash: ir::Expression::Hash(hex::decode(&x.value)?),
+                script: ir::ScriptSource::infer_param(&self.name),
+            }),
+            ast::PolicyValue::Constructor(x) => {
+                let hash = x
+                    .find_field("hash")
+                    .ok_or(Error::InvalidAst("Missing policy hash".to_string()))?
+                    .into_lower()?;
+
+                let ref_field = x.find_field("ref");
+                let script_field = x.find_field("script");
+
+                let script = match (ref_field, script_field) {
+                    (Some(x), None) => ir::ScriptSource::UtxoRef(x.into_lower()?),
+                    (None, Some(x)) => ir::ScriptSource::Inline(x.into_lower()?),
+                    (None, None) => ir::ScriptSource::infer_param(&self.name),
+                    (Some(_), Some(_)) => {
+                        return Err(Error::InvalidAst(
+                            "both ref and script specified".to_string(),
+                        ))
+                    }
+                };
+
+                Ok(ir::PolicyExpr { hash, script })
+            }
+        }
+    }
+}
+
+impl IntoLower for ast::Type {
+    type Output = ir::Type;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::Type::Int => Ok(ir::Type::Int),
+            ast::Type::Bool => Ok(ir::Type::Bool),
+            ast::Type::Bytes => Ok(ir::Type::Bytes),
+            ast::Type::Address => Ok(ir::Type::Address),
+            ast::Type::Custom(x) => Ok(ir::Type::Custom(x.value.clone())),
         }
     }
 }
@@ -148,12 +213,11 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::Unit => ir::Expression::Struct(ir::StructExpr::unit()),
             ast::DataExpr::Identifier(x) => match &x.symbol {
                 Some(ast::Symbol::ParamVar(n, ty)) => {
-                    ir::Expression::EvalParameter(n.to_lowercase().clone(), ty.as_ref().clone())
+                    ir::Expression::EvalParameter(n.to_lowercase().clone(), ty.into_lower()?)
                 }
                 Some(ast::Symbol::PartyDef(x)) => {
-                    ir::Expression::EvalParameter(x.name.to_lowercase().clone(), ast::Type::Address)
+                    ir::Expression::EvalParameter(x.name.to_lowercase().clone(), ir::Type::Address)
                 }
-                Some(ast::Symbol::PolicyDef(x)) => x.into_lower()?,
                 _ => {
                     dbg!(&x);
                     todo!();
@@ -218,6 +282,18 @@ impl IntoLower for ast::AssetExpr {
     }
 }
 
+impl IntoLower for ast::AddressExpr {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::AddressExpr::String(x) => Ok(ir::Expression::String(x.value.clone())),
+            ast::AddressExpr::HexString(x) => Ok(ir::Expression::Bytes(hex::decode(&x.value)?)),
+            ast::AddressExpr::Identifier(x) => lower_into_address_expr(x),
+        }
+    }
+}
+
 impl IntoLower for ast::InputBlockField {
     type Output = ir::Expression;
 
@@ -233,19 +309,33 @@ impl IntoLower for ast::InputBlockField {
 }
 
 impl IntoLower for ast::InputBlock {
-    type Output = ir::Expression;
+    type Output = ir::Input;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
-        let ir = ir::InputQuery {
+        let from = self.find("from");
+        let min_amount = self.find("min_amount");
+
+        let policy = from
+            .and_then(ast::InputBlockField::as_address_expr)
+            .and_then(ast::AddressExpr::as_identifier)
+            .and_then(|x| x.symbol.as_ref())
+            .and_then(|x| x.as_policy_def())
+            .map(|x| x.into_lower())
+            .transpose()?;
+
+        let input = ir::Input {
             name: self.name.to_lowercase().clone(),
-            address: self.find("from").map(|x| x.into_lower()).transpose()?,
-            min_amount: self
-                .find("min_amount")
-                .map(|x| x.into_lower())
-                .transpose()?,
+            query: ir::InputQuery {
+                address: from.into_lower()?,
+                min_amount: min_amount.into_lower()?,
+            }
+            .into(),
+            refs: HashSet::new(),
+            redeemer: None,
+            policy,
         };
 
-        Ok(ir::Expression::InputQuery(Box::new(ir)))
+        Ok(input)
     }
 }
 
@@ -266,9 +356,9 @@ impl IntoLower for ast::OutputBlock {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         Ok(ir::Output {
-            address: self.find("to").map(|x| x.into_lower()).transpose()?,
-            datum: self.find("datum").map(|x| x.into_lower()).transpose()?,
-            amount: self.find("amount").map(|x| x.into_lower()).transpose()?,
+            address: self.find("to").into_lower()?,
+            datum: self.find("datum").into_lower()?,
+            amount: self.find("amount").into_lower()?,
         })
     }
 }
@@ -289,8 +379,8 @@ impl IntoLower for ast::MintBlock {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         Ok(ir::Mint {
-            amount: self.find("amount").map(|x| x.into_lower()).transpose()?,
-            redeemer: self.find("redeemer").map(|x| x.into_lower()).transpose()?,
+            amount: self.find("amount").into_lower()?,
+            redeemer: self.find("redeemer").into_lower()?,
         })
     }
 }
@@ -358,10 +448,10 @@ mod tests {
     #[test]
     fn test_lower() {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
-        let test_file = format!("{}/../../examples/transfer.tx3", manifest_dir);
+        let test_file = format!("{}/../../examples/lang_tour.tx3", manifest_dir);
         let mut ast = crate::parsing::parse_file(&test_file).unwrap();
         crate::analyzing::analyze(&mut ast).unwrap();
-        let ir = lower(&ast, "transfer").unwrap();
+        let ir = lower(&ast, "my_tx").unwrap();
 
         dbg!(ir);
     }

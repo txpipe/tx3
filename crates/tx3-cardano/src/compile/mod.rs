@@ -42,10 +42,10 @@ fn coerce_bytes_into_address(value: &[u8]) -> Result<pallas::ledger::addresses::
 }
 
 fn coerce_policy_into_address(
-    hash: &[u8],
+    policy: &[u8],
     pparams: &PParams,
 ) -> Result<pallas::ledger::addresses::Address, Error> {
-    let policy = hash.into();
+    let policy = primitives::Hash::from(policy);
 
     let address = pallas::ledger::addresses::ShelleyAddress::new(
         pparams.network,
@@ -139,7 +139,7 @@ fn coerce_expr_into_address(
 ) -> Result<pallas::ledger::addresses::Address, Error> {
     match expr {
         ir::Expression::Address(x) => coerce_bytes_into_address(x),
-        ir::Expression::Policy(x) => coerce_policy_into_address(x, pparams),
+        ir::Expression::Hash(x) => coerce_policy_into_address(x, pparams),
         ir::Expression::Bytes(x) => coerce_bytes_into_address(x),
         ir::Expression::String(x) => coerce_string_into_address(x),
         _ => Err(Error::CoerceError(
@@ -152,7 +152,16 @@ fn coerce_expr_into_address(
 fn coerce_expr_into_bytes(ir: &ir::Expression) -> Result<primitives::Bytes, Error> {
     match ir {
         ir::Expression::Bytes(x) => Ok(primitives::Bytes::from(x.clone())),
-        _ => Err(Error::InvalidAssetExpression(format!("{:?}", ir))),
+        _ => Err(Error::CoerceError(format!("{:?}", ir), "Bytes".to_string())),
+    }
+}
+
+fn coerce_expr_into_hash<const SIZE: usize>(
+    ir: &ir::Expression,
+) -> Result<primitives::Hash<SIZE>, Error> {
+    match ir {
+        ir::Expression::Bytes(x) => Ok(primitives::Hash::from(x.as_slice())),
+        _ => Err(Error::CoerceError(format!("{:?}", ir), "Hash".to_string())),
     }
 }
 
@@ -327,19 +336,14 @@ fn compile_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionInput>, Erro
     let refs = tx
         .inputs
         .iter()
-        .map(coerce_expr_into_utxo_refs)
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let inputs = refs
-        .iter()
-        .flatten()
+        .flat_map(|x| x.refs.iter())
         .map(|x| primitives::TransactionInput {
             transaction_id: x.txid.as_slice().into(),
             index: x.index as u64,
         })
         .collect();
 
-    Ok(inputs)
+    Ok(refs)
 }
 
 fn compile_outputs(
@@ -379,6 +383,23 @@ fn compile_certs(tx: &ir::Tx) -> Result<Vec<primitives::Certificate>, Error> {
         .collect::<Result<Vec<_>, _>>()
 }
 
+fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionInput>, Error> {
+    let refs = tx
+        .inputs
+        .iter()
+        .filter_map(|x| x.policy.as_ref())
+        .filter_map(|x| x.script.as_utxo_ref())
+        .flat_map(|x| coerce_expr_into_utxo_refs(x))
+        .flatten()
+        .map(|x| primitives::TransactionInput {
+            transaction_id: x.txid.as_slice().into(),
+            index: x.index as u64,
+        })
+        .collect();
+
+    Ok(refs)
+}
+
 fn compile_tx_body(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::TransactionBody, Error> {
     let out = primitives::TransactionBody {
         inputs: compile_inputs(tx)?.into(),
@@ -396,7 +417,7 @@ fn compile_tx_body(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Transac
         network_id: None,
         collateral_return: None,
         total_collateral: None,
-        reference_inputs: None,
+        reference_inputs: primitives::NonEmptySet::from_vec(compile_reference_inputs(tx)?),
         // reference_inputs: {
         //     let refs: Vec<_> = self
         //         .reference_inputs

@@ -23,15 +23,12 @@ fn main() {
     let cli = Cli::parse();
 
     for input_file in cli.input {
-        let mut protocol = tx3_lang::Protocol::load_file(&input_file).unwrap_or_else(|e| {
-            eprintln!("Failed to load protocol file {}: {}", input_file, e);
-            std::process::exit(1);
-        });
-
-        protocol.analyze().unwrap_or_else(|e| {
-            eprintln!("Failed to analyze protocol: {}", e);
-            std::process::exit(1);
-        });
+        let protocol = tx3_lang::Protocol::from_file(&input_file)
+            .load()
+            .unwrap_or_else(|e| {
+                eprintln!("Failed to load protocol file {}: {}", input_file, e);
+                std::process::exit(1);
+            });
 
         match cli.template.as_str() {
             "typescript" => typescript::generate(protocol, &Path::new(&cli.output)),
