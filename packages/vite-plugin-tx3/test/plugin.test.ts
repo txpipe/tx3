@@ -11,14 +11,14 @@ describe("vite-plugin-tx3", () => {
   beforeEach(() => {
     // Clean output directory before each test
     if (fs.existsSync(outputDir)) {
-      //fs.rmSync(outputDir, { recursive: true });
+      fs.rmSync(outputDir, { recursive: true });
     }
   });
 
   afterEach(() => {
     // Clean up after tests
     if (fs.existsSync(outputDir)) {
-      //fs.rmSync(outputDir, { recursive: true });
+      fs.rmSync(outputDir, { recursive: true });
     }
   });
 

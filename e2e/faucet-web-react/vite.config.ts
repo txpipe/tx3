@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tx3Plugin from "./src/vite-plugin-tx3";
+import tx3Plugin from "vite-plugin-tx3/dist/index.js";
 
 // https://vite.dev/config/
 export default defineConfig({
