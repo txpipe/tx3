@@ -7,7 +7,7 @@ use super::*;
 pub(crate) mod asset_math;
 pub(crate) mod plutus_data;
 
-use plutus_data::IntoData as _;
+use plutus_data::{IntoData as _, TryIntoData as _};
 
 macro_rules! asset {
     ($policy:expr, $asset:expr, $amount:expr) => {
@@ -47,8 +47,13 @@ fn coerce_policy_into_address(
 ) -> Result<pallas::ledger::addresses::Address, Error> {
     let policy = primitives::Hash::from(policy);
 
+    let network = match pparams.network {
+        primitives::NetworkId::Testnet => pallas::ledger::addresses::Network::Testnet,
+        primitives::NetworkId::Mainnet => pallas::ledger::addresses::Network::Mainnet,
+    };
+
     let address = pallas::ledger::addresses::ShelleyAddress::new(
-        pparams.network,
+        network,
         pallas::ledger::addresses::ShelleyPaymentPart::Script(policy),
         pallas::ledger::addresses::ShelleyDelegationPart::Null,
     );
@@ -388,7 +393,8 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
         .inputs
         .iter()
         .filter_map(|x| x.policy.as_ref())
-        .filter_map(|x| x.script.as_utxo_ref())
+        .filter_map(|x| x.script.as_ref())
+        .filter_map(|x| x.as_utxo_ref())
         .flat_map(|x| coerce_expr_into_utxo_refs(x))
         .flatten()
         .map(|x| primitives::TransactionInput {
@@ -405,31 +411,19 @@ fn compile_tx_body(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Transac
         inputs: compile_inputs(tx)?.into(),
         outputs: compile_outputs(tx, pparams)?.into(),
         fee: coerce_expr_into_number(&tx.fees)? as u64,
+        certificates: primitives::NonEmptySet::from_vec(compile_certs(tx)?),
+        mint: compile_mint_block(tx)?,
+        reference_inputs: primitives::NonEmptySet::from_vec(compile_reference_inputs(tx)?),
+        network_id: Some(pparams.network),
         ttl: None,
         validity_interval_start: None,
-        certificates: primitives::NonEmptySet::from_vec(compile_certs(tx)?),
         withdrawals: None,
         auxiliary_data_hash: None,
-        mint: compile_mint_block(tx)?,
         script_data_hash: None,
         collateral: None,
         required_signers: None,
-        network_id: None,
         collateral_return: None,
         total_collateral: None,
-        reference_inputs: primitives::NonEmptySet::from_vec(compile_reference_inputs(tx)?),
-        // reference_inputs: {
-        //     let refs: Vec<_> = self
-        //         .reference_inputs
-        //         .iter()
-        //         .map(|i| i.eval(ctx))
-        //         .collect::<Result<Vec<_>, _>>()?
-        //         .into_iter()
-        //         .flatten()
-        //         .collect();
-
-        //     NonEmptySet::from_vec(refs)
-        // },
         voting_procedures: None,
         proposal_procedures: None,
         treasury_value: None,
@@ -449,6 +443,49 @@ fn compile_auxiliary_data(_tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryDa
     // )))
 
     Ok(None)
+}
+
+fn utxo_ref_matches(ref1: &tx3_lang::UtxoRef, ref2: &primitives::TransactionInput) -> bool {
+    ref1.txid.eq(ref2.transaction_id.as_slice()) && ref1.index == ref2.index as u32
+}
+
+fn compile_single_spend_redeemer(
+    input_id: &tx3_lang::UtxoRef,
+    input_ir: &ir::Input,
+    sorted_inputs: &[&primitives::TransactionInput],
+) -> Result<primitives::Redeemer, Error> {
+    let index = sorted_inputs
+        .iter()
+        .position(|x| utxo_ref_matches(&input_id, x))
+        .unwrap();
+
+    let redeemer = primitives::Redeemer {
+        tag: primitives::RedeemerTag::Spend,
+        index: index as u32,
+        ex_units: primitives::ExUnits { mem: 0, steps: 0 },
+        data: input_ir.redeemer.try_into_data()?,
+    };
+
+    Ok(redeemer)
+}
+
+fn compile_spend_redeemers(
+    tx: &ir::Tx,
+    compiled_body: &primitives::TransactionBody,
+) -> Result<Vec<primitives::Redeemer>, Error> {
+    let mut compiled_inputs = compiled_body.inputs.iter().collect::<Vec<_>>();
+    compiled_inputs.sort_by_key(|x| (x.transaction_id, x.index));
+
+    let mut redeemers = Vec::new();
+
+    for input in tx.inputs.iter() {
+        for ref_ in input.refs.iter() {
+            let redeemer = compile_single_spend_redeemer(ref_, input, compiled_inputs.as_slice())?;
+            redeemers.push(redeemer);
+        }
+    }
+
+    Ok(redeemers)
 }
 
 fn compile_mint_redeemers(_tx: &ir::Tx) -> Result<Vec<primitives::Redeemer>, Error> {
@@ -484,11 +521,15 @@ fn compile_mint_redeemers(_tx: &ir::Tx) -> Result<Vec<primitives::Redeemer>, Err
     Ok(vec![])
 }
 
-fn compile_redeemers(tx: &ir::Tx) -> Result<Option<primitives::Redeemers>, Error> {
+fn compile_redeemers(
+    tx: &ir::Tx,
+    compiled_body: &primitives::TransactionBody,
+) -> Result<Option<primitives::Redeemers>, Error> {
+    let spend_redeemers = compile_spend_redeemers(tx, compiled_body)?;
     let mint_redeemers = compile_mint_redeemers(tx)?;
 
     // TODO: chain other redeemers
-    let redeemers = mint_redeemers;
+    let redeemers: Vec<_> = spend_redeemers.into_iter().chain(mint_redeemers).collect();
 
     if redeemers.is_empty() {
         Ok(None)
@@ -499,9 +540,12 @@ fn compile_redeemers(tx: &ir::Tx) -> Result<Option<primitives::Redeemers>, Error
     }
 }
 
-fn compile_witness_set(tx: &ir::Tx) -> Result<primitives::WitnessSet, Error> {
+fn compile_witness_set(
+    tx: &ir::Tx,
+    compiled_body: &primitives::TransactionBody,
+) -> Result<primitives::WitnessSet, Error> {
     let out = primitives::WitnessSet {
-        redeemer: compile_redeemers(tx)?,
+        redeemer: compile_redeemers(tx, compiled_body)?,
         vkeywitness: None,
         native_script: None,
         bootstrap_witness: None,
@@ -516,7 +560,7 @@ fn compile_witness_set(tx: &ir::Tx) -> Result<primitives::WitnessSet, Error> {
 
 pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx, Error> {
     let transaction_body = compile_tx_body(tx, pparams)?;
-    let transaction_witness_set = compile_witness_set(tx)?;
+    let transaction_witness_set = compile_witness_set(tx, &transaction_body)?;
     let auxiliary_data = compile_auxiliary_data(tx)?;
 
     let tx = primitives::Tx {

@@ -268,68 +268,69 @@ where
 impl Apply for ir::ScriptSource {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         match self {
-            ir::ScriptSource::Inline(x) => Ok(ir::ScriptSource::Inline(x.apply_args(args)?)),
-            ir::ScriptSource::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef(x.apply_args(args)?)),
-            ir::ScriptSource::InferParam(x) => {
-                let defined = args.get(&x);
-
-                if let Some(defined) = defined {
-                    match defined {
-                        ArgValue::UtxoRef(x) => {
-                            Ok(ir::ScriptSource::UtxoRef(ir::Expression::UtxoRefs(vec![
-                                x.clone()
-                            ])))
-                        }
-                        ArgValue::Bytes(x) => {
-                            Ok(ir::ScriptSource::Inline(ir::Expression::Bytes(x.clone())))
-                        }
-                        _ => Err(Error::InvalidArgument(defined.clone(), x.clone())),
-                    }
-                } else {
-                    Ok(ir::ScriptSource::InferParam(x))
-                }
-            }
+            ir::ScriptSource::Embedded(x) => Ok(ir::ScriptSource::Embedded(x.apply_args(args)?)),
+            ir::ScriptSource::UtxoRef { r#ref, source } => Ok(ir::ScriptSource::UtxoRef {
+                r#ref: r#ref.apply_args(args)?,
+                source: source.apply_args(args)?,
+            }),
         }
     }
 
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
         match self {
-            ir::ScriptSource::Inline(x) => Ok(ir::ScriptSource::Inline(x.apply_inputs(args)?)),
-            ir::ScriptSource::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef(x.apply_inputs(args)?)),
-            ir::ScriptSource::InferParam(x) => Ok(ir::ScriptSource::InferParam(x)),
+            ir::ScriptSource::Embedded(x) => Ok(ir::ScriptSource::Embedded(x.apply_inputs(args)?)),
+            ir::ScriptSource::UtxoRef { r#ref, source } => Ok(ir::ScriptSource::UtxoRef {
+                r#ref: r#ref.apply_inputs(args)?,
+                source: source.apply_inputs(args)?,
+            }),
         }
     }
 
     fn apply_fees(self, fees: u64) -> Result<Self, Error> {
         match self {
-            ir::ScriptSource::Inline(x) => Ok(ir::ScriptSource::Inline(x.apply_fees(fees)?)),
-            ir::ScriptSource::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef(x.apply_fees(fees)?)),
-            ir::ScriptSource::InferParam(x) => Ok(ir::ScriptSource::InferParam(x)),
+            ir::ScriptSource::Embedded(x) => Ok(ir::ScriptSource::Embedded(x.apply_fees(fees)?)),
+            ir::ScriptSource::UtxoRef { r#ref, source } => Ok(ir::ScriptSource::UtxoRef {
+                r#ref: r#ref.apply_fees(fees)?,
+                source: source.apply_fees(fees)?,
+            }),
         }
     }
 
     fn is_constant(&self) -> bool {
         match self {
-            ir::ScriptSource::Inline(x) => x.is_constant(),
-            ir::ScriptSource::UtxoRef(x) => x.is_constant(),
-            ir::ScriptSource::InferParam(_) => false,
+            ir::ScriptSource::Embedded(x) => x.is_constant(),
+            ir::ScriptSource::UtxoRef { r#ref, source } => {
+                r#ref.is_constant() && source.is_constant()
+            }
         }
     }
 
     fn params(&self) -> BTreeMap<String, ir::Type> {
+        let mut params = BTreeMap::new();
+
         match self {
-            ir::ScriptSource::Inline(x) => x.params(),
-            ir::ScriptSource::UtxoRef(x) => x.params(),
-            ir::ScriptSource::InferParam(x) => BTreeMap::from([(x.clone(), ir::Type::UtxoRef)]),
+            ir::ScriptSource::Embedded(x) => params.extend(x.params()),
+            ir::ScriptSource::UtxoRef { r#ref, source } => {
+                params.extend(r#ref.params());
+                params.extend(source.params());
+            }
         }
+
+        params
     }
 
     fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        let mut queries = BTreeMap::new();
+
         match self {
-            ir::ScriptSource::Inline(x) => x.queries(),
-            ir::ScriptSource::UtxoRef(x) => x.queries(),
-            ir::ScriptSource::InferParam(_) => BTreeMap::new(),
+            ir::ScriptSource::Embedded(x) => queries.extend(x.queries()),
+            ir::ScriptSource::UtxoRef { r#ref, source } => {
+                queries.extend(r#ref.queries());
+                queries.extend(source.queries());
+            }
         }
+
+        queries
     }
 
     fn reduce_self(self) -> Result<Self, Error> {
@@ -338,30 +339,70 @@ impl Apply for ir::ScriptSource {
 
     fn reduce_nested(self) -> Result<Self, Error> {
         match self {
-            ir::ScriptSource::Inline(x) => Ok(ir::ScriptSource::Inline(x.reduce_nested()?)),
-            ir::ScriptSource::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef(x.reduce_nested()?)),
-            ir::ScriptSource::InferParam(x) => Ok(ir::ScriptSource::InferParam(x)),
+            ir::ScriptSource::Embedded(x) => Ok(ir::ScriptSource::Embedded(x.reduce_nested()?)),
+            ir::ScriptSource::UtxoRef { r#ref, source } => Ok(ir::ScriptSource::UtxoRef {
+                r#ref: r#ref.reduce_nested()?,
+                source: source.reduce_nested()?,
+            }),
+        }
+    }
+}
+
+impl TryFrom<&ArgValue> for ir::ScriptSource {
+    type Error = Error;
+
+    fn try_from(value: &ArgValue) -> Result<Self, Self::Error> {
+        match value {
+            ArgValue::Bytes(x) => Ok(ir::ScriptSource::Embedded(ir::Expression::Bytes(x.clone()))),
+            ArgValue::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef {
+                r#ref: ir::Expression::UtxoRefs(vec![x.clone()]),
+                source: None,
+            }),
+            _ => Err(Error::InvalidArgument(value.clone(), "script".to_string())),
         }
     }
 }
 
 impl Apply for ir::PolicyExpr {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
-        Ok(Self {
-            hash: self.hash.apply_args(args)?,
-            script: self.script.apply_args(args)?,
-        })
+        let name = self.name;
+        let hash = self.hash.apply_args(args)?;
+
+        let script = if self.script.is_some() {
+            self.script.apply_args(args)?
+        } else {
+            let defined = args.get(&format!("{}_script", name.to_lowercase()));
+            defined.map(TryFrom::try_from).transpose()?
+        };
+
+        Ok(Self { name, hash, script })
     }
 
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
-        Ok(Self {
-            hash: self.hash.apply_inputs(args)?,
-            script: self.script.apply_inputs(args)?,
-        })
+        let name = self.name;
+        let hash = self.hash.apply_inputs(args)?;
+
+        let script = self
+            .script
+            .map(|x| match x {
+                ir::ScriptSource::UtxoRef { r#ref, .. } => {
+                    let source = args
+                        .get(&name.to_lowercase())
+                        .and_then(|x| x.iter().next())
+                        .and_then(|x| x.script.clone());
+
+                    Ok(ir::ScriptSource::UtxoRef { r#ref, source })
+                }
+                x => Ok(x),
+            })
+            .transpose()?;
+
+        Ok(Self { name, hash, script })
     }
 
     fn apply_fees(self, fees: u64) -> Result<Self, Error> {
         Ok(Self {
+            name: self.name,
             hash: self.hash.apply_fees(fees)?,
             script: self.script.apply_fees(fees)?,
         })
@@ -375,13 +416,37 @@ impl Apply for ir::PolicyExpr {
         let mut params = BTreeMap::new();
         params.extend(self.hash.params());
         params.extend(self.script.params());
+
+        if self.script.is_none() {
+            params.insert(
+                format!("{}_script", self.name.to_lowercase()),
+                ir::Type::UtxoRef,
+            );
+        }
+
         params
     }
 
     fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
         let mut queries = BTreeMap::new();
-        queries.extend(self.hash.queries());
-        queries.extend(self.script.queries());
+
+        if let Some(script) = &self.script {
+            match script {
+                ir::ScriptSource::UtxoRef { r#ref, source } => {
+                    if source.is_none() {
+                        queries.insert(
+                            self.name.to_lowercase(),
+                            ir::InputQuery {
+                                r#ref: Some(r#ref.clone()),
+                                ..Default::default()
+                            },
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
+
         queries
     }
 
@@ -391,6 +456,7 @@ impl Apply for ir::PolicyExpr {
 
     fn reduce_nested(self) -> Result<Self, Error> {
         Ok(Self {
+            name: self.name,
             hash: self.hash.reduce_nested()?,
             script: self.script.reduce_nested()?,
         })
@@ -660,6 +726,7 @@ impl Apply for ir::InputQuery {
         Ok(Self {
             address: self.address.apply_args(args)?,
             min_amount: self.min_amount.apply_args(args)?,
+            r#ref: self.r#ref.apply_args(args)?,
         })
     }
 
@@ -667,6 +734,7 @@ impl Apply for ir::InputQuery {
         Ok(Self {
             address: self.address.apply_inputs(args)?,
             min_amount: self.min_amount.apply_inputs(args)?,
+            r#ref: self.r#ref.apply_inputs(args)?,
         })
     }
 
@@ -674,17 +742,19 @@ impl Apply for ir::InputQuery {
         Ok(Self {
             address: self.address.apply_fees(fees)?,
             min_amount: self.min_amount.apply_fees(fees)?,
+            r#ref: self.r#ref.apply_fees(fees)?,
         })
     }
 
     fn is_constant(&self) -> bool {
-        self.address.is_constant() && self.min_amount.is_constant()
+        self.address.is_constant() && self.min_amount.is_constant() && self.r#ref.is_constant()
     }
 
     fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
         params.extend(self.address.params());
         params.extend(self.min_amount.params());
+        params.extend(self.r#ref.params());
         params
     }
 
@@ -702,6 +772,7 @@ impl Apply for ir::InputQuery {
         Ok(Self {
             address: self.address.reduce()?,
             min_amount: self.min_amount.reduce()?,
+            r#ref: self.r#ref.reduce()?,
         })
     }
 }
@@ -752,11 +823,10 @@ impl Apply for ir::Input {
     }
 
     fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
-        self.query
-            .as_ref()
-            .map(|x| (self.name.clone(), x.clone()))
-            .into_iter()
-            .collect()
+        let input = self.query.iter().map(|x| (self.name.clone(), x.clone()));
+        let policy = self.policy.queries();
+
+        BTreeMap::from_iter(input.chain(policy))
     }
 
     fn reduce_self(self) -> Result<Self, Error> {

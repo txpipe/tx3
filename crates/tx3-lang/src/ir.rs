@@ -63,19 +63,17 @@ pub struct AdHocDirective {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum ScriptSource {
-    Inline(Expression),
-    UtxoRef(Expression),
-    InferParam(String),
+    Embedded(Expression),
+    UtxoRef {
+        r#ref: Expression,
+        source: Option<Expression>,
+    },
 }
 
 impl ScriptSource {
-    pub fn infer_param(policy_name: &str) -> Self {
-        Self::InferParam(format!("{}_script", policy_name.to_lowercase()))
-    }
-
     pub fn as_utxo_ref(&self) -> Option<&Expression> {
         match self {
-            Self::UtxoRef(x) => Some(x),
+            Self::UtxoRef { r#ref, .. } => Some(r#ref),
             _ => None,
         }
     }
@@ -83,8 +81,9 @@ impl ScriptSource {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct PolicyExpr {
+    pub name: String,
     pub hash: Expression,
-    pub script: ScriptSource,
+    pub script: Option<ScriptSource>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -123,10 +122,11 @@ pub enum Expression {
     AdHocDirective(Box<AdHocDirective>),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 pub struct InputQuery {
     pub address: Option<Expression>,
     pub min_amount: Option<Expression>,
+    pub r#ref: Option<Expression>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]

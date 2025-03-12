@@ -54,6 +54,7 @@ pub struct Utxo {
     pub address: Vec<u8>,
     pub datum: Option<ir::Expression>,
     pub assets: Vec<ir::AssetExpr>,
+    pub script: Option<ir::Expression>,
 }
 
 impl std::hash::Hash for Utxo {
@@ -286,6 +287,7 @@ mod tests {
                     asset_name: ir::Expression::Bytes(b"asset".to_vec()),
                     amount: ir::Expression::Number(100),
                 }],
+                script: Some(ir::Expression::Bytes(b"abce".to_vec())),
             }]),
         );
 

@@ -66,7 +66,7 @@ pub enum Error {
     MaxOptimizeRoundsReached,
 }
 
-pub type Network = pallas::ledger::addresses::Network;
+pub type Network = pallas::ledger::primitives::NetworkId;
 
 pub struct PParams {
     pub network: Network,
