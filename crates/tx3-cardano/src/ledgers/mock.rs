@@ -5,7 +5,7 @@ pub struct MockLedger;
 impl Ledger for MockLedger {
     async fn get_pparams(&self) -> Result<PParams, Error> {
         Ok(PParams {
-            network: pallas::ledger::addresses::Network::Testnet,
+            network: crate::Network::Testnet,
             min_fee_coefficient: 1,
             min_fee_constant: 2,
             coins_per_utxo_byte: 1,

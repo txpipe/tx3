@@ -67,7 +67,7 @@ impl crate::resolve::Ledger for Ledger {
 
         match params {
             utxorpc::spec::query::any_chain_params::Params::Cardano(params) => Ok(PParams {
-                network: pallas::ledger::addresses::Network::from(self.network_id),
+                network: crate::Network::try_from(self.network_id).unwrap(),
                 min_fee_coefficient: params.min_fee_coefficient,
                 min_fee_constant: params.min_fee_constant,
                 coins_per_utxo_byte: params.coins_per_utxo_byte,

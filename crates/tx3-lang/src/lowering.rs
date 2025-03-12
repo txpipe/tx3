@@ -156,8 +156,9 @@ impl IntoLower for ast::PolicyDef {
     fn into_lower(&self) -> Result<Self::Output, Error> {
         match &self.value {
             ast::PolicyValue::Assign(x) => Ok(ir::PolicyExpr {
+                name: self.name.clone(),
                 hash: ir::Expression::Hash(hex::decode(&x.value)?),
-                script: ir::ScriptSource::infer_param(&self.name),
+                script: ir::ScriptSource::Missing,
             }),
             ast::PolicyValue::Constructor(x) => {
                 let hash = x
@@ -169,17 +170,23 @@ impl IntoLower for ast::PolicyDef {
                 let script_field = x.find_field("script");
 
                 let script = match (ref_field, script_field) {
-                    (Some(x), None) => ir::ScriptSource::UtxoRef(x.into_lower()?),
-                    (None, Some(x)) => ir::ScriptSource::Inline(x.into_lower()?),
-                    (None, None) => ir::ScriptSource::infer_param(&self.name),
-                    (Some(_), Some(_)) => {
-                        return Err(Error::InvalidAst(
-                            "both ref and script specified".to_string(),
-                        ))
-                    }
+                    (Some(x), None) => ir::ScriptSource::UtxoRef {
+                        r#ref: x.into_lower()?,
+                        source: None,
+                    },
+                    (None, Some(x)) => ir::ScriptSource::Embedded(x.into_lower()?),
+                    (None, None) => ir::ScriptSource::Missing,
+                    (Some(r#ref), Some(source)) => ir::ScriptSource::UtxoRef {
+                        r#ref: r#ref.into_lower()?,
+                        source: Some(source.into_lower()?),
+                    },
                 };
 
-                Ok(ir::PolicyExpr { hash, script })
+                Ok(ir::PolicyExpr {
+                    name: self.name.clone(),
+                    hash,
+                    script,
+                })
             }
         }
     }
@@ -314,6 +321,7 @@ impl IntoLower for ast::InputBlock {
     fn into_lower(&self) -> Result<Self::Output, Error> {
         let from = self.find("from");
         let min_amount = self.find("min_amount");
+        let r#ref = self.find("ref");
 
         let policy = from
             .and_then(ast::InputBlockField::as_address_expr)
@@ -328,6 +336,7 @@ impl IntoLower for ast::InputBlock {
             query: ir::InputQuery {
                 address: from.into_lower()?,
                 min_amount: min_amount.into_lower()?,
+                r#ref: r#ref.into_lower()?,
             }
             .into(),
             refs: HashSet::new(),

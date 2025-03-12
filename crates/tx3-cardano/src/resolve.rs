@@ -1,3 +1,4 @@
+use pallas::ledger::primitives::conway as primitives;
 use tx3_lang::ir::InputQuery;
 
 use crate::{compile::compile_tx, Error, PParams};
@@ -60,7 +61,28 @@ fn utxo_from_u5c_to_tx3(u: utxorpc::ChainUtxo<utxorpc::spec::cardano::TxOutput>)
             asset_name: tx3_lang::ir::Expression::Bytes(vec![]),
             amount: tx3_lang::ir::Expression::Number(u.parsed.as_ref().unwrap().coin as i128),
         }], //u.parsed.unwrap().assets.into(),
+        script: u
+            .parsed
+            .as_ref()
+            .and_then(|x| x.script.as_ref())
+            .and_then(|x| x.script.as_ref())
+            .map(|x| {
+                let mut buf = vec![];
+                x.encode(&mut buf);
+                buf
+            })
+            .map(|x| tx3_lang::ir::Expression::Bytes(x)),
     }
+}
+
+fn eval_size_fees(tx: &[u8], pparams: &PParams) -> Result<u64, Error> {
+    Ok(tx.len() as u64 * pparams.min_fee_coefficient + pparams.min_fee_constant + 200_000)
+}
+
+fn eval_redeemer_fees(tx: &primitives::Tx, pparams: &PParams) -> Result<u64, Error> {
+    // pallas::ledger::validate::phase_two::evaluate_tx(tx.into(), pparams, utxos,
+    // slot_config);
+    todo!()
 }
 
 async fn eval_pass<L: Ledger>(
@@ -94,12 +116,13 @@ async fn eval_pass<L: Ledger>(
 
     let payload = pallas::codec::minicbor::to_vec(&tx).unwrap();
 
-    let fee =
-        (payload.len() as u64 * pparams.min_fee_coefficient) + pparams.min_fee_constant + 200_000;
+    let size_fees = eval_size_fees(&payload, pparams)?;
+
+    //let redeemer_fees = eval_redeemer_fees(tx, pparams)?;
 
     let eval = TxEval {
         payload,
-        fee,
+        fee: size_fees, // TODO: add redeemer fees
         ex_units: 0,
     };
 
@@ -210,6 +233,9 @@ mod tests {
             }))
             .apply()
             .unwrap();
+
+        dbg!(&tx.find_params());
+        dbg!(&tx.find_queries());
 
         let tx = resolve_tx(tx, MockLedger, 3).await.unwrap();
 
