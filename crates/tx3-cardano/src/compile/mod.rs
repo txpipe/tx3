@@ -393,7 +393,8 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
         .inputs
         .iter()
         .filter_map(|x| x.policy.as_ref())
-        .filter_map(|x| x.script.as_utxo_ref())
+        .filter_map(|x| x.script.as_ref())
+        .filter_map(|x| x.as_utxo_ref())
         .flat_map(|x| coerce_expr_into_utxo_refs(x))
         .flatten()
         .map(|x| primitives::TransactionInput {

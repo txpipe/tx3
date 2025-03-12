@@ -158,7 +158,7 @@ impl IntoLower for ast::PolicyDef {
             ast::PolicyValue::Assign(x) => Ok(ir::PolicyExpr {
                 name: self.name.clone(),
                 hash: ir::Expression::Hash(hex::decode(&x.value)?),
-                script: ir::ScriptSource::Missing,
+                script: None,
             }),
             ast::PolicyValue::Constructor(x) => {
                 let hash = x
@@ -170,16 +170,16 @@ impl IntoLower for ast::PolicyDef {
                 let script_field = x.find_field("script");
 
                 let script = match (ref_field, script_field) {
-                    (Some(x), None) => ir::ScriptSource::UtxoRef {
+                    (Some(x), None) => Some(ir::ScriptSource::UtxoRef {
                         r#ref: x.into_lower()?,
                         source: None,
-                    },
-                    (None, Some(x)) => ir::ScriptSource::Embedded(x.into_lower()?),
-                    (None, None) => ir::ScriptSource::Missing,
-                    (Some(r#ref), Some(source)) => ir::ScriptSource::UtxoRef {
+                    }),
+                    (None, Some(x)) => Some(ir::ScriptSource::Embedded(x.into_lower()?)),
+                    (Some(r#ref), Some(source)) => Some(ir::ScriptSource::UtxoRef {
                         r#ref: r#ref.into_lower()?,
                         source: Some(source.into_lower()?),
-                    },
+                    }),
+                    (None, None) => None,
                 };
 
                 Ok(ir::PolicyExpr {

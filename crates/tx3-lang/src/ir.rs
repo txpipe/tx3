@@ -68,7 +68,6 @@ pub enum ScriptSource {
         r#ref: Expression,
         source: Option<Expression>,
     },
-    Missing,
 }
 
 impl ScriptSource {
@@ -84,7 +83,7 @@ impl ScriptSource {
 pub struct PolicyExpr {
     pub name: String,
     pub hash: Expression,
-    pub script: ScriptSource,
+    pub script: Option<ScriptSource>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]

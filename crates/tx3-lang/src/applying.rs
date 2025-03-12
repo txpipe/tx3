@@ -273,7 +273,6 @@ impl Apply for ir::ScriptSource {
                 r#ref: r#ref.apply_args(args)?,
                 source: source.apply_args(args)?,
             }),
-            ir::ScriptSource::Missing => Ok(ir::ScriptSource::Missing),
         }
     }
 
@@ -284,7 +283,6 @@ impl Apply for ir::ScriptSource {
                 r#ref: r#ref.apply_inputs(args)?,
                 source: source.apply_inputs(args)?,
             }),
-            ir::ScriptSource::Missing => Ok(ir::ScriptSource::Missing),
         }
     }
 
@@ -295,7 +293,6 @@ impl Apply for ir::ScriptSource {
                 r#ref: r#ref.apply_fees(fees)?,
                 source: source.apply_fees(fees)?,
             }),
-            ir::ScriptSource::Missing => Ok(ir::ScriptSource::Missing),
         }
     }
 
@@ -305,7 +302,6 @@ impl Apply for ir::ScriptSource {
             ir::ScriptSource::UtxoRef { r#ref, source } => {
                 r#ref.is_constant() && source.is_constant()
             }
-            ir::ScriptSource::Missing => false,
         }
     }
 
@@ -318,7 +314,6 @@ impl Apply for ir::ScriptSource {
                 params.extend(r#ref.params());
                 params.extend(source.params());
             }
-            ir::ScriptSource::Missing => {}
         }
 
         params
@@ -333,7 +328,6 @@ impl Apply for ir::ScriptSource {
                 queries.extend(r#ref.queries());
                 queries.extend(source.queries());
             }
-            ir::ScriptSource::Missing => {}
         }
 
         queries
@@ -350,7 +344,21 @@ impl Apply for ir::ScriptSource {
                 r#ref: r#ref.reduce_nested()?,
                 source: source.reduce_nested()?,
             }),
-            ir::ScriptSource::Missing => Ok(ir::ScriptSource::Missing),
+        }
+    }
+}
+
+impl TryFrom<&ArgValue> for ir::ScriptSource {
+    type Error = Error;
+
+    fn try_from(value: &ArgValue) -> Result<Self, Self::Error> {
+        match value {
+            ArgValue::Bytes(x) => Ok(ir::ScriptSource::Embedded(ir::Expression::Bytes(x.clone()))),
+            ArgValue::UtxoRef(x) => Ok(ir::ScriptSource::UtxoRef {
+                r#ref: ir::Expression::UtxoRefs(vec![x.clone()]),
+                source: None,
+            }),
+            _ => Err(Error::InvalidArgument(value.clone(), "script".to_string())),
         }
     }
 }
@@ -360,28 +368,12 @@ impl Apply for ir::PolicyExpr {
         let name = self.name;
         let hash = self.hash.apply_args(args)?;
 
-        let script = match self.script {
-            ir::ScriptSource::Embedded(x) => Ok(ir::ScriptSource::Embedded(x.apply_args(args)?)),
-            ir::ScriptSource::UtxoRef { r#ref, source } => Ok(ir::ScriptSource::UtxoRef {
-                r#ref: r#ref.apply_args(args)?,
-                source: source.apply_args(args)?,
-            }),
-            ir::ScriptSource::Missing => {
-                let defined = args.get(&format!("{}_script", name.to_lowercase()));
-
-                match defined {
-                    Some(ArgValue::Bytes(x)) => {
-                        Ok(ir::ScriptSource::Embedded(ir::Expression::Bytes(x.clone())))
-                    }
-                    Some(ArgValue::UtxoRef(x)) => Ok(ir::ScriptSource::UtxoRef {
-                        r#ref: ir::Expression::UtxoRefs(vec![x.clone()]),
-                        source: None,
-                    }),
-                    Some(x) => Err(Error::InvalidArgument(x.clone(), name.clone())),
-                    None => Ok(ir::ScriptSource::Missing),
-                }
-            }
-        }?;
+        let script = if self.script.is_some() {
+            self.script.apply_args(args)?
+        } else {
+            let defined = args.get(&format!("{}_script", name.to_lowercase()));
+            defined.map(TryFrom::try_from).transpose()?
+        };
 
         Ok(Self { name, hash, script })
     }
@@ -390,17 +382,20 @@ impl Apply for ir::PolicyExpr {
         let name = self.name;
         let hash = self.hash.apply_inputs(args)?;
 
-        let script = match self.script {
-            ir::ScriptSource::UtxoRef { r#ref, .. } => {
-                let source = args
-                    .get(&name.to_lowercase())
-                    .and_then(|x| x.iter().next())
-                    .and_then(|x| x.script.clone());
+        let script = self
+            .script
+            .map(|x| match x {
+                ir::ScriptSource::UtxoRef { r#ref, .. } => {
+                    let source = args
+                        .get(&name.to_lowercase())
+                        .and_then(|x| x.iter().next())
+                        .and_then(|x| x.script.clone());
 
-                Ok(ir::ScriptSource::UtxoRef { r#ref, source })
-            }
-            x => Ok(x),
-        }?;
+                    Ok(ir::ScriptSource::UtxoRef { r#ref, source })
+                }
+                x => Ok(x),
+            })
+            .transpose()?;
 
         Ok(Self { name, hash, script })
     }
@@ -422,14 +417,11 @@ impl Apply for ir::PolicyExpr {
         params.extend(self.hash.params());
         params.extend(self.script.params());
 
-        match &self.script {
-            ir::ScriptSource::Missing => {
-                params.insert(
-                    format!("{}_script", self.name.to_lowercase()),
-                    ir::Type::UtxoRef,
-                );
-            }
-            _ => {}
+        if self.script.is_none() {
+            params.insert(
+                format!("{}_script", self.name.to_lowercase()),
+                ir::Type::UtxoRef,
+            );
         }
 
         params
@@ -438,19 +430,21 @@ impl Apply for ir::PolicyExpr {
     fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
         let mut queries = BTreeMap::new();
 
-        match &self.script {
-            ir::ScriptSource::UtxoRef { r#ref, source } => {
-                if source.is_none() {
-                    queries.insert(
-                        self.name.to_lowercase(),
-                        ir::InputQuery {
-                            r#ref: Some(r#ref.clone()),
-                            ..Default::default()
-                        },
-                    );
+        if let Some(script) = &self.script {
+            match script {
+                ir::ScriptSource::UtxoRef { r#ref, source } => {
+                    if source.is_none() {
+                        queries.insert(
+                            self.name.to_lowercase(),
+                            ir::InputQuery {
+                                r#ref: Some(r#ref.clone()),
+                                ..Default::default()
+                            },
+                        );
+                    }
                 }
+                _ => {}
             }
-            _ => {}
         }
 
         queries
