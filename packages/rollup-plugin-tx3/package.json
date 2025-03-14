@@ -1,6 +1,6 @@
 {
   "name": "rollup-plugin-tx3",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "A rollup plugin to generate bindings for Tx3 files",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
