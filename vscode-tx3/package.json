@@ -1,0 +1,66 @@
+{
+  "name": "tx3",
+  "displayName": "Tx3 Language Support",
+  "description": "Language support for Tx3 including syntax highlighting and LSP",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "files": [
+    "tx3-lsp",
+    "tx3-lsp.exe"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tx3",
+        "aliases": [
+          "Tx3",
+          "tx3"
+        ],
+        "extensions": [
+          ".tx3"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tx3",
+        "scopeName": "source.tx3",
+        "path": "./syntaxes/tx3.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "tx3.startServer",
+        "title": "Start Tx3 Language Server"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "18.x",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  }
+}

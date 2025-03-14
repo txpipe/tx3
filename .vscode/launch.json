@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/vscode-tx3",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/vscode-tx3"],
+      "outFiles": ["${workspaceFolder}/vscode-tx3/out/**/*.js"],
+      "preLaunchTask": "npm: compile - vscode-tx3"
+    }
+  ]
+}
