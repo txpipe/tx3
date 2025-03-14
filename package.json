@@ -2,6 +2,7 @@
   "name": "tx3",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "e2e/faucet-web-react"
   ]
 }

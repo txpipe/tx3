@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:preview": "vite --mode preview",
+    "dev:preprod": "vite --mode preprod",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "lint": "eslint ."
   },
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tx3": "file:../../packages/tx3"
+    "tx3-trp": "file:../../packages/tx3-trp"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
@@ -28,6 +29,6 @@
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0",
-    "vite-plugin-tx3": "^0.1.2"
+    "vite-plugin-tx3": "file:../../packages/vite-plugin-tx3"
   }
 }

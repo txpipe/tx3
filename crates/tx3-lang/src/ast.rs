@@ -474,6 +474,7 @@ pub enum Type {
     Bool,
     Bytes,
     Address,
+    UtxoRef,
     Custom(Identifier),
 }
 

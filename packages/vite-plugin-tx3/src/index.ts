@@ -27,9 +27,7 @@ export default function tx3VitePlugin(options: Tx3PluginOptions): Plugin {
     configureServer(server) {
       const projectRoot = process.cwd();
 
-      const filesToWatch = options.inputFiles.map((pattern) =>
-        path.resolve(projectRoot, pattern)
-      );
+      const filesToWatch = rollupPlugin.filesToWatch();
 
       server.watcher.add(filesToWatch);
 

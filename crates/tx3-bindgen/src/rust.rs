@@ -1,8 +1,8 @@
-use std::path::Path;
-
 use convert_case::Casing;
 use proc_macro2::Ident;
 use quote::{format_ident, quote};
+
+use crate::Job;
 
 fn to_syn_type(ty: &tx3_lang::ir::Type) -> syn::Type {
     match ty {
@@ -15,12 +15,11 @@ fn to_syn_type(ty: &tx3_lang::ir::Type) -> syn::Type {
     }
 }
 
-/// Runs the build-time configuration for the dependent crate
-pub fn generate(protocol: tx3_lang::Protocol, dest_path: &Path) {
+pub fn generate(job: &Job) {
     let mut output = String::new();
 
-    for tx_def in protocol.txs() {
-        let proto_tx = protocol.new_tx(&tx_def.name).unwrap();
+    for tx_def in job.protocol.txs() {
+        let proto_tx = job.protocol.new_tx(&tx_def.name).unwrap();
         let proto_bytes: Vec<u8> = proto_tx.ir_bytes();
 
         let bytes_name = format_ident!("PROTO_{}", tx_def.name.to_uppercase());
@@ -66,5 +65,5 @@ pub fn generate(protocol: tx3_lang::Protocol, dest_path: &Path) {
         output.push_str("\n\n");
     }
 
-    std::fs::write(dest_path, output).unwrap();
+    std::fs::write(job.dest_path.join(format!("{}.rs", job.name)), output).unwrap();
 }
