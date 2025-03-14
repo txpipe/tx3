@@ -208,6 +208,13 @@
           "is_many": false,
           "fields": [
             {
+              "From": {
+                "Identifier": {
+                  "value": "TimeLock"
+                }
+              }
+            },
+            {
               "Ref": {
                 "Identifier": {
                   "value": "locked_utxo"

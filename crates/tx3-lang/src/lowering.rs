@@ -201,6 +201,7 @@ impl IntoLower for ast::Type {
             ast::Type::Bool => Ok(ir::Type::Bool),
             ast::Type::Bytes => Ok(ir::Type::Bytes),
             ast::Type::Address => Ok(ir::Type::Address),
+            ast::Type::UtxoRef => Ok(ir::Type::UtxoRef),
             ast::Type::Custom(x) => Ok(ir::Type::Custom(x.value.clone())),
         }
     }

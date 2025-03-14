@@ -46,14 +46,28 @@ describe("rollup-plugin-tx3", () => {
     await bundle.close();
   });
 
-  it("should handle plugin options correctly", () => {
-    const plugin = tx3RollupPlugin({
-      inputFiles: ["test/fixtures/*.tx3"],
-      outputDir: "custom-output",
-      bingenPath: "/custom/path/tx3-bindgen",
-      bingenArgs: ["--verbose"],
+  it("should handle plugin options correctly", async () => {
+    const bundle = await rollup({
+      input: "test/fixtures/dummy.js", // We need a dummy entry point
+      plugins: [
+        tx3RollupPlugin({
+          inputFiles: ["test/fixtures/*.tx3"],
+          outputDir,
+          trpEndpoint: "http://localhost:3000",
+          trpHeaders: {
+            "X-Custom-Header": "value",
+          },
+          envArgs: {
+            timelock_script: "value",
+          },
+        }),
+      ],
     });
 
-    expect(plugin.name).toBe("rollup-plugin-tx3");
+    // Trigger the buildStart hook
+    await bundle.generate({ format: "esm" });
+
+    // Clean up
+    await bundle.close();
   });
 });

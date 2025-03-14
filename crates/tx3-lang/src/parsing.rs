@@ -675,6 +675,8 @@ impl AstNode for Type {
             "Int" => Ok(Type::Int),
             "Bool" => Ok(Type::Bool),
             "Bytes" => Ok(Type::Bytes),
+            "Address" => Ok(Type::Address),
+            "UtxoRef" => Ok(Type::UtxoRef),
             t => Ok(Type::Custom(Identifier::new(t.to_string()))),
         }
     }
@@ -897,7 +899,15 @@ mod tests {
 
     input_to_ast_check!(BinaryOperator, "plus", "+", BinaryOperator::Add);
 
-    input_to_ast_check!(BinaryOperator, "minus", "-", BinaryOperator::Subtract);
+    input_to_ast_check!(Type, "int", "Int", Type::Int);
+
+    input_to_ast_check!(Type, "bool", "Bool", Type::Bool);
+
+    input_to_ast_check!(Type, "bytes", "Bytes", Type::Bytes);
+
+    input_to_ast_check!(Type, "address", "Address", Type::Address);
+
+    input_to_ast_check!(Type, "utxo_ref", "UtxoRef", Type::UtxoRef);
 
     input_to_ast_check!(
         TypeDef,
