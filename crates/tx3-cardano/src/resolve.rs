@@ -40,10 +40,10 @@ fn expr_to_address_pattern(
 }
 
 fn input_query_to_pattern(query: &InputQuery) -> utxorpc::spec::cardano::TxOutputPattern {
-    let address = query.address.as_ref().map(|x| expr_to_address_pattern(x));
+    let address = query.address.as_ref().map(expr_to_address_pattern);
 
     utxorpc::spec::cardano::TxOutputPattern {
-        address: address,
+        address,
         ..Default::default()
     }
 }
@@ -52,7 +52,7 @@ fn utxo_from_u5c_to_tx3(u: utxorpc::ChainUtxo<utxorpc::spec::cardano::TxOutput>)
     tx3_lang::Utxo {
         r#ref: tx3_lang::UtxoRef {
             txid: u.txo_ref.as_ref().unwrap().hash.clone().into(),
-            index: u.txo_ref.as_ref().unwrap().index as u32,
+            index: u.txo_ref.as_ref().unwrap().index,
         },
         address: u.parsed.as_ref().unwrap().address.clone().into(),
         datum: None, //u.parsed.unwrap().datum.into(),
@@ -71,7 +71,7 @@ fn utxo_from_u5c_to_tx3(u: utxorpc::ChainUtxo<utxorpc::spec::cardano::TxOutput>)
                 x.encode(&mut buf);
                 buf
             })
-            .map(|x| tx3_lang::ir::Expression::Bytes(x)),
+            .map(tx3_lang::ir::Expression::Bytes),
     }
 }
 
@@ -79,7 +79,8 @@ fn eval_size_fees(tx: &[u8], pparams: &PParams) -> Result<u64, Error> {
     Ok(tx.len() as u64 * pparams.min_fee_coefficient + pparams.min_fee_constant + 200_000)
 }
 
-fn eval_redeemer_fees(tx: &primitives::Tx, pparams: &PParams) -> Result<u64, Error> {
+#[allow(dead_code)]
+fn eval_redeemer_fees(_tx: &primitives::Tx, _pparams: &PParams) -> Result<u64, Error> {
     // pallas::ledger::validate::phase_two::evaluate_tx(tx.into(), pparams, utxos,
     // slot_config);
     todo!()

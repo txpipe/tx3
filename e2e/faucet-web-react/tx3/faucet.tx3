@@ -4,6 +4,8 @@ asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.MYTOK
 
 party Requester;
 
+asset Saraa = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.MEME;
+
 tx claim_with_password(
     password: Bytes,
     quantity: Int,
@@ -18,11 +20,26 @@ tx claim_with_password(
         amount: MyToken(quantity),
         redeemer: password,
     }
-    
+
     output {
         to: Requester,
         amount: provided_gas - fees + MyToken(quantity),
     }
+}
+
+tx minting_sarah(
+    foo: Int,
+) {
+
+  input something {
+    from: Saraa,
+    min_amount: fees,
+  }
+
+  mint {
+    amount: Saraa(foo),
+    
+  }
 }
 
 

@@ -459,8 +459,8 @@ mod tests {
     fn test_lower() {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let test_file = format!("{}/../../examples/lang_tour.tx3", manifest_dir);
-        let mut ast = crate::parsing::parse_file(&test_file).unwrap();
-        crate::analyzing::analyze(&mut ast).unwrap();
+        let mut ast = crate::loading::parse_file(&test_file).unwrap();
+        crate::analyzing::analyze(&mut ast).ok().unwrap();
         let ir = lower(&ast, "my_tx").unwrap();
 
         dbg!(ir);

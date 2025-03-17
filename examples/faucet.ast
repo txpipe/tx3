@@ -12,7 +12,12 @@
             "name": "quantity",
             "type": "Int"
           }
-        ]
+        ],
+        "span": {
+          "dummy": false,
+          "start": 210,
+          "end": 252
+        }
       },
       "inputs": [
         {
@@ -22,18 +27,33 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "Requester"
+                  "value": "Requester",
+                  "span": {
+                    "dummy": false,
+                    "start": 294,
+                    "end": 303
+                  }
                 }
               }
             },
             {
               "MinAmount": {
                 "Identifier": {
-                  "value": "fees"
+                  "value": "fees",
+                  "span": {
+                    "dummy": false,
+                    "start": 325,
+                    "end": 329
+                  }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 259,
+            "end": 336
+          }
         }
       ],
       "outputs": [
@@ -43,7 +63,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "Requester"
+                  "value": "Requester",
+                  "span": {
+                    "dummy": false,
+                    "start": 448,
+                    "end": 457
+                  }
                 }
               }
             },
@@ -54,14 +79,29 @@
                     "BinaryOp": {
                       "left": {
                         "Identifier": {
-                          "value": "provided_gas"
+                          "value": "provided_gas",
+                          "span": {
+                            "dummy": false,
+                            "start": 475,
+                            "end": 487
+                          }
                         }
                       },
                       "operator": "Subtract",
                       "right": {
                         "Identifier": {
-                          "value": "fees"
+                          "value": "fees",
+                          "span": {
+                            "dummy": false,
+                            "start": 490,
+                            "end": 494
+                          }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 488,
+                        "end": 489
                       }
                     }
                   },
@@ -69,19 +109,44 @@
                   "right": {
                     "Constructor": {
                       "type": {
-                        "value": "MyToken"
+                        "value": "MyToken",
+                        "span": {
+                          "dummy": false,
+                          "start": 497,
+                          "end": 504
+                        }
                       },
                       "amount": {
                         "Identifier": {
-                          "value": "quantity"
+                          "value": "quantity",
+                          "span": {
+                            "dummy": false,
+                            "start": 505,
+                            "end": 513
+                          }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 497,
+                        "end": 514
                       }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 495,
+                    "end": 496
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 427,
+            "end": 521
+          }
         }
       ],
       "burn": null,
@@ -91,12 +156,27 @@
             "Amount": {
               "Constructor": {
                 "type": {
-                  "value": "MyToken"
+                  "value": "MyToken",
+                  "span": {
+                    "dummy": false,
+                    "start": 365,
+                    "end": 372
+                  }
                 },
                 "amount": {
                   "Identifier": {
-                    "value": "quantity"
+                    "value": "quantity",
+                    "span": {
+                      "dummy": false,
+                      "start": 373,
+                      "end": 381
+                    }
                   }
+                },
+                "span": {
+                  "dummy": false,
+                  "start": 365,
+                  "end": 382
                 }
               }
             }
@@ -104,13 +184,28 @@
           {
             "Redeemer": {
               "Identifier": {
-                "value": "password"
+                "value": "password",
+                "span": {
+                  "dummy": false,
+                  "start": 402,
+                  "end": 410
+                }
               }
             }
           }
-        ]
+        ],
+        "span": {
+          "dummy": false,
+          "start": 342,
+          "end": 417
+        }
       },
-      "adhoc": []
+      "adhoc": [],
+      "span": {
+        "dummy": false,
+        "start": 188,
+        "end": 523
+      }
     }
   ],
   "types": [],
@@ -118,14 +213,29 @@
     {
       "name": "MyToken",
       "policy": {
-        "value": "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe"
+        "value": "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe",
+        "span": {
+          "dummy": false,
+          "start": 101,
+          "end": 159
+        }
       },
-      "asset_name": "MYTOKEN"
+      "asset_name": "MYTOKEN",
+      "span": {
+        "dummy": false,
+        "start": 85,
+        "end": 168
+      }
     }
   ],
   "parties": [
     {
-      "name": "Requester"
+      "name": "Requester",
+      "span": {
+        "dummy": false,
+        "start": 170,
+        "end": 186
+      }
     }
   ],
   "policies": [
@@ -133,9 +243,24 @@
       "name": "PasswordPolicy",
       "value": {
         "Assign": {
-          "value": "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe"
+          "value": "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe",
+          "span": {
+            "dummy": false,
+            "start": 24,
+            "end": 82
+          }
         }
+      },
+      "span": {
+        "dummy": false,
+        "start": 0,
+        "end": 83
       }
     }
-  ]
+  ],
+  "span": {
+    "dummy": false,
+    "start": 0,
+    "end": 525
+  }
 }

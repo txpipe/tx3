@@ -8,7 +8,12 @@
             "name": "ask",
             "type": {
               "Custom": {
-                "value": "Token"
+                "value": "Token",
+                "span": {
+                  "dummy": true,
+                  "start": 0,
+                  "end": 0
+                }
               }
             }
           },
@@ -16,11 +21,21 @@
             "name": "bid",
             "type": {
               "Custom": {
-                "value": "Token"
+                "value": "Token",
+                "span": {
+                  "dummy": true,
+                  "start": 0,
+                  "end": 0
+                }
               }
             }
           }
-        ]
+        ],
+        "span": {
+          "dummy": false,
+          "start": 145,
+          "end": 179
+        }
       },
       "inputs": [
         {
@@ -30,14 +45,24 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "Dex"
+                  "value": "Dex",
+                  "span": {
+                    "dummy": false,
+                    "start": 213,
+                    "end": 216
+                  }
                 }
               }
             },
             {
               "DatumIs": {
                 "Custom": {
-                  "value": "PoolState"
+                  "value": "PoolState",
+                  "span": {
+                    "dummy": true,
+                    "start": 0,
+                    "end": 0
+                  }
                 }
               }
             },
@@ -45,40 +70,95 @@
               "Redeemer": {
                 "Constructor": {
                   "type": {
-                    "value": "SwapParams"
+                    "value": "SwapParams",
+                    "span": {
+                      "dummy": false,
+                      "start": 266,
+                      "end": 276
+                    }
                   },
                   "case": {
                     "name": {
-                      "value": "Default"
+                      "value": "Default",
+                      "span": {
+                        "dummy": true,
+                        "start": 0,
+                        "end": 0
+                      }
                     },
                     "fields": [
                       {
                         "name": {
-                          "value": "ask"
+                          "value": "ask",
+                          "span": {
+                            "dummy": false,
+                            "start": 291,
+                            "end": 294
+                          }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "ask"
+                            "value": "ask",
+                            "span": {
+                              "dummy": false,
+                              "start": 296,
+                              "end": 299
+                            }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 291,
+                          "end": 299
                         }
                       },
                       {
                         "name": {
-                          "value": "bid"
+                          "value": "bid",
+                          "span": {
+                            "dummy": false,
+                            "start": 313,
+                            "end": 316
+                          }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "ask"
+                            "value": "ask",
+                            "span": {
+                              "dummy": false,
+                              "start": 318,
+                              "end": 321
+                            }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 313,
+                          "end": 321
                         }
                       }
                     ],
-                    "spread": null
+                    "spread": null,
+                    "span": {
+                      "dummy": false,
+                      "start": 277,
+                      "end": 332
+                    }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 266,
+                    "end": 332
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 186,
+            "end": 339
+          }
         },
         {
           "name": "payment",
@@ -87,7 +167,12 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "Buyer"
+                  "value": "Buyer",
+                  "span": {
+                    "dummy": false,
+                    "start": 379,
+                    "end": 384
+                  }
                 }
               }
             },
@@ -96,19 +181,39 @@
                 "BinaryOp": {
                   "left": {
                     "Identifier": {
-                      "value": "fees"
+                      "value": "fees",
+                      "span": {
+                        "dummy": false,
+                        "start": 406,
+                        "end": 410
+                      }
                     }
                   },
                   "operator": "Add",
                   "right": {
                     "Identifier": {
-                      "value": "bid"
+                      "value": "bid",
+                      "span": {
+                        "dummy": false,
+                        "start": 413,
+                        "end": 416
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 411,
+                    "end": 412
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 349,
+            "end": 423
+          }
         }
       ],
       "outputs": [
@@ -118,7 +223,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "Dex"
+                  "value": "Dex",
+                  "span": {
+                    "dummy": false,
+                    "start": 454,
+                    "end": 457
+                  }
                 }
               }
             },
@@ -126,89 +236,209 @@
               "Datum": {
                 "Constructor": {
                   "type": {
-                    "value": "PoolState"
+                    "value": "PoolState",
+                    "span": {
+                      "dummy": false,
+                      "start": 474,
+                      "end": 483
+                    }
                   },
                   "case": {
                     "name": {
-                      "value": "Default"
+                      "value": "Default",
+                      "span": {
+                        "dummy": true,
+                        "start": 0,
+                        "end": 0
+                      }
                     },
                     "fields": [
                       {
                         "name": {
-                          "value": "pair_a"
+                          "value": "pair_a",
+                          "span": {
+                            "dummy": false,
+                            "start": 498,
+                            "end": 504
+                          }
                         },
                         "value": {
                           "BinaryOp": {
                             "left": {
                               "PropertyAccess": {
                                 "object": {
-                                  "value": "inputs"
+                                  "value": "inputs",
+                                  "span": {
+                                    "dummy": false,
+                                    "start": 506,
+                                    "end": 512
+                                  }
                                 },
                                 "path": [
                                   {
-                                    "value": "pool"
+                                    "value": "pool",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 513,
+                                      "end": 517
+                                    }
                                   },
                                   {
-                                    "value": "pair_a"
+                                    "value": "pair_a",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 518,
+                                      "end": 524
+                                    }
                                   }
-                                ]
+                                ],
+                                "span": {
+                                  "dummy": false,
+                                  "start": 506,
+                                  "end": 524
+                                }
                               }
                             },
                             "operator": "Subtract",
                             "right": {
                               "Identifier": {
-                                "value": "ask"
+                                "value": "ask",
+                                "span": {
+                                  "dummy": false,
+                                  "start": 527,
+                                  "end": 530
+                                }
                               }
+                            },
+                            "span": {
+                              "dummy": false,
+                              "start": 525,
+                              "end": 526
                             }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 498,
+                          "end": 530
                         }
                       },
                       {
                         "name": {
-                          "value": "pair_b"
+                          "value": "pair_b",
+                          "span": {
+                            "dummy": false,
+                            "start": 544,
+                            "end": 550
+                          }
                         },
                         "value": {
                           "BinaryOp": {
                             "left": {
                               "PropertyAccess": {
                                 "object": {
-                                  "value": "inputs"
+                                  "value": "inputs",
+                                  "span": {
+                                    "dummy": false,
+                                    "start": 552,
+                                    "end": 558
+                                  }
                                 },
                                 "path": [
                                   {
-                                    "value": "pool"
+                                    "value": "pool",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 559,
+                                      "end": 563
+                                    }
                                   },
                                   {
-                                    "value": "pair_b"
+                                    "value": "pair_b",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 564,
+                                      "end": 570
+                                    }
                                   }
-                                ]
+                                ],
+                                "span": {
+                                  "dummy": false,
+                                  "start": 552,
+                                  "end": 570
+                                }
                               }
                             },
                             "operator": "Add",
                             "right": {
                               "Identifier": {
-                                "value": "bid"
+                                "value": "bid",
+                                "span": {
+                                  "dummy": false,
+                                  "start": 573,
+                                  "end": 576
+                                }
                               }
+                            },
+                            "span": {
+                              "dummy": false,
+                              "start": 571,
+                              "end": 572
                             }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 544,
+                          "end": 576
                         }
                       }
                     ],
                     "spread": {
                       "PropertyAccess": {
                         "object": {
-                          "value": "inputs"
+                          "value": "inputs",
+                          "span": {
+                            "dummy": false,
+                            "start": 593,
+                            "end": 599
+                          }
                         },
                         "path": [
                           {
-                            "value": "pool"
+                            "value": "pool",
+                            "span": {
+                              "dummy": false,
+                              "start": 600,
+                              "end": 604
+                            }
                           },
                           {
-                            "value": "datum"
+                            "value": "datum",
+                            "span": {
+                              "dummy": false,
+                              "start": 605,
+                              "end": 610
+                            }
                           }
-                        ]
+                        ],
+                        "span": {
+                          "dummy": false,
+                          "start": 593,
+                          "end": 610
+                        }
                       }
+                    },
+                    "span": {
+                      "dummy": false,
+                      "start": 484,
+                      "end": 620
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 474,
+                    "end": 620
                   }
                 }
               }
@@ -216,11 +446,21 @@
             {
               "Amount": {
                 "Identifier": {
-                  "value": "pool"
+                  "value": "pool",
+                  "span": {
+                    "dummy": false,
+                    "start": 638,
+                    "end": 642
+                  }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 433,
+            "end": 649
+          }
         },
         {
           "name": null,
@@ -228,7 +468,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "Buyer"
+                  "value": "Buyer",
+                  "span": {
+                    "dummy": false,
+                    "start": 676,
+                    "end": 681
+                  }
                 }
               }
             },
@@ -241,40 +486,85 @@
                         "BinaryOp": {
                           "left": {
                             "Identifier": {
-                              "value": "payment"
+                              "value": "payment",
+                              "span": {
+                                "dummy": false,
+                                "start": 699,
+                                "end": 706
+                              }
                             }
                           },
                           "operator": "Add",
                           "right": {
                             "Identifier": {
-                              "value": "ask"
+                              "value": "ask",
+                              "span": {
+                                "dummy": false,
+                                "start": 709,
+                                "end": 712
+                              }
                             }
+                          },
+                          "span": {
+                            "dummy": false,
+                            "start": 707,
+                            "end": 708
                           }
                         }
                       },
                       "operator": "Subtract",
                       "right": {
                         "Identifier": {
-                          "value": "bid"
+                          "value": "bid",
+                          "span": {
+                            "dummy": false,
+                            "start": 715,
+                            "end": 718
+                          }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 713,
+                        "end": 714
                       }
                     }
                   },
                   "operator": "Subtract",
                   "right": {
                     "Identifier": {
-                      "value": "fees"
+                      "value": "fees",
+                      "span": {
+                        "dummy": false,
+                        "start": 721,
+                        "end": 725
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 719,
+                    "end": 720
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 655,
+            "end": 732
+          }
         }
       ],
       "burn": null,
       "mint": null,
-      "adhoc": []
+      "adhoc": [],
+      "span": {
+        "dummy": false,
+        "start": 138,
+        "end": 734
+      }
     }
   ],
   "types": [
@@ -288,21 +578,51 @@
               "name": "pair_a",
               "type": {
                 "Custom": {
-                  "value": "Token"
+                  "value": "Token",
+                  "span": {
+                    "dummy": true,
+                    "start": 0,
+                    "end": 0
+                  }
                 }
+              },
+              "span": {
+                "dummy": false,
+                "start": 21,
+                "end": 34
               }
             },
             {
               "name": "pair_b",
               "type": {
                 "Custom": {
-                  "value": "Token"
+                  "value": "Token",
+                  "span": {
+                    "dummy": true,
+                    "start": 0,
+                    "end": 0
+                  }
                 }
+              },
+              "span": {
+                "dummy": false,
+                "start": 40,
+                "end": 53
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 0,
+            "end": 56
+          }
         }
-      ]
+      ],
+      "span": {
+        "dummy": false,
+        "start": 0,
+        "end": 56
+      }
     },
     {
       "name": "SwapParams",
@@ -312,25 +632,60 @@
           "fields": [
             {
               "name": "amount",
-              "type": "Int"
+              "type": "Int",
+              "span": {
+                "dummy": false,
+                "start": 80,
+                "end": 91
+              }
             },
             {
               "name": "ratio",
-              "type": "Int"
+              "type": "Int",
+              "span": {
+                "dummy": false,
+                "start": 97,
+                "end": 107
+              }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 58,
+            "end": 110
+          }
         }
-      ]
+      ],
+      "span": {
+        "dummy": false,
+        "start": 58,
+        "end": 110
+      }
     }
   ],
   "assets": [],
   "parties": [
     {
-      "name": "Buyer"
+      "name": "Buyer",
+      "span": {
+        "dummy": false,
+        "start": 112,
+        "end": 124
+      }
     },
     {
-      "name": "Dex"
+      "name": "Dex",
+      "span": {
+        "dummy": false,
+        "start": 126,
+        "end": 136
+      }
     }
   ],
-  "policies": []
+  "policies": [],
+  "span": {
+    "dummy": false,
+    "start": 0,
+    "end": 734
+  }
 }

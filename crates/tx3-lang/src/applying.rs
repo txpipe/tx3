@@ -90,7 +90,7 @@ where
     }
 
     fn reduce_nested(self) -> Result<Self, Error> {
-        Ok(self.map(|x| x.reduce()).transpose()?)
+        self.map(|x| x.reduce()).transpose()
     }
 }
 
@@ -429,20 +429,15 @@ impl Apply for ir::PolicyExpr {
     fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
         let mut queries = BTreeMap::new();
 
-        if let Some(script) = &self.script {
-            match script {
-                ir::ScriptSource::UtxoRef { r#ref, source } => {
-                    if source.is_none() {
-                        queries.insert(
-                            self.name.to_lowercase(),
-                            ir::InputQuery {
-                                r#ref: Some(r#ref.clone()),
-                                ..Default::default()
-                            },
-                        );
-                    }
-                }
-                _ => {}
+        if let Some(ir::ScriptSource::UtxoRef { r#ref, source }) = &self.script {
+            if source.is_none() {
+                queries.insert(
+                    self.name.to_lowercase(),
+                    ir::InputQuery {
+                        r#ref: Some(r#ref.clone()),
+                        ..Default::default()
+                    },
+                );
             }
         }
 
@@ -956,8 +951,8 @@ impl Apply for ir::Expression {
                     Ok(ir::Expression::Number(result))
                 }
                 (ir::Expression::Assets(x), ir::Expression::Assets(y)) => {
-                    let x = ir::AssetExpr::aggregate(&x);
-                    let y = ir::AssetExpr::aggregate(&y);
+                    let x = ir::AssetExpr::aggregate(x);
+                    let y = ir::AssetExpr::aggregate(y);
 
                     let result = match &op.op {
                         ir::BinaryOpKind::Add => ir::AssetExpr::sum(x, y),
@@ -1257,7 +1252,7 @@ mod tests {
     #[test]
     fn test_apply_args() {
         let mut ast = crate::parsing::parse_string(SUBJECT_PROTOCOL).unwrap();
-        crate::analyzing::analyze(&mut ast).unwrap();
+        crate::analyzing::analyze(&mut ast).ok().unwrap();
 
         let before = crate::lowering::lower(&ast, "swap").unwrap();
 

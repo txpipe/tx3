@@ -6,3 +6,9 @@ edition = "2024"
 [dependencies]
 tokio = { version = "1.44.1", features = ["full"] }
 tower-lsp = "0.20.0"
+tower = { version = "0.4", features = ["util"] }
+dashmap = "6.1.0"
+ropey = "1.6.1"
+tx3-lang = { version = "0.1.0", path = "../tx3-lang" }
+pest = "2.7.15"
+miette = "7.5.0"

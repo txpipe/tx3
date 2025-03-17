@@ -2,6 +2,7 @@
 //!
 //! This module takes a string and parses it into Tx3 AST.
 
+use miette::SourceOffset;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 
@@ -11,34 +12,70 @@ use crate::ast::*;
 #[grammar = "tx3.pest"]
 pub(crate) struct Tx3Grammar;
 
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("Parsing error: {message}")]
+#[diagnostic(code(tx3::parsing))]
+pub struct Error {
+    pub message: String,
 
-    #[error(transparent)]
-    Pest(#[from] pest::error::Error<Rule>),
+    #[source_code]
+    pub src: String,
 
-    #[error("Invalid type: {0}")]
-    InvalidType(String),
+    #[label]
+    pub span: Span,
+}
 
-    #[error("Missing required field: {0}")]
-    MissingRequiredField(String),
+impl From<pest::error::Error<Rule>> for Error {
+    fn from(error: pest::error::Error<Rule>) -> Self {
+        match &error.variant {
+            pest::error::ErrorVariant::ParsingError { positives, .. } => Error {
+                message: format!("expected {:?}", positives),
+                src: error.line().to_string(),
+                span: error.location.into(),
+            },
+            pest::error::ErrorVariant::CustomError { message } => Error {
+                message: message.clone(),
+                src: error.line().to_string(),
+                span: error.location.into(),
+            },
+        }
+    }
+}
 
-    #[error("Invalid binary operator: {0}")]
-    InvalidBinaryOperator(String),
+impl From<pest::error::InputLocation> for Span {
+    fn from(value: pest::error::InputLocation) -> Self {
+        match value {
+            pest::error::InputLocation::Pos(pos) => Self::new(pos, pos),
+            pest::error::InputLocation::Span((start, end)) => Self::new(start, end),
+        }
+    }
+}
+
+impl From<pest::Span<'_>> for Span {
+    fn from(span: pest::Span<'_>) -> Self {
+        Self::new(span.start(), span.end())
+    }
+}
+
+impl From<Span> for miette::SourceSpan {
+    fn from(span: Span) -> Self {
+        miette::SourceSpan::new(SourceOffset::from(span.start), span.end - span.start)
+    }
 }
 
 pub trait AstNode: Sized {
     const RULE: Rule;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error>;
+
+    fn span(&self) -> &Span;
 }
 
 impl AstNode for Program {
     const RULE: Rule = Rule::program;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let inner = pair.into_inner();
 
         let mut program = Self {
@@ -48,6 +85,7 @@ impl AstNode for Program {
             parties: Vec::new(),
             policies: Vec::new(),
             scope: None,
+            span,
         };
 
         for pair in inner {
@@ -65,12 +103,17 @@ impl AstNode for Program {
 
         Ok(program)
     }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
 }
 
 impl AstNode for ParameterList {
     const RULE: Rule = Rule::parameter_list;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let inner = pair.into_inner();
 
         let mut parameters = Vec::new();
@@ -83,7 +126,11 @@ impl AstNode for ParameterList {
             parameters.push(ParamDef { name, r#type });
         }
 
-        Ok(ParameterList { parameters })
+        Ok(ParameterList { parameters, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -91,6 +138,7 @@ impl AstNode for TxDef {
     const RULE: Rule = Rule::tx_def;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let name = inner.next().unwrap().as_str().to_string();
@@ -122,7 +170,12 @@ impl AstNode for TxDef {
             mint,
             adhoc,
             scope: None,
+            span,
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -133,7 +186,12 @@ impl AstNode for Identifier {
         Ok(Identifier {
             value: pair.as_str().to_string(),
             symbol: None,
+            span: pair.as_span().into(),
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -143,7 +201,12 @@ impl AstNode for StringLiteral {
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         Ok(StringLiteral {
             value: pair.as_str()[1..pair.as_str().len() - 1].to_string(),
+            span: pair.as_span().into(),
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -153,7 +216,12 @@ impl AstNode for HexStringLiteral {
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         Ok(HexStringLiteral {
             value: pair.as_str()[2..].to_string(),
+            span: pair.as_span().into(),
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -161,10 +229,18 @@ impl AstNode for PartyDef {
     const RULE: Rule = Rule::party_def;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
         let identifier = inner.next().unwrap().as_str().to_string();
 
-        Ok(PartyDef { name: identifier })
+        Ok(PartyDef {
+            name: identifier,
+            span,
+        })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -185,20 +261,30 @@ impl AstNode for InputBlockField {
             }
             Rule::input_block_min_amount => {
                 let pair = pair.into_inner().next().unwrap();
-                let x = InputBlockField::MinAmount(AssetExpr::parse(pair)?.into());
+                let x = InputBlockField::MinAmount(AssetExpr::parse(pair)?);
                 Ok(x)
             }
             Rule::input_block_redeemer => {
                 let pair = pair.into_inner().next().unwrap();
-                let x = InputBlockField::Redeemer(DataExpr::parse(pair)?.into());
+                let x = InputBlockField::Redeemer(DataExpr::parse(pair)?);
                 Ok(x)
             }
             Rule::input_block_ref => {
                 let pair = pair.into_inner().next().unwrap();
-                let x = InputBlockField::Ref(DataExpr::parse(pair)?.into());
+                let x = InputBlockField::Ref(DataExpr::parse(pair)?);
                 Ok(x)
             }
             x => unreachable!("Unexpected rule in input_block: {:?}", x),
+        }
+    }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::From(x) => x.span(),
+            Self::DatumIs(x) => x.span(),
+            Self::MinAmount(x) => x.span(),
+            Self::Redeemer(x) => x.span(),
+            Self::Ref(x) => x.span(),
         }
     }
 }
@@ -207,6 +293,7 @@ impl AstNode for InputBlock {
     const RULE: Rule = Rule::input_block;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let name = inner.next().unwrap().as_str().to_string();
@@ -219,7 +306,12 @@ impl AstNode for InputBlock {
             name,
             is_many: false,
             fields,
+            span,
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -246,12 +338,21 @@ impl AstNode for OutputBlockField {
             x => unreachable!("Unexpected rule in output_block_field: {:?}", x),
         }
     }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::To(x) => x.span(),
+            Self::Amount(x) => x.span(),
+            Self::Datum(x) => x.span(),
+        }
+    }
 }
 
 impl AstNode for OutputBlock {
     const RULE: Rule = Rule::output_block;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let has_name = inner
@@ -265,7 +366,11 @@ impl AstNode for OutputBlock {
             .map(|x| OutputBlockField::parse(x))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(OutputBlock { name, fields })
+        Ok(OutputBlock { name, fields, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -287,19 +392,31 @@ impl AstNode for MintBlockField {
             x => unreachable!("Unexpected rule in output_block_field: {:?}", x),
         }
     }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::Amount(x) => x.span(),
+            Self::Redeemer(x) => x.span(),
+        }
+    }
 }
 
 impl AstNode for MintBlock {
     const RULE: Rule = Rule::mint_block;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let inner = pair.into_inner();
 
         let fields = inner
             .map(|x| MintBlockField::parse(x))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(MintBlock { fields })
+        Ok(MintBlock { fields, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -307,13 +424,18 @@ impl AstNode for BurnBlock {
     const RULE: Rule = Rule::burn_block;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let inner = pair.into_inner();
 
         let fields = inner
             .map(|x| MintBlockField::parse(x))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(BurnBlock { fields })
+        Ok(BurnBlock { fields, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -321,6 +443,7 @@ impl AstNode for RecordField {
     const RULE: Rule = Rule::record_field;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
         let identifier = inner.next().unwrap().as_str().to_string();
         let r#type = Type::parse(inner.next().unwrap())?;
@@ -328,7 +451,12 @@ impl AstNode for RecordField {
         Ok(RecordField {
             name: identifier,
             r#type,
+            span,
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -349,19 +477,32 @@ impl AstNode for PolicyField {
             x => unreachable!("Unexpected rule in policy_field: {:?}", x),
         }
     }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::Hash(x) => x.span(),
+            Self::Script(x) => x.span(),
+            Self::Ref(x) => x.span(),
+        }
+    }
 }
 
 impl AstNode for PolicyConstructor {
     const RULE: Rule = Rule::policy_def_constructor;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let inner = pair.into_inner();
 
         let fields = inner
             .map(|x| PolicyField::parse(x))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(PolicyConstructor { fields })
+        Ok(PolicyConstructor { fields, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -379,17 +520,29 @@ impl AstNode for PolicyValue {
             x => unreachable!("Unexpected rule in policy_value: {:?}", x),
         }
     }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::Constructor(x) => x.span(),
+            Self::Assign(x) => x.span(),
+        }
+    }
 }
 
 impl AstNode for PolicyDef {
     const RULE: Rule = Rule::policy_def;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
         let name = inner.next().unwrap().as_str().to_string();
         let value = PolicyValue::parse(inner.next().unwrap())?;
 
-        Ok(PolicyDef { name, value })
+        Ok(PolicyDef { name, value, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -408,12 +561,21 @@ impl AstNode for AddressExpr {
             x => unreachable!("Unexpected rule in address_expr: {:?}", x),
         }
     }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::String(x) => x.span(),
+            Self::HexString(x) => x.span(),
+            Self::Identifier(x) => x.span(),
+        }
+    }
 }
 
 impl AstNode for AssetConstructor {
     const RULE: Rule = Rule::asset_constructor;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let r#type = Identifier::parse(inner.next().unwrap())?;
@@ -422,7 +584,12 @@ impl AstNode for AssetConstructor {
         Ok(AssetConstructor {
             r#type,
             amount: Box::new(amount),
+            span,
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -458,6 +625,7 @@ impl AstNode for AssetExpr {
         let mut final_expr = Self::term_parse(inner.next().unwrap())?;
 
         while let Some(term) = inner.next() {
+            let span = term.as_span().into();
             let operator = BinaryOperator::parse(term)?;
             let next_expr = Self::term_parse(inner.next().unwrap())?;
 
@@ -465,10 +633,20 @@ impl AstNode for AssetExpr {
                 operator,
                 left: Box::new(final_expr),
                 right: Box::new(next_expr),
+                span,
             });
         }
 
         Ok(final_expr)
+    }
+
+    fn span(&self) -> &Span {
+        match self {
+            AssetExpr::Constructor(x) => x.span(),
+            AssetExpr::BinaryOp(x) => &x.span,
+            AssetExpr::PropertyAccess(x) => x.span(),
+            AssetExpr::Identifier(x) => x.span(),
+        }
     }
 }
 
@@ -476,6 +654,7 @@ impl AstNode for PropertyAccess {
     const RULE: Rule = Rule::property_access;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let object = Identifier::parse(inner.next().unwrap())?;
@@ -491,7 +670,12 @@ impl AstNode for PropertyAccess {
             object,
             path: identifiers,
             scope: None,
+            span,
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -499,6 +683,7 @@ impl AstNode for RecordConstructorField {
     const RULE: Rule = Rule::record_constructor_field;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let name = Identifier::parse(inner.next().unwrap())?;
@@ -507,7 +692,12 @@ impl AstNode for RecordConstructorField {
         Ok(RecordConstructorField {
             name,
             value: Box::new(value),
+            span,
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -515,6 +705,7 @@ impl AstNode for DatumConstructor {
     const RULE: Rule = Rule::datum_constructor;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let r#type = Identifier::parse(inner.next().unwrap())?;
@@ -524,12 +715,18 @@ impl AstNode for DatumConstructor {
             r#type,
             case,
             scope: None,
+            span,
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
 impl VariantCaseConstructor {
     fn implicit_parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let inner = pair.into_inner();
 
         let mut fields = Vec::new();
@@ -550,12 +747,14 @@ impl VariantCaseConstructor {
         Ok(VariantCaseConstructor {
             name: Identifier::new("Default"),
             fields,
-            spread: spread.map(|x| Box::new(x)),
+            spread: spread.map(Box::new),
             scope: None,
+            span,
         })
     }
 
     fn explicit_parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let name = Identifier::parse(inner.next().unwrap())?;
@@ -578,8 +777,9 @@ impl VariantCaseConstructor {
         Ok(VariantCaseConstructor {
             name,
             fields,
-            spread: spread.map(|x| Box::new(x)),
+            spread: spread.map(Box::new),
             scope: None,
+            span,
         })
     }
 }
@@ -593,6 +793,10 @@ impl AstNode for VariantCaseConstructor {
             Rule::explicit_variant_case_constructor => Self::explicit_parse(pair),
             x => unreachable!("Unexpected rule in datum_constructor: {:?}", x),
         }
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -641,6 +845,7 @@ impl AstNode for DataExpr {
         let mut final_expr = Self::term_parse(inner.next().unwrap())?;
 
         while let Some(term) = inner.next() {
+            let span = term.as_span().into();
             let operator = BinaryOperator::parse(term)?;
             let next_expr = Self::term_parse(inner.next().unwrap())?;
 
@@ -648,10 +853,26 @@ impl AstNode for DataExpr {
                 operator,
                 left: Box::new(final_expr),
                 right: Box::new(next_expr),
+                span,
             });
         }
 
         Ok(final_expr)
+    }
+
+    fn span(&self) -> &Span {
+        match self {
+            DataExpr::None => &Span::DUMMY,      // TODO
+            DataExpr::Unit => &Span::DUMMY,      // TODO
+            DataExpr::Number(_) => &Span::DUMMY, // TODO
+            DataExpr::Bool(_) => &Span::DUMMY,   // TODO
+            DataExpr::String(x) => x.span(),
+            DataExpr::HexString(x) => x.span(),
+            DataExpr::Constructor(x) => x.span(),
+            DataExpr::Identifier(x) => x.span(),
+            DataExpr::PropertyAccess(x) => x.span(),
+            DataExpr::BinaryOp(x) => &x.span,
+        }
     }
 }
 
@@ -662,8 +883,12 @@ impl AstNode for BinaryOperator {
         match pair.as_str() {
             "+" => Ok(BinaryOperator::Add),
             "-" => Ok(BinaryOperator::Subtract),
-            x => Err(Error::InvalidBinaryOperator(x.to_string())),
+            x => unreachable!("Unexpected string in binary_operator: {:?}", x),
         }
+    }
+
+    fn span(&self) -> &Span {
+        &Span::DUMMY // TODO
     }
 }
 
@@ -680,10 +905,15 @@ impl AstNode for Type {
             t => Ok(Type::Custom(Identifier::new(t.to_string()))),
         }
     }
+
+    fn span(&self) -> &Span {
+        &Span::DUMMY // TODO
+    }
 }
 
 impl TypeDef {
     fn parse_variant_format(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let identifier = inner.next().unwrap().as_str().to_string();
@@ -695,10 +925,12 @@ impl TypeDef {
         Ok(TypeDef {
             name: identifier,
             cases,
+            span,
         })
     }
 
     fn parse_record_format(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span: Span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let identifier = inner.next().unwrap().as_str().to_string();
@@ -712,7 +944,9 @@ impl TypeDef {
             cases: vec![VariantCase {
                 name: "Default".to_string(),
                 fields,
+                span: span.clone(),
             }],
+            span,
         })
     }
 }
@@ -727,10 +961,15 @@ impl AstNode for TypeDef {
             x => unreachable!("Unexpected rule in type_def: {:?}", x),
         }
     }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
 }
 
 impl VariantCase {
     fn struct_case_parse(pair: pest::iterators::Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let identifier = inner.next().unwrap().as_str().to_string();
@@ -742,10 +981,12 @@ impl VariantCase {
         Ok(Self {
             name: identifier,
             fields,
+            span,
         })
     }
 
     fn unit_case_parse(pair: pest::iterators::Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let identifier = inner.next().unwrap().as_str().to_string();
@@ -753,6 +994,7 @@ impl VariantCase {
         Ok(Self {
             name: identifier,
             fields: vec![],
+            span,
         })
     }
 }
@@ -770,12 +1012,17 @@ impl AstNode for VariantCase {
 
         Ok(case)
     }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
 }
 
 impl AstNode for AssetDef {
     const RULE: Rule = Rule::asset_def;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         let identifier = inner.next().unwrap().as_str().to_string();
@@ -786,7 +1033,12 @@ impl AstNode for AssetDef {
             name: identifier,
             policy,
             asset_name,
+            span,
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -806,35 +1058,12 @@ impl AstNode for ChainSpecificBlock {
             x => unreachable!("Unexpected rule in chain_specific_block: {:?}", x),
         }
     }
-}
 
-/// Parses a Tx3 source file into a Program AST.
-///
-/// # Arguments
-///
-/// * `path` - Path to the Tx3 source file to parse
-///
-/// # Returns
-///
-/// * `Result<Program, Error>` - The parsed Program AST or an error
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - The file cannot be read
-/// - The file contents are not valid Tx3 syntax
-/// - The AST construction fails
-///
-/// # Example
-///
-/// ```no_run
-/// use tx3_lang::parsing::parse_file;
-/// let program = parse_file("path/to/program.tx3").unwrap();
-/// ```
-pub fn parse_file(path: &str) -> Result<Program, Error> {
-    let input = std::fs::read_to_string(path)?;
-    let pairs = Tx3Grammar::parse(Rule::program, &input)?;
-    Ok(Program::parse(pairs.into_iter().next().unwrap())?)
+    fn span(&self) -> &Span {
+        match self {
+            Self::Cardano(x) => x.span(),
+        }
+    }
 }
 
 /// Parses a Tx3 source string into a Program AST.
@@ -861,7 +1090,7 @@ pub fn parse_file(path: &str) -> Result<Program, Error> {
 /// ```
 pub fn parse_string(input: &str) -> Result<Program, Error> {
     let pairs = Tx3Grammar::parse(Rule::program, input)?;
-    Ok(Program::parse(pairs.into_iter().next().unwrap())?)
+    Program::parse(pairs.into_iter().next().unwrap())
 }
 
 #[cfg(test)]
@@ -870,12 +1099,6 @@ mod tests {
     use assert_json_diff::assert_json_eq;
     use paste::paste;
     use pest::Parser;
-
-    #[test]
-    fn smoke_test_parse_file() {
-        let manifest_dir = env!("CARGO_MANIFEST_DIR");
-        let _ = parse_file(&format!("{}/../..//examples/transfer.tx3", manifest_dir)).unwrap();
-    }
 
     #[test]
     fn smoke_test_parse_string() {
@@ -924,7 +1147,9 @@ mod tests {
                     RecordField::new("field1", Type::Int),
                     RecordField::new("field2", Type::Bytes)
                 ],
+                span: Span::DUMMY,
             }],
+            span: Span::DUMMY,
         }
     );
 
@@ -947,12 +1172,15 @@ mod tests {
                         RecordField::new("field1", Type::Int),
                         RecordField::new("field2", Type::Bytes)
                     ],
+                    span: Span::DUMMY,
                 },
                 VariantCase {
                     name: "Case2".to_string(),
                     fields: vec![],
+                    span: Span::DUMMY,
                 },
             ],
+            span: Span::DUMMY,
         }
     );
 
@@ -1016,6 +1244,7 @@ mod tests {
         PolicyDef {
             name: "MyPolicy".to_string(),
             value: PolicyValue::Assign(HexStringLiteral::new("AFAFAF".to_string())),
+            span: Span::DUMMY,
         }
     );
 
@@ -1041,7 +1270,9 @@ mod tests {
                         "1234567890".to_string()
                     ))),
                 ],
+                span: Span::DUMMY,
             }),
+            span: Span::DUMMY,
         }
     );
 
@@ -1055,6 +1286,7 @@ mod tests {
                 "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
             ),
             asset_name: "0xef7a1ceb".to_string(),
+            span: Span::DUMMY,
         }
     );
 
@@ -1068,6 +1300,7 @@ mod tests {
                 "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
             ),
             asset_name: "MYTOKEN".to_string(),
+            span: Span::DUMMY,
         }
     );
 
@@ -1078,6 +1311,7 @@ mod tests {
         AssetConstructor {
             r#type: Identifier::new("MyToken"),
             amount: Box::new(DataExpr::Number(15)),
+            span: Span::DUMMY,
         }
     );
 
@@ -1089,6 +1323,7 @@ mod tests {
             operator: BinaryOperator::Add,
             left: Box::new(DataExpr::Number(5)),
             right: Box::new(DataExpr::Identifier(Identifier::new("var1"))),
+            span: Span::DUMMY,
         })
     );
 
@@ -1130,16 +1365,20 @@ mod tests {
                     RecordConstructorField {
                         name: Identifier::new("field1"),
                         value: Box::new(DataExpr::Number(10)),
+                        span: Span::DUMMY,
                     },
                     RecordConstructorField {
                         name: Identifier::new("field2"),
                         value: Box::new(DataExpr::Identifier(Identifier::new("abc"))),
+                        span: Span::DUMMY,
                     },
                 ],
                 spread: None,
                 scope: None,
+                span: Span::DUMMY,
             },
             scope: None,
+            span: Span::DUMMY,
         }
     );
 
@@ -1158,16 +1397,20 @@ mod tests {
                     RecordConstructorField {
                         name: Identifier::new("delta_x"),
                         value: Box::new(DataExpr::Identifier(Identifier::new("delta_x"))),
+                        span: Span::DUMMY,
                     },
                     RecordConstructorField {
                         name: Identifier::new("delta_y"),
                         value: Box::new(DataExpr::Identifier(Identifier::new("delta_y"))),
+                        span: Span::DUMMY,
                     },
                 ],
                 spread: None,
                 scope: None,
+                span: Span::DUMMY,
             },
             scope: None,
+            span: Span::DUMMY,
         }
     );
 
@@ -1187,18 +1430,22 @@ mod tests {
                     RecordConstructorField {
                         name: Identifier::new("delta_x"),
                         value: Box::new(DataExpr::Identifier(Identifier::new("delta_x"))),
+                        span: Span::DUMMY,
                     },
                     RecordConstructorField {
                         name: Identifier::new("delta_y"),
                         value: Box::new(DataExpr::Identifier(Identifier::new("delta_y"))),
+                        span: Span::DUMMY,
                     },
                 ],
                 spread: Some(Box::new(DataExpr::Identifier(Identifier::new(
                     "abc".to_string()
                 )))),
                 scope: None,
+                span: Span::DUMMY,
             },
             scope: None,
+            span: Span::DUMMY,
         }
     );
 
@@ -1218,8 +1465,10 @@ mod tests {
                 OutputBlockField::Amount(Box::new(AssetExpr::Constructor(AssetConstructor {
                     r#type: Identifier::new("Ada"),
                     amount: Box::new(DataExpr::Number(100)),
+                    span: Span::DUMMY,
                 }))),
             ],
+            span: Span::DUMMY,
         }
     );
 
@@ -1234,9 +1483,27 @@ mod tests {
             crate::cardano::VoteDelegationCertificate {
                 drep: DataExpr::HexString(HexStringLiteral::new("1234567890".to_string())),
                 stake: DataExpr::HexString(HexStringLiteral::new("1234567890".to_string())),
+                span: Span::DUMMY,
             },
         ))
     );
+
+    fn parse_well_known_example(example: &str) -> Program {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let test_file = format!("{}/../../examples/{}.tx3", manifest_dir, example);
+        let input = std::fs::read_to_string(&test_file).unwrap();
+        parse_string(&input).unwrap()
+    }
+
+    #[test]
+    fn test_spans_are_respected() {
+        let program = parse_well_known_example("lang_tour");
+        assert_eq!(program.span, Span::new(0, 738));
+
+        assert_eq!(program.parties[0].span, Span::new(0, 14));
+
+        assert_eq!(program.types[0].span, Span::new(16, 69));
+    }
 
     fn make_snapshot_if_missing(example: &str, program: &Program) {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -1249,12 +1516,11 @@ mod tests {
     }
 
     fn test_parsing_example(example: &str) {
-        let manifest_dir = env!("CARGO_MANIFEST_DIR");
-        let test_file = format!("{}/../../examples/{}.tx3", manifest_dir, example);
-        let program = parse_file(&test_file).unwrap();
+        let program = parse_well_known_example(example);
 
         make_snapshot_if_missing(example, &program);
 
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let ast_file = format!("{}/../../examples/{}.ast", manifest_dir, example);
         let ast = std::fs::read_to_string(ast_file).unwrap();
 

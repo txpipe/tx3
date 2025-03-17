@@ -35,15 +35,12 @@ pub fn generate(job: &Job) {
 
         let param_names: Vec<Ident> = proto_tx
             .find_params()
-            .iter()
-            .map(|(name, _)| format_ident!("{}", name.to_case(convert_case::Case::Snake)))
+            .keys()
+            .map(|name| format_ident!("{}", name.to_case(convert_case::Case::Snake)))
             .collect();
 
-        let param_types: Vec<syn::Type> = proto_tx
-            .find_params()
-            .iter()
-            .map(|(_, ty)| to_syn_type(ty))
-            .collect();
+        let param_types: Vec<syn::Type> =
+            proto_tx.find_params().values().map(to_syn_type).collect();
 
         let tokens = quote! {
             pub const #bytes_name: &[u8] = #proto_bytes_literal;

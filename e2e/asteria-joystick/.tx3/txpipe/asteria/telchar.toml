@@ -1,0 +1,15 @@
+[metadata]
+protocol = "txpipe/asteria"
+
+[[profile.preview_challenge]]
+network = "cardano-preview"
+
+[[profile.preview_challenge.env]]
+pellet_validator_address = 2
+asteria_validator_address = 2
+admin_token = 2
+max_speed = 2
+max_ship_fuel = 2
+fuel_per_step = 2
+initial_fuel = 2
+min_asteria_distance = 2

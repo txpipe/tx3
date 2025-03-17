@@ -27,7 +27,7 @@ pub fn build(path: &str) {
     let out_dir = std::env::var("OUT_DIR").unwrap();
 
     let job = Job {
-        name: path.file_name().unwrap().to_str().unwrap().to_string(),
+        name: path.file_stem().unwrap().to_str().unwrap().to_string(),
         protocol,
         dest_path: out_dir.into(),
         trp_endpoint: "http://localhost:3000".to_string(),

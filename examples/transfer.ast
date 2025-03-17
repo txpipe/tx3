@@ -8,7 +8,12 @@
             "name": "quantity",
             "type": "Int"
           }
-        ]
+        ],
+        "span": {
+          "dummy": false,
+          "start": 44,
+          "end": 65
+        }
       },
       "inputs": [
         {
@@ -18,7 +23,12 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "Sender"
+                  "value": "Sender",
+                  "span": {
+                    "dummy": false,
+                    "start": 101,
+                    "end": 107
+                  }
                 }
               }
             },
@@ -26,17 +36,37 @@
               "MinAmount": {
                 "Constructor": {
                   "type": {
-                    "value": "Ada"
+                    "value": "Ada",
+                    "span": {
+                      "dummy": false,
+                      "start": 129,
+                      "end": 132
+                    }
                   },
                   "amount": {
                     "Identifier": {
-                      "value": "quantity"
+                      "value": "quantity",
+                      "span": {
+                        "dummy": false,
+                        "start": 133,
+                        "end": 141
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 129,
+                    "end": 142
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 72,
+            "end": 149
+          }
         }
       ],
       "outputs": [
@@ -46,7 +76,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "Receiver"
+                  "value": "Receiver",
+                  "span": {
+                    "dummy": false,
+                    "start": 180,
+                    "end": 188
+                  }
                 }
               }
             },
@@ -54,17 +89,37 @@
               "Amount": {
                 "Constructor": {
                   "type": {
-                    "value": "Ada"
+                    "value": "Ada",
+                    "span": {
+                      "dummy": false,
+                      "start": 206,
+                      "end": 209
+                    }
                   },
                   "amount": {
                     "Identifier": {
-                      "value": "quantity"
+                      "value": "quantity",
+                      "span": {
+                        "dummy": false,
+                        "start": 210,
+                        "end": 218
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 206,
+                    "end": 219
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 159,
+            "end": 226
+          }
         },
         {
           "name": null,
@@ -72,7 +127,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "Sender"
+                  "value": "Sender",
+                  "span": {
+                    "dummy": false,
+                    "start": 253,
+                    "end": 259
+                  }
                 }
               }
             },
@@ -83,50 +143,110 @@
                     "BinaryOp": {
                       "left": {
                         "Identifier": {
-                          "value": "source"
+                          "value": "source",
+                          "span": {
+                            "dummy": false,
+                            "start": 277,
+                            "end": 283
+                          }
                         }
                       },
                       "operator": "Subtract",
                       "right": {
                         "Constructor": {
                           "type": {
-                            "value": "Ada"
+                            "value": "Ada",
+                            "span": {
+                              "dummy": false,
+                              "start": 286,
+                              "end": 289
+                            }
                           },
                           "amount": {
                             "Identifier": {
-                              "value": "quantity"
+                              "value": "quantity",
+                              "span": {
+                                "dummy": false,
+                                "start": 290,
+                                "end": 298
+                              }
                             }
+                          },
+                          "span": {
+                            "dummy": false,
+                            "start": 286,
+                            "end": 299
                           }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 284,
+                        "end": 285
                       }
                     }
                   },
                   "operator": "Subtract",
                   "right": {
                     "Identifier": {
-                      "value": "fees"
+                      "value": "fees",
+                      "span": {
+                        "dummy": false,
+                        "start": 302,
+                        "end": 306
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 300,
+                    "end": 301
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 232,
+            "end": 313
+          }
         }
       ],
       "burn": null,
       "mint": null,
-      "adhoc": []
+      "adhoc": [],
+      "span": {
+        "dummy": false,
+        "start": 33,
+        "end": 315
+      }
     }
   ],
   "types": [],
   "assets": [],
   "parties": [
     {
-      "name": "Sender"
+      "name": "Sender",
+      "span": {
+        "dummy": false,
+        "start": 1,
+        "end": 14
+      }
     },
     {
-      "name": "Receiver"
+      "name": "Receiver",
+      "span": {
+        "dummy": false,
+        "start": 16,
+        "end": 31
+      }
     }
   ],
-  "policies": []
+  "policies": [],
+  "span": {
+    "dummy": false,
+    "start": 0,
+    "end": 316
+  }
 }
