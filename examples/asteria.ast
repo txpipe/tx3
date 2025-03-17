@@ -8,7 +8,12 @@
             "name": "ship_name",
             "type": {
               "Custom": {
-                "value": "AssetName"
+                "value": "AssetName",
+                "span": {
+                  "dummy": true,
+                  "start": 0,
+                  "end": 0
+                }
               }
             }
           },
@@ -24,7 +29,12 @@
             "name": "required_fuel",
             "type": "Int"
           }
-        ]
+        ],
+        "span": {
+          "dummy": false,
+          "start": 442,
+          "end": 530
+        }
       },
       "inputs": [
         {
@@ -34,14 +44,24 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "Game"
+                  "value": "Game",
+                  "span": {
+                    "dummy": false,
+                    "start": 564,
+                    "end": 568
+                  }
                 }
               }
             },
             {
               "DatumIs": {
                 "Custom": {
-                  "value": "ShipState"
+                  "value": "ShipState",
+                  "span": {
+                    "dummy": true,
+                    "start": 0,
+                    "end": 0
+                  }
                 }
               }
             },
@@ -51,12 +71,27 @@
                   "left": {
                     "Constructor": {
                       "type": {
-                        "value": "Ship"
+                        "value": "Ship",
+                        "span": {
+                          "dummy": false,
+                          "start": 619,
+                          "end": 623
+                        }
                       },
                       "amount": {
                         "Identifier": {
-                          "value": "ship_name"
+                          "value": "ship_name",
+                          "span": {
+                            "dummy": false,
+                            "start": 624,
+                            "end": 633
+                          }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 619,
+                        "end": 637
                       }
                     }
                   },
@@ -64,14 +99,34 @@
                   "right": {
                     "Constructor": {
                       "type": {
-                        "value": "Fuel"
+                        "value": "Fuel",
+                        "span": {
+                          "dummy": false,
+                          "start": 640,
+                          "end": 644
+                        }
                       },
                       "amount": {
                         "Identifier": {
-                          "value": "required_fuel"
+                          "value": "required_fuel",
+                          "span": {
+                            "dummy": false,
+                            "start": 645,
+                            "end": 658
+                          }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 640,
+                        "end": 659
                       }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 638,
+                    "end": 639
                   }
                 }
               }
@@ -80,40 +135,95 @@
               "Redeemer": {
                 "Constructor": {
                   "type": {
-                    "value": "ShipCommand"
+                    "value": "ShipCommand",
+                    "span": {
+                      "dummy": false,
+                      "start": 680,
+                      "end": 691
+                    }
                   },
                   "case": {
                     "name": {
-                      "value": "MoveShip"
+                      "value": "MoveShip",
+                      "span": {
+                        "dummy": false,
+                        "start": 693,
+                        "end": 701
+                      }
                     },
                     "fields": [
                       {
                         "name": {
-                          "value": "delta_x"
+                          "value": "delta_x",
+                          "span": {
+                            "dummy": false,
+                            "start": 716,
+                            "end": 723
+                          }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "delta_x"
+                            "value": "delta_x",
+                            "span": {
+                              "dummy": false,
+                              "start": 725,
+                              "end": 732
+                            }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 716,
+                          "end": 732
                         }
                       },
                       {
                         "name": {
-                          "value": "delta_y"
+                          "value": "delta_y",
+                          "span": {
+                            "dummy": false,
+                            "start": 746,
+                            "end": 753
+                          }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "delta_y"
+                            "value": "delta_y",
+                            "span": {
+                              "dummy": false,
+                              "start": 755,
+                              "end": 762
+                            }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 746,
+                          "end": 762
                         }
                       }
                     ],
-                    "spread": null
+                    "spread": null,
+                    "span": {
+                      "dummy": false,
+                      "start": 691,
+                      "end": 773
+                    }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 680,
+                    "end": 773
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 537,
+            "end": 780
+          }
         },
         {
           "name": "pilot",
@@ -122,7 +232,12 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "Player"
+                  "value": "Player",
+                  "span": {
+                    "dummy": false,
+                    "start": 814,
+                    "end": 820
+                  }
                 }
               }
             },
@@ -130,17 +245,37 @@
               "MinAmount": {
                 "Constructor": {
                   "type": {
-                    "value": "Pilot"
+                    "value": "Pilot",
+                    "span": {
+                      "dummy": false,
+                      "start": 842,
+                      "end": 847
+                    }
                   },
                   "amount": {
                     "Identifier": {
-                      "value": "ship_name"
+                      "value": "ship_name",
+                      "span": {
+                        "dummy": false,
+                        "start": 848,
+                        "end": 857
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 842,
+                    "end": 861
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 786,
+            "end": 868
+          }
         },
         {
           "name": "fees",
@@ -149,18 +284,33 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "Player"
+                  "value": "Player",
+                  "span": {
+                    "dummy": false,
+                    "start": 905,
+                    "end": 911
+                  }
                 }
               }
             },
             {
               "MinAmount": {
                 "Identifier": {
-                  "value": "fee"
+                  "value": "fee",
+                  "span": {
+                    "dummy": false,
+                    "start": 933,
+                    "end": 936
+                  }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 878,
+            "end": 943
+          }
         }
       ],
       "outputs": [
@@ -170,7 +320,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "Game"
+                  "value": "Game",
+                  "span": {
+                    "dummy": false,
+                    "start": 1029,
+                    "end": 1033
+                  }
                 }
               }
             },
@@ -180,30 +335,70 @@
                   "left": {
                     "PropertyAccess": {
                       "object": {
-                        "value": "inputs"
+                        "value": "inputs",
+                        "span": {
+                          "dummy": false,
+                          "start": 1051,
+                          "end": 1057
+                        }
                       },
                       "path": [
                         {
-                          "value": "ship"
+                          "value": "ship",
+                          "span": {
+                            "dummy": false,
+                            "start": 1058,
+                            "end": 1062
+                          }
                         },
                         {
-                          "value": "amount"
+                          "value": "amount",
+                          "span": {
+                            "dummy": false,
+                            "start": 1063,
+                            "end": 1069
+                          }
                         }
-                      ]
+                      ],
+                      "span": {
+                        "dummy": false,
+                        "start": 1051,
+                        "end": 1069
+                      }
                     }
                   },
                   "operator": "Subtract",
                   "right": {
                     "Constructor": {
                       "type": {
-                        "value": "Fuel"
+                        "value": "Fuel",
+                        "span": {
+                          "dummy": false,
+                          "start": 1072,
+                          "end": 1076
+                        }
                       },
                       "amount": {
                         "Identifier": {
-                          "value": "required_fuel"
+                          "value": "required_fuel",
+                          "span": {
+                            "dummy": false,
+                            "start": 1077,
+                            "end": 1090
+                          }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 1072,
+                        "end": 1091
                       }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 1070,
+                    "end": 1071
                   }
                 }
               }
@@ -212,94 +407,219 @@
               "Datum": {
                 "Constructor": {
                   "type": {
-                    "value": "ShipState"
+                    "value": "ShipState",
+                    "span": {
+                      "dummy": false,
+                      "start": 1109,
+                      "end": 1118
+                    }
                   },
                   "case": {
                     "name": {
-                      "value": "Playing"
+                      "value": "Playing",
+                      "span": {
+                        "dummy": false,
+                        "start": 1120,
+                        "end": 1127
+                      }
                     },
                     "fields": [
                       {
                         "name": {
-                          "value": "pos_x"
+                          "value": "pos_x",
+                          "span": {
+                            "dummy": false,
+                            "start": 1142,
+                            "end": 1147
+                          }
                         },
                         "value": {
                           "BinaryOp": {
                             "left": {
                               "PropertyAccess": {
                                 "object": {
-                                  "value": "inputs"
+                                  "value": "inputs",
+                                  "span": {
+                                    "dummy": false,
+                                    "start": 1149,
+                                    "end": 1155
+                                  }
                                 },
                                 "path": [
                                   {
-                                    "value": "ship"
+                                    "value": "ship",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 1156,
+                                      "end": 1160
+                                    }
                                   },
                                   {
-                                    "value": "pos_x"
+                                    "value": "pos_x",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 1161,
+                                      "end": 1166
+                                    }
                                   }
-                                ]
+                                ],
+                                "span": {
+                                  "dummy": false,
+                                  "start": 1149,
+                                  "end": 1166
+                                }
                               }
                             },
                             "operator": "Add",
                             "right": {
                               "Identifier": {
-                                "value": "delta_x"
+                                "value": "delta_x",
+                                "span": {
+                                  "dummy": false,
+                                  "start": 1169,
+                                  "end": 1176
+                                }
                               }
+                            },
+                            "span": {
+                              "dummy": false,
+                              "start": 1167,
+                              "end": 1168
                             }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 1142,
+                          "end": 1176
                         }
                       },
                       {
                         "name": {
-                          "value": "pos_y"
+                          "value": "pos_y",
+                          "span": {
+                            "dummy": false,
+                            "start": 1190,
+                            "end": 1195
+                          }
                         },
                         "value": {
                           "BinaryOp": {
                             "left": {
                               "PropertyAccess": {
                                 "object": {
-                                  "value": "inputs"
+                                  "value": "inputs",
+                                  "span": {
+                                    "dummy": false,
+                                    "start": 1197,
+                                    "end": 1203
+                                  }
                                 },
                                 "path": [
                                   {
-                                    "value": "ship"
+                                    "value": "ship",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 1204,
+                                      "end": 1208
+                                    }
                                   },
                                   {
-                                    "value": "pos_y"
+                                    "value": "pos_y",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 1209,
+                                      "end": 1214
+                                    }
                                   }
-                                ]
+                                ],
+                                "span": {
+                                  "dummy": false,
+                                  "start": 1197,
+                                  "end": 1214
+                                }
                               }
                             },
                             "operator": "Add",
                             "right": {
                               "Identifier": {
-                                "value": "delta_y"
+                                "value": "delta_y",
+                                "span": {
+                                  "dummy": false,
+                                  "start": 1217,
+                                  "end": 1224
+                                }
                               }
+                            },
+                            "span": {
+                              "dummy": false,
+                              "start": 1215,
+                              "end": 1216
                             }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 1190,
+                          "end": 1224
                         }
                       }
                     ],
                     "spread": {
                       "PropertyAccess": {
                         "object": {
-                          "value": "inputs"
+                          "value": "inputs",
+                          "span": {
+                            "dummy": false,
+                            "start": 1241,
+                            "end": 1247
+                          }
                         },
                         "path": [
                           {
-                            "value": "ship"
+                            "value": "ship",
+                            "span": {
+                              "dummy": false,
+                              "start": 1248,
+                              "end": 1252
+                            }
                           },
                           {
-                            "value": "datum"
+                            "value": "datum",
+                            "span": {
+                              "dummy": false,
+                              "start": 1253,
+                              "end": 1258
+                            }
                           }
-                        ]
+                        ],
+                        "span": {
+                          "dummy": false,
+                          "start": 1241,
+                          "end": 1258
+                        }
                       }
+                    },
+                    "span": {
+                      "dummy": false,
+                      "start": 1118,
+                      "end": 1268
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 1109,
+                    "end": 1268
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 1008,
+            "end": 1275
+          }
         },
         {
           "name": null,
@@ -307,7 +627,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "Player"
+                  "value": "Player",
+                  "span": {
+                    "dummy": false,
+                    "start": 1302,
+                    "end": 1308
+                  }
                 }
               }
             },
@@ -319,46 +644,106 @@
                       "left": {
                         "PropertyAccess": {
                           "object": {
-                            "value": "inputs"
+                            "value": "inputs",
+                            "span": {
+                              "dummy": false,
+                              "start": 1326,
+                              "end": 1332
+                            }
                           },
                           "path": [
                             {
-                              "value": "pilot"
+                              "value": "pilot",
+                              "span": {
+                                "dummy": false,
+                                "start": 1333,
+                                "end": 1338
+                              }
                             },
                             {
-                              "value": "amount"
+                              "value": "amount",
+                              "span": {
+                                "dummy": false,
+                                "start": 1339,
+                                "end": 1345
+                              }
                             }
-                          ]
+                          ],
+                          "span": {
+                            "dummy": false,
+                            "start": 1326,
+                            "end": 1345
+                          }
                         }
                       },
                       "operator": "Add",
                       "right": {
                         "PropertyAccess": {
                           "object": {
-                            "value": "inputs"
+                            "value": "inputs",
+                            "span": {
+                              "dummy": false,
+                              "start": 1349,
+                              "end": 1355
+                            }
                           },
                           "path": [
                             {
-                              "value": "fees"
+                              "value": "fees",
+                              "span": {
+                                "dummy": false,
+                                "start": 1356,
+                                "end": 1360
+                              }
                             },
                             {
-                              "value": "amount"
+                              "value": "amount",
+                              "span": {
+                                "dummy": false,
+                                "start": 1361,
+                                "end": 1367
+                              }
                             }
-                          ]
+                          ],
+                          "span": {
+                            "dummy": false,
+                            "start": 1349,
+                            "end": 1367
+                          }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 1346,
+                        "end": 1347
                       }
                     }
                   },
                   "operator": "Subtract",
                   "right": {
                     "Identifier": {
-                      "value": "fee"
+                      "value": "fee",
+                      "span": {
+                        "dummy": false,
+                        "start": 1370,
+                        "end": 1373
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 1368,
+                    "end": 1369
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 1281,
+            "end": 1380
+          }
         }
       ],
       "burn": {
@@ -367,20 +752,45 @@
             "Amount": {
               "Constructor": {
                 "type": {
-                  "value": "Fuel"
+                  "value": "Fuel",
+                  "span": {
+                    "dummy": false,
+                    "start": 972,
+                    "end": 976
+                  }
                 },
                 "amount": {
                   "Identifier": {
-                    "value": "required_fuel"
+                    "value": "required_fuel",
+                    "span": {
+                      "dummy": false,
+                      "start": 977,
+                      "end": 990
+                    }
                   }
+                },
+                "span": {
+                  "dummy": false,
+                  "start": 972,
+                  "end": 991
                 }
               }
             }
           }
-        ]
+        ],
+        "span": {
+          "dummy": false,
+          "start": 949,
+          "end": 998
+        }
       },
       "mint": null,
-      "adhoc": []
+      "adhoc": [],
+      "span": {
+        "dummy": false,
+        "start": 430,
+        "end": 1382
+      }
     }
   ],
   "types": [
@@ -392,39 +802,89 @@
           "fields": [
             {
               "name": "pos_x",
-              "type": "Int"
+              "type": "Int",
+              "span": {
+                "dummy": false,
+                "start": 135,
+                "end": 145
+              }
             },
             {
               "name": "pos_y",
-              "type": "Int"
+              "type": "Int",
+              "span": {
+                "dummy": false,
+                "start": 151,
+                "end": 161
+              }
             },
             {
               "name": "ship_token_name",
               "type": {
                 "Custom": {
-                  "value": "AssetName"
+                  "value": "AssetName",
+                  "span": {
+                    "dummy": true,
+                    "start": 0,
+                    "end": 0
+                  }
                 }
+              },
+              "span": {
+                "dummy": false,
+                "start": 167,
+                "end": 193
               }
             },
             {
               "name": "pilot_token_name",
               "type": {
                 "Custom": {
-                  "value": "AssetName"
+                  "value": "AssetName",
+                  "span": {
+                    "dummy": true,
+                    "start": 0,
+                    "end": 0
+                  }
                 }
+              },
+              "span": {
+                "dummy": false,
+                "start": 199,
+                "end": 226
               }
             },
             {
               "name": "last_move_latest_time",
               "type": {
                 "Custom": {
-                  "value": "PosixTime"
+                  "value": "PosixTime",
+                  "span": {
+                    "dummy": true,
+                    "start": 0,
+                    "end": 0
+                  }
                 }
+              },
+              "span": {
+                "dummy": false,
+                "start": 232,
+                "end": 264
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 114,
+            "end": 267
+          }
         }
-      ]
+      ],
+      "span": {
+        "dummy": false,
+        "start": 114,
+        "end": 267
+      }
     },
     {
       "name": "ShipCommand",
@@ -434,64 +894,149 @@
           "fields": [
             {
               "name": "delta_x",
-              "type": "Int"
+              "type": "Int",
+              "span": {
+                "dummy": false,
+                "start": 312,
+                "end": 324
+              }
             },
             {
               "name": "delta_y",
-              "type": "Int"
+              "type": "Int",
+              "span": {
+                "dummy": false,
+                "start": 334,
+                "end": 346
+              }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 292,
+            "end": 353
+          }
         },
         {
           "name": "GatherFuel",
           "fields": [
             {
               "name": "amount",
-              "type": "Int"
+              "type": "Int",
+              "span": {
+                "dummy": false,
+                "start": 380,
+                "end": 391
+              }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 359,
+            "end": 398
+          }
         },
         {
           "name": "MineAsteria",
-          "fields": []
+          "fields": [],
+          "span": {
+            "dummy": false,
+            "start": 404,
+            "end": 415
+          }
         },
         {
           "name": "Quit",
-          "fields": []
+          "fields": [],
+          "span": {
+            "dummy": false,
+            "start": 421,
+            "end": 425
+          }
         }
-      ]
+      ],
+      "span": {
+        "dummy": false,
+        "start": 269,
+        "end": 428
+      }
     }
   ],
   "assets": [
     {
       "name": "Fuel",
       "policy": {
-        "value": "11111"
+        "value": "11111",
+        "span": {
+          "dummy": false,
+          "start": 41,
+          "end": 48
+        }
       },
-      "asset_name": "FUEL"
+      "asset_name": "FUEL",
+      "span": {
+        "dummy": false,
+        "start": 28,
+        "end": 54
+      }
     },
     {
       "name": "Ship",
       "policy": {
-        "value": "33333"
+        "value": "33333",
+        "span": {
+          "dummy": false,
+          "start": 69,
+          "end": 76
+        }
       },
-      "asset_name": "SHIP"
+      "asset_name": "SHIP",
+      "span": {
+        "dummy": false,
+        "start": 56,
+        "end": 82
+      }
     },
     {
       "name": "Pilot",
       "policy": {
-        "value": "33333"
+        "value": "33333",
+        "span": {
+          "dummy": false,
+          "start": 98,
+          "end": 105
+        }
       },
-      "asset_name": "PILOT"
+      "asset_name": "PILOT",
+      "span": {
+        "dummy": false,
+        "start": 84,
+        "end": 112
+      }
     }
   ],
   "parties": [
     {
-      "name": "Player"
+      "name": "Player",
+      "span": {
+        "dummy": false,
+        "start": 0,
+        "end": 13
+      }
     },
     {
-      "name": "Game"
+      "name": "Game",
+      "span": {
+        "dummy": false,
+        "start": 15,
+        "end": 26
+      }
     }
   ],
-  "policies": []
+  "policies": [],
+  "span": {
+    "dummy": false,
+    "start": 0,
+    "end": 1382
+  }
 }

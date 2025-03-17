@@ -12,7 +12,12 @@
             "name": "until",
             "type": "Int"
           }
-        ]
+        ],
+        "span": {
+          "dummy": false,
+          "start": 193,
+          "end": 230
+        }
       },
       "inputs": [
         {
@@ -22,7 +27,12 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "Owner"
+                  "value": "Owner",
+                  "span": {
+                    "dummy": false,
+                    "start": 266,
+                    "end": 271
+                  }
                 }
               }
             },
@@ -30,17 +40,37 @@
               "MinAmount": {
                 "Constructor": {
                   "type": {
-                    "value": "Ada"
+                    "value": "Ada",
+                    "span": {
+                      "dummy": false,
+                      "start": 293,
+                      "end": 296
+                    }
                   },
                   "amount": {
                     "Identifier": {
-                      "value": "quantity"
+                      "value": "quantity",
+                      "span": {
+                        "dummy": false,
+                        "start": 297,
+                        "end": 305
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 293,
+                    "end": 306
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 237,
+            "end": 313
+          }
         }
       ],
       "outputs": [
@@ -50,7 +80,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "TimeLock"
+                  "value": "TimeLock",
+                  "span": {
+                    "dummy": false,
+                    "start": 351,
+                    "end": 359
+                  }
                 }
               }
             },
@@ -58,12 +93,27 @@
               "Amount": {
                 "Constructor": {
                   "type": {
-                    "value": "Ada"
+                    "value": "Ada",
+                    "span": {
+                      "dummy": false,
+                      "start": 377,
+                      "end": 380
+                    }
                   },
                   "amount": {
                     "Identifier": {
-                      "value": "quantity"
+                      "value": "quantity",
+                      "span": {
+                        "dummy": false,
+                        "start": 381,
+                        "end": 389
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 377,
+                    "end": 390
                   }
                 }
               }
@@ -72,50 +122,120 @@
               "Datum": {
                 "Constructor": {
                   "type": {
-                    "value": "State"
+                    "value": "State",
+                    "span": {
+                      "dummy": false,
+                      "start": 407,
+                      "end": 412
+                    }
                   },
                   "case": {
                     "name": {
-                      "value": "Default"
+                      "value": "Default",
+                      "span": {
+                        "dummy": true,
+                        "start": 0,
+                        "end": 0
+                      }
                     },
                     "fields": [
                       {
                         "name": {
-                          "value": "lock_until"
+                          "value": "lock_until",
+                          "span": {
+                            "dummy": false,
+                            "start": 427,
+                            "end": 437
+                          }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "until"
+                            "value": "until",
+                            "span": {
+                              "dummy": false,
+                              "start": 439,
+                              "end": 444
+                            }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 427,
+                          "end": 444
                         }
                       },
                       {
                         "name": {
-                          "value": "owner"
+                          "value": "owner",
+                          "span": {
+                            "dummy": false,
+                            "start": 458,
+                            "end": 463
+                          }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "Owner"
+                            "value": "Owner",
+                            "span": {
+                              "dummy": false,
+                              "start": 465,
+                              "end": 470
+                            }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 458,
+                          "end": 470
                         }
                       },
                       {
                         "name": {
-                          "value": "beneficiary"
+                          "value": "beneficiary",
+                          "span": {
+                            "dummy": false,
+                            "start": 484,
+                            "end": 495
+                          }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "Beneficiary"
+                            "value": "Beneficiary",
+                            "span": {
+                              "dummy": false,
+                              "start": 497,
+                              "end": 508
+                            }
                           }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 484,
+                          "end": 508
                         }
                       }
                     ],
-                    "spread": null
+                    "spread": null,
+                    "span": {
+                      "dummy": false,
+                      "start": 413,
+                      "end": 519
+                    }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 407,
+                    "end": 519
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 323,
+            "end": 526
+          }
         },
         {
           "name": null,
@@ -123,7 +243,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "Owner"
+                  "value": "Owner",
+                  "span": {
+                    "dummy": false,
+                    "start": 553,
+                    "end": 558
+                  }
                 }
               }
             },
@@ -134,39 +259,84 @@
                     "BinaryOp": {
                       "left": {
                         "Identifier": {
-                          "value": "source"
+                          "value": "source",
+                          "span": {
+                            "dummy": false,
+                            "start": 576,
+                            "end": 582
+                          }
                         }
                       },
                       "operator": "Subtract",
                       "right": {
                         "Constructor": {
                           "type": {
-                            "value": "Ada"
+                            "value": "Ada",
+                            "span": {
+                              "dummy": false,
+                              "start": 585,
+                              "end": 588
+                            }
                           },
                           "amount": {
                             "Identifier": {
-                              "value": "quantity"
+                              "value": "quantity",
+                              "span": {
+                                "dummy": false,
+                                "start": 589,
+                                "end": 597
+                              }
                             }
+                          },
+                          "span": {
+                            "dummy": false,
+                            "start": 585,
+                            "end": 598
                           }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 583,
+                        "end": 584
                       }
                     }
                   },
                   "operator": "Subtract",
                   "right": {
                     "Identifier": {
-                      "value": "fees"
+                      "value": "fees",
+                      "span": {
+                        "dummy": false,
+                        "start": 601,
+                        "end": 605
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 599,
+                    "end": 600
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 532,
+            "end": 612
+          }
         }
       ],
       "burn": null,
       "mint": null,
-      "adhoc": []
+      "adhoc": [],
+      "span": {
+        "dummy": false,
+        "start": 186,
+        "end": 614
+      }
     },
     {
       "name": "unlock",
@@ -174,13 +344,14 @@
         "parameters": [
           {
             "name": "locked_utxo",
-            "type": {
-              "Custom": {
-                "value": "UtxoRef"
-              }
-            }
+            "type": "UtxoRef"
           }
-        ]
+        ],
+        "span": {
+          "dummy": false,
+          "start": 625,
+          "end": 653
+        }
       },
       "inputs": [
         {
@@ -190,18 +361,33 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "Beneficiary"
+                  "value": "Beneficiary",
+                  "span": {
+                    "dummy": false,
+                    "start": 686,
+                    "end": 697
+                  }
                 }
               }
             },
             {
               "MinAmount": {
                 "Identifier": {
-                  "value": "fees"
+                  "value": "fees",
+                  "span": {
+                    "dummy": false,
+                    "start": 719,
+                    "end": 723
+                  }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 660,
+            "end": 730
+          }
         },
         {
           "name": "locked",
@@ -210,21 +396,36 @@
             {
               "From": {
                 "Identifier": {
-                  "value": "TimeLock"
+                  "value": "TimeLock",
+                  "span": {
+                    "dummy": false,
+                    "start": 765,
+                    "end": 773
+                  }
                 }
               }
             },
             {
               "Ref": {
                 "Identifier": {
-                  "value": "locked_utxo"
+                  "value": "locked_utxo",
+                  "span": {
+                    "dummy": false,
+                    "start": 788,
+                    "end": 799
+                  }
                 }
               }
             },
             {
               "Redeemer": "Unit"
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 736,
+            "end": 828
+          }
         }
       ],
       "outputs": [
@@ -234,7 +435,12 @@
             {
               "To": {
                 "Identifier": {
-                  "value": "Beneficiary"
+                  "value": "Beneficiary",
+                  "span": {
+                    "dummy": false,
+                    "start": 862,
+                    "end": 873
+                  }
                 }
               }
             },
@@ -245,32 +451,67 @@
                     "BinaryOp": {
                       "left": {
                         "Identifier": {
-                          "value": "gas"
+                          "value": "gas",
+                          "span": {
+                            "dummy": false,
+                            "start": 891,
+                            "end": 894
+                          }
                         }
                       },
                       "operator": "Add",
                       "right": {
                         "Identifier": {
-                          "value": "locked"
+                          "value": "locked",
+                          "span": {
+                            "dummy": false,
+                            "start": 897,
+                            "end": 903
+                          }
                         }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 895,
+                        "end": 896
                       }
                     }
                   },
                   "operator": "Subtract",
                   "right": {
                     "Identifier": {
-                      "value": "fees"
+                      "value": "fees",
+                      "span": {
+                        "dummy": false,
+                        "start": 906,
+                        "end": 910
+                      }
                     }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 904,
+                    "end": 905
                   }
                 }
               }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 834,
+            "end": 917
+          }
         }
       ],
       "burn": null,
       "mint": null,
-      "adhoc": []
+      "adhoc": [],
+      "span": {
+        "dummy": false,
+        "start": 616,
+        "end": 919
+      }
     }
   ],
   "types": [
@@ -282,28 +523,63 @@
           "fields": [
             {
               "name": "lock_until",
-              "type": "Int"
+              "type": "Int",
+              "span": {
+                "dummy": false,
+                "start": 128,
+                "end": 143
+              }
             },
             {
               "name": "owner",
-              "type": "Bytes"
+              "type": "Bytes",
+              "span": {
+                "dummy": false,
+                "start": 147,
+                "end": 159
+              }
             },
             {
               "name": "beneficiary",
-              "type": "Bytes"
+              "type": "Bytes",
+              "span": {
+                "dummy": false,
+                "start": 163,
+                "end": 181
+              }
             }
-          ]
+          ],
+          "span": {
+            "dummy": false,
+            "start": 113,
+            "end": 184
+          }
         }
-      ]
+      ],
+      "span": {
+        "dummy": false,
+        "start": 113,
+        "end": 184
+      }
     }
   ],
   "assets": [],
   "parties": [
     {
-      "name": "Owner"
+      "name": "Owner",
+      "span": {
+        "dummy": false,
+        "start": 0,
+        "end": 12
+      }
     },
     {
-      "name": "Beneficiary"
+      "name": "Beneficiary",
+      "span": {
+        "dummy": false,
+        "start": 14,
+        "end": 32
+      }
     }
   ],
   "policies": [
@@ -311,9 +587,24 @@
       "name": "TimeLock",
       "value": {
         "Assign": {
-          "value": "6b9c456aa650cb808a9ab54326e039d5235ed69f069c9664a8fe5b69"
+          "value": "6b9c456aa650cb808a9ab54326e039d5235ed69f069c9664a8fe5b69",
+          "span": {
+            "dummy": false,
+            "start": 52,
+            "end": 110
+          }
         }
+      },
+      "span": {
+        "dummy": false,
+        "start": 34,
+        "end": 111
       }
     }
-  ]
+  ],
+  "span": {
+    "dummy": false,
+    "start": 0,
+    "end": 920
+  }
 }

@@ -297,11 +297,7 @@ fn compile_output_block(
 
     let value = asset_math::aggregate_values(values);
 
-    let datum_option = ir
-        .datum
-        .as_ref()
-        .map(|x| compile_data_expr(x))
-        .transpose()?;
+    let datum_option = ir.datum.as_ref().map(compile_data_expr).transpose()?;
 
     let output =
         primitives::TransactionOutput::PostAlonzo(primitives::PostAlonzoTransactionOutput {
@@ -355,9 +351,8 @@ fn compile_outputs(
     tx: &ir::Tx,
     pparams: &PParams,
 ) -> Result<Vec<primitives::TransactionOutput>, Error> {
-    let blocks = tx.outputs.iter().cloned().collect::<Vec<_>>();
-
-    let resolved = blocks
+    let resolved = tx
+        .outputs
         .iter()
         .map(|x| compile_output_block(x, pparams))
         .collect::<Result<Vec<_>, _>>()?;
@@ -395,7 +390,7 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
         .filter_map(|x| x.policy.as_ref())
         .filter_map(|x| x.script.as_ref())
         .filter_map(|x| x.as_utxo_ref())
-        .flat_map(|x| coerce_expr_into_utxo_refs(x))
+        .flat_map(coerce_expr_into_utxo_refs)
         .flatten()
         .map(|x| primitives::TransactionInput {
             transaction_id: x.txid.as_slice().into(),
@@ -409,7 +404,7 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
 fn compile_tx_body(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::TransactionBody, Error> {
     let out = primitives::TransactionBody {
         inputs: compile_inputs(tx)?.into(),
-        outputs: compile_outputs(tx, pparams)?.into(),
+        outputs: compile_outputs(tx, pparams)?,
         fee: coerce_expr_into_number(&tx.fees)? as u64,
         certificates: primitives::NonEmptySet::from_vec(compile_certs(tx)?),
         mint: compile_mint_block(tx)?,
@@ -456,7 +451,7 @@ fn compile_single_spend_redeemer(
 ) -> Result<primitives::Redeemer, Error> {
     let index = sorted_inputs
         .iter()
-        .position(|x| utxo_ref_matches(&input_id, x))
+        .position(|x| utxo_ref_matches(input_id, x))
         .unwrap();
 
     let redeemer = primitives::Redeemer {

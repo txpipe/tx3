@@ -64,7 +64,9 @@ enum IrEncoding {
 
 #[derive(Deserialize)]
 struct IrEnvelope {
+    #[allow(dead_code)]
     pub version: String,
+
     pub bytecode: String,
     pub encoding: IrEncoding,
 }

@@ -3,21 +3,51 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{analyzing, parsing, ArgValue, Protocol};
+use crate::{analyzing, ast, parsing, ArgValue, Protocol};
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum Error {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
     #[error("Parsing error: {0}")]
+    #[diagnostic(transparent)]
     Parsing(#[from] parsing::Error),
 
     #[error("Analyzing error: {0}")]
-    Analyzing(#[from] analyzing::Error),
+    Analyzing(#[from] analyzing::AnalyzeReport),
 
     #[error("Invalid environment file: {0}")]
     InvalidEnvFile(String),
+}
+
+/// Parses a Tx3 source file into a Program AST.
+///
+/// # Arguments
+///
+/// * `path` - Path to the Tx3 source file to parse
+///
+/// # Returns
+///
+/// * `Result<Program, Error>` - The parsed Program AST or an error
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The file cannot be read
+/// - The file contents are not valid Tx3 syntax
+/// - The AST construction fails
+///
+/// # Example
+///
+/// ```no_run
+/// use tx3_lang::loading::parse_file;
+/// let program = parse_file("path/to/program.tx3").unwrap();
+/// ```
+pub fn parse_file(path: &str) -> Result<ast::Program, Error> {
+    let input = std::fs::read_to_string(path)?;
+    let program = parsing::parse_string(&input)?;
+    Ok(program)
 }
 
 pub type ArgMap = std::collections::HashMap<String, ArgValue>;
@@ -111,7 +141,7 @@ impl ProtocolLoader {
         let mut ast = parsing::parse_string(&code)?;
 
         if self.analyze {
-            analyzing::analyze(&mut ast)?;
+            analyzing::analyze(&mut ast).ok()?;
         }
 
         let mut env_args = std::collections::HashMap::new();
@@ -131,5 +161,16 @@ impl ProtocolLoader {
         let proto = Protocol { ast, env_args };
 
         Ok(proto)
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    #[test]
+    fn smoke_test_parse_file() {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let _ = parse_file(&format!("{}/../..//examples/transfer.tx3", manifest_dir)).unwrap();
     }
 }

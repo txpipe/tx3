@@ -69,7 +69,7 @@ pub fn generate(job: &Job) {
 
     let headers_item = swc_ecma_quote::quote!(
         "export const DEFAULT_HEADERS = $value;" as ModuleItem,
-        value: Expr = headers_lit.into(),
+        value: Expr = headers_lit,
     );
 
     module_items.push(headers_item);
@@ -78,7 +78,7 @@ pub fn generate(job: &Job) {
 
     let env_args_item = swc_ecma_quote::quote!(
         "export const DEFAULT_ENV_ARGS = $value;" as ModuleItem,
-        value: Expr = env_args_lit.into(),
+        value: Expr = env_args_lit,
     );
 
     module_items.push(env_args_item);

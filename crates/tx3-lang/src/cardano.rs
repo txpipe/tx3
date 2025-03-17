@@ -4,8 +4,8 @@ use pest::iterators::Pair;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    analyzing::Analyzable,
-    ast::{DataExpr, Scope},
+    analyzing::{Analyzable, AnalyzeReport},
+    ast::{DataExpr, Scope, Span},
     ir,
     lowering::IntoLower,
     parsing::{AstNode, Error, Rule},
@@ -15,27 +15,34 @@ use crate::{
 pub struct VoteDelegationCertificate {
     pub drep: DataExpr,
     pub stake: DataExpr,
+    pub span: Span,
 }
 
 impl AstNode for VoteDelegationCertificate {
     const RULE: Rule = Rule::cardano_vote_delegation_certificate;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
         let mut inner = pair.into_inner();
 
         Ok(VoteDelegationCertificate {
             drep: DataExpr::parse(inner.next().unwrap())?,
             stake: DataExpr::parse(inner.next().unwrap())?,
+            span,
         })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
 impl Analyzable for VoteDelegationCertificate {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), crate::analyzing::Error> {
-        self.drep.analyze(parent.clone())?;
-        self.stake.analyze(parent.clone())?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let drep = self.drep.analyze(parent.clone());
+        let stake = self.stake.analyze(parent.clone());
 
-        Ok(())
+        drep + stake
     }
 }
 
@@ -57,6 +64,35 @@ impl IntoLower for VoteDelegationCertificate {
 pub struct StakeDelegationCertificate {
     pub pool: DataExpr,
     pub stake: DataExpr,
+    pub span: Span,
+}
+
+impl AstNode for StakeDelegationCertificate {
+    const RULE: Rule = Rule::cardano_stake_delegation_certificate;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let mut inner = pair.into_inner();
+
+        Ok(StakeDelegationCertificate {
+            pool: DataExpr::parse(inner.next().unwrap())?,
+            stake: DataExpr::parse(inner.next().unwrap())?,
+            span,
+        })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
+impl Analyzable for StakeDelegationCertificate {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let pool = self.pool.analyze(parent.clone());
+        let stake = self.stake.analyze(parent.clone());
+
+        pool + stake
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -75,10 +111,17 @@ impl AstNode for CardanoBlock {
             VoteDelegationCertificate::parse(inner.next().unwrap())?,
         ))
     }
+
+    fn span(&self) -> &Span {
+        match self {
+            CardanoBlock::VoteDelegationCertificate(x) => x.span(),
+            CardanoBlock::StakeDelegationCertificate(x) => x.span(),
+        }
+    }
 }
 
 impl Analyzable for CardanoBlock {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), crate::analyzing::Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
             CardanoBlock::VoteDelegationCertificate(x) => x.analyze(parent),
             _ => todo!(),

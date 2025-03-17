@@ -3,30 +3,51 @@ import * as path from "path";
 import {
   LanguageClient,
   LanguageClientOptions,
+  MessageStrategy,
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
 
 let client: LanguageClient;
 
-export function activate(context: vscode.ExtensionContext) {
+function getServerPath(context: vscode.ExtensionContext) {
+  if (context.extensionMode === vscode.ExtensionMode.Development) {
+    return {
+      command: "cargo",
+      args: ["run", "--bin", "tx3-lsp", "--"],
+    };
+  }
+
   // Get the path to the Rust LSP server binary
   // This assumes the binary is in the extension's root directory
-  const serverPath = context.asAbsolutePath(
-    process.platform === "win32" ? "tx3-lsp.exe" : "tx3-lsp"
-  );
+  switch (process.platform) {
+    case "win32":
+      return {
+        command: context.asAbsolutePath("tx3-lsp.exe"),
+        args: [],
+      };
+    default:
+      return {
+        command: context.asAbsolutePath("tx3-lsp"),
+        args: [],
+      };
+  }
+}
+
+export function activate(context: vscode.ExtensionContext) {
+  const serverConfig = getServerPath(context);
 
   // The server options. We launch the Rust binary directly
   const serverOptions: ServerOptions = {
     run: {
-      command: serverPath,
+      command: serverConfig.command,
+      args: serverConfig.args,
       transport: TransportKind.stdio,
     },
     debug: {
-      command: serverPath,
+      command: serverConfig.command,
+      args: serverConfig.args, // TODO: Add --debug
       transport: TransportKind.stdio,
-      // You can add additional args for debug mode if needed
-      args: ["--debug"],
     },
   };
 

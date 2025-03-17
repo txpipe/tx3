@@ -30,6 +30,48 @@ pub enum Symbol {
     Fees,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Span {
+    dummy: bool,
+    pub start: usize,
+    pub end: usize,
+}
+
+impl Eq for Span {}
+
+impl PartialEq for Span {
+    fn eq(&self, other: &Self) -> bool {
+        if self.dummy || other.dummy {
+            return true;
+        }
+
+        self.start == other.start && self.end == other.end
+    }
+}
+
+impl std::hash::Hash for Span {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.start.hash(state);
+        self.end.hash(state);
+    }
+}
+
+impl Span {
+    pub const DUMMY: Self = Self {
+        dummy: true,
+        start: 0,
+        end: 0,
+    };
+
+    pub fn new(start: usize, end: usize) -> Self {
+        Self {
+            dummy: false,
+            start,
+            end,
+        }
+    }
+}
+
 impl Symbol {
     pub fn as_type_def(&self) -> Option<&TypeDef> {
         match self {
@@ -63,6 +105,7 @@ impl Symbol {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Identifier {
     pub value: String,
+    pub span: Span,
 
     // analysis
     #[serde(skip)]
@@ -74,6 +117,7 @@ impl Identifier {
         Self {
             value: value.into(),
             symbol: None,
+            span: Span::DUMMY,
         }
     }
 
@@ -98,6 +142,7 @@ pub struct Program {
     pub assets: Vec<AssetDef>,
     pub parties: Vec<PartyDef>,
     pub policies: Vec<PolicyDef>,
+    pub span: Span,
 
     // analysis
     #[serde(skip)]
@@ -107,6 +152,7 @@ pub struct Program {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ParameterList {
     pub parameters: Vec<ParamDef>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -118,6 +164,7 @@ pub struct TxDef {
     pub burn: Option<BurnBlock>,
     pub mint: Option<MintBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
+    pub span: Span,
 
     // analysis
     #[serde(skip)]
@@ -127,12 +174,14 @@ pub struct TxDef {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct StringLiteral {
     pub value: String,
+    pub span: Span,
 }
 
 impl StringLiteral {
     pub fn new(value: impl Into<String>) -> Self {
         Self {
             value: value.into(),
+            span: Span::DUMMY,
         }
     }
 }
@@ -140,12 +189,14 @@ impl StringLiteral {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct HexStringLiteral {
     pub value: String,
+    pub span: Span,
 }
 
 impl HexStringLiteral {
     pub fn new(value: impl Into<String>) -> Self {
         Self {
             value: value.into(),
+            span: Span::DUMMY,
         }
     }
 }
@@ -198,6 +249,7 @@ pub struct InputBlock {
     pub name: String,
     pub is_many: bool,
     pub fields: Vec<InputBlockField>,
+    pub span: Span,
 }
 
 impl InputBlock {
@@ -227,6 +279,7 @@ impl OutputBlockField {
 pub struct OutputBlock {
     pub name: Option<String>,
     pub fields: Vec<OutputBlockField>,
+    pub span: Span,
 }
 
 impl OutputBlock {
@@ -253,6 +306,7 @@ impl MintBlockField {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MintBlock {
     pub fields: Vec<MintBlockField>,
+    pub span: Span,
 }
 
 impl MintBlock {
@@ -264,12 +318,14 @@ impl MintBlock {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BurnBlock {
     pub fields: Vec<MintBlockField>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RecordField {
     pub name: String,
     pub r#type: Type,
+    pub span: Span,
 }
 
 impl RecordField {
@@ -277,6 +333,7 @@ impl RecordField {
         Self {
             name: name.to_string(),
             r#type,
+            span: Span::DUMMY,
         }
     }
 }
@@ -284,6 +341,7 @@ impl RecordField {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct PartyDef {
     pub name: String,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -296,6 +354,7 @@ pub struct PartyField {
 pub struct PolicyDef {
     pub name: String,
     pub value: PolicyValue,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -308,6 +367,7 @@ pub enum PolicyField {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PolicyConstructor {
     pub fields: Vec<PolicyField>,
+    pub span: Span,
 }
 
 impl PolicyConstructor {
@@ -330,6 +390,7 @@ pub enum PolicyValue {
 pub struct AssetConstructor {
     pub r#type: Identifier,
     pub amount: Box<DataExpr>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -337,6 +398,7 @@ pub struct AssetBinaryOp {
     pub left: Box<AssetExpr>,
     pub operator: BinaryOperator,
     pub right: Box<AssetExpr>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -351,6 +413,7 @@ pub enum AssetExpr {
 pub struct PropertyAccess {
     pub object: Identifier,
     pub path: Vec<Identifier>,
+    pub span: Span,
 
     // analysis
     #[serde(skip)]
@@ -363,6 +426,7 @@ impl PropertyAccess {
             object: Identifier::new(object),
             path: path.iter().map(|x| Identifier::new(*x)).collect(),
             scope: None,
+            span: Span::DUMMY,
         }
     }
 }
@@ -385,12 +449,14 @@ impl PropertyAccess {
 pub struct RecordConstructorField {
     pub name: Identifier,
     pub value: Box<DataExpr>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DatumConstructor {
     pub r#type: Identifier,
     pub case: VariantCaseConstructor,
+    pub span: Span,
 
     // analysis
     #[serde(skip)]
@@ -402,6 +468,7 @@ pub struct VariantCaseConstructor {
     pub name: Identifier,
     pub fields: Vec<RecordConstructorField>,
     pub spread: Option<Box<DataExpr>>,
+    pub span: Span,
 
     // analysis
     #[serde(skip)]
@@ -422,6 +489,7 @@ pub struct DataBinaryOp {
     pub left: Box<DataExpr>,
     pub operator: BinaryOperator,
     pub right: Box<DataExpr>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -488,6 +556,7 @@ pub struct ParamDef {
 pub struct TypeDef {
     pub name: String,
     pub cases: Vec<VariantCase>,
+    pub span: Span,
 }
 
 impl TypeDef {
@@ -505,6 +574,7 @@ impl TypeDef {
 pub struct VariantCase {
     pub name: String,
     pub fields: Vec<RecordField>,
+    pub span: Span,
 }
 
 impl VariantCase {
@@ -524,6 +594,7 @@ pub struct AssetDef {
     pub name: String,
     pub policy: HexStringLiteral,
     pub asset_name: String,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

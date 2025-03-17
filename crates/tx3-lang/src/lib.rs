@@ -13,14 +13,14 @@
 //!
 //! ```
 //! let mut program = tx3_lang::parsing::parse_string("tx swap() {}").unwrap();
-//! tx3_lang::analyzing::analyze(&mut program).unwrap();
+//! tx3_lang::analyzing::analyze(&mut program).ok().unwrap();
 //! ```
 //!
 //! # Lowering
 //!
 //! ```
 //! let mut program = tx3_lang::parsing::parse_string("tx swap() {}").unwrap();
-//! tx3_lang::analyzing::analyze(&mut program).unwrap();
+//! tx3_lang::analyzing::analyze(&mut program).ok().unwrap();
 //! let ir = tx3_lang::lowering::lower(&program, "swap").unwrap();
 //! ```
 
@@ -149,7 +149,7 @@ impl Protocol {
         // TODO: merge lower and apply errors?
         let tx = tx.apply().unwrap();
 
-        Ok(tx.into())
+        Ok(tx)
     }
 
     pub fn ast(&self) -> &ast::Program {

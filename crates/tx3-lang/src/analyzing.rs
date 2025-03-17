@@ -4,24 +4,173 @@
 //! duplicate definitions, unknown symbols, and other semantic errors.
 
 use std::{collections::HashMap, rc::Rc};
-
 use thiserror::Error;
 
 use crate::ast::*;
 
-#[derive(Error, Debug)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("not in scope: {name}")]
+#[diagnostic(code(tx3::not_in_scope))]
+pub struct NotInScopeError {
+    pub name: String,
+
+    #[source_code]
+    src: Option<String>,
+
+    #[label]
+    span: Span,
+}
+
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("invalid symbol, expected {expected}, got {got}")]
+#[diagnostic(code(tx3::invalid_symbol))]
+pub struct InvalidSymbolError {
+    pub expected: &'static str,
+    pub got: String,
+
+    #[source_code]
+    src: Option<String>,
+
+    #[label]
+    span: Span,
+}
+
+#[derive(Error, Debug, miette::Diagnostic)]
 pub enum Error {
     #[error("duplicate definition: {0}")]
+    #[diagnostic(code(tx3::duplicate_definition))]
     DuplicateDefinition(String),
 
-    #[error("not in scope: {0}")]
-    NotInScope(String),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    NotInScope(#[from] NotInScopeError),
 
     #[error("needs parent scope")]
+    #[diagnostic(code(tx3::needs_parent_scope))]
     NeedsParentScope,
 
-    #[error("invalid symbol, expected {0}, got {1}")]
-    InvalidSymbol(&'static str, String),
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    InvalidSymbol(#[from] InvalidSymbolError),
+}
+
+impl Error {
+    pub fn span(&self) -> &Span {
+        match self {
+            Self::NotInScope(x) => &x.span,
+            Self::InvalidSymbol(x) => &x.span,
+            _ => &Span::DUMMY,
+        }
+    }
+
+    pub fn src(&self) -> Option<&str> {
+        match self {
+            Self::NotInScope(x) => x.src.as_deref(),
+            _ => None,
+        }
+    }
+
+    pub fn not_in_scope(name: String, ast: &impl crate::parsing::AstNode) -> Self {
+        Self::NotInScope(NotInScopeError {
+            name,
+            src: None,
+            span: ast.span().clone(),
+        })
+    }
+
+    pub fn invalid_symbol(
+        expected: &'static str,
+        got: &Symbol,
+        ast: &impl crate::parsing::AstNode,
+    ) -> Self {
+        Self::InvalidSymbol(InvalidSymbolError {
+            expected,
+            got: format!("{:?}", got),
+            src: None,
+            span: ast.span().clone(),
+        })
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct AnalyzeReport {
+    pub errors: Vec<Error>,
+}
+
+impl AnalyzeReport {
+    pub fn is_empty(&self) -> bool {
+        self.errors.is_empty()
+    }
+
+    pub fn ok(self) -> Result<(), Self> {
+        if self.is_empty() {
+            Ok(())
+        } else {
+            Err(self)
+        }
+    }
+}
+
+impl std::error::Error for AnalyzeReport {}
+
+impl std::fmt::Display for AnalyzeReport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AnalyzeReport {{ errors: {:?} }}", self.errors)
+    }
+}
+
+impl std::ops::Add for Error {
+    type Output = AnalyzeReport;
+
+    fn add(self, other: Self) -> Self::Output {
+        Self::Output {
+            errors: vec![self, other],
+        }
+    }
+}
+
+impl From<Error> for AnalyzeReport {
+    fn from(error: Error) -> Self {
+        Self {
+            errors: vec![error],
+        }
+    }
+}
+
+impl From<Vec<Error>> for AnalyzeReport {
+    fn from(errors: Vec<Error>) -> Self {
+        Self { errors }
+    }
+}
+
+impl std::ops::Add for AnalyzeReport {
+    type Output = AnalyzeReport;
+
+    fn add(self, other: Self) -> Self::Output {
+        [self, other].into_iter().collect()
+    }
+}
+
+impl FromIterator<Error> for AnalyzeReport {
+    fn from_iter<T: IntoIterator<Item = Error>>(iter: T) -> Self {
+        Self {
+            errors: iter.into_iter().collect(),
+        }
+    }
+}
+
+impl FromIterator<AnalyzeReport> for AnalyzeReport {
+    fn from_iter<T: IntoIterator<Item = AnalyzeReport>>(iter: T) -> Self {
+        Self {
+            errors: iter.into_iter().flat_map(|r| r.errors).collect(),
+        }
+    }
+}
+
+macro_rules! bail_report {
+    ($($args:expr),*) => {
+        { return AnalyzeReport::from(vec![$($args),*]); }
+    };
 }
 
 impl Scope {
@@ -84,13 +233,13 @@ impl Scope {
             .insert(input.name.clone(), Symbol::Input(input.name.clone()));
     }
 
-    pub fn resolve(&self, name: &str) -> Result<Symbol, Error> {
+    pub fn resolve(&self, name: &str) -> Option<Symbol> {
         if let Some(symbol) = self.symbols.get(name) {
-            Ok(symbol.clone())
+            Some(symbol.clone())
         } else if let Some(parent) = &self.parent {
             parent.resolve(name)
         } else {
-            Err(Error::NotInScope(name.to_string()))
+            None
         }
     }
 }
@@ -106,31 +255,36 @@ pub trait Analyzable {
     /// * `parent` - Optional parent scope containing symbol definitions
     ///
     /// # Returns
-    /// * `Ok(())` if analysis succeeds
-    /// * `Err(Error)` if any semantic errors are found
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error>;
+    /// * `AnalyzeReport` of the analysis. Empty if no errors are found.
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport;
 }
 
 impl<T: Analyzable> Analyzable for Option<T> {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         if let Some(item) = self {
-            item.analyze(parent)?;
+            item.analyze(parent)
+        } else {
+            AnalyzeReport::default()
         }
-
-        Ok(())
     }
 }
 
 impl<T: Analyzable> Analyzable for Box<T> {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.as_mut().analyze(parent)?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.as_mut().analyze(parent)
+    }
+}
 
-        Ok(())
+impl<T: Analyzable> Analyzable for Vec<T> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.iter_mut()
+            .map(|item| item.analyze(parent.clone()))
+            .collect()
     }
 }
 
 impl Analyzable for PolicyField {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
             PolicyField::Hash(x) => x.analyze(parent),
             PolicyField::Script(x) => x.analyze(parent),
@@ -139,52 +293,47 @@ impl Analyzable for PolicyField {
     }
 }
 impl Analyzable for PolicyConstructor {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        for field in self.fields.iter_mut() {
-            field.analyze(parent.clone())?;
-        }
-
-        Ok(())
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields.analyze(parent)
     }
 }
-impl Analyzable for PolicyDef {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        match &mut self.value {
-            PolicyValue::Constructor(x) => x.analyze(parent)?,
-            PolicyValue::Assign(_) => (),
-        }
 
-        Ok(())
+impl Analyzable for PolicyDef {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        match &mut self.value {
+            PolicyValue::Constructor(x) => x.analyze(parent),
+            PolicyValue::Assign(_) => AnalyzeReport::default(),
+        }
     }
 }
 
 impl Analyzable for DataBinaryOp {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.left.analyze(parent.clone())?;
-        self.right.analyze(parent.clone())?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let left = self.left.analyze(parent.clone());
+        let right = self.right.analyze(parent.clone());
 
-        Ok(())
+        left + right
     }
 }
 
 impl Analyzable for RecordConstructorField {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.name.analyze(parent.clone())?;
-        self.value.analyze(parent.clone())?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let name = self.name.analyze(parent.clone());
+        let value = self.value.analyze(parent.clone());
 
-        Ok(())
+        name + value
     }
 }
 
 impl Analyzable for VariantCaseConstructor {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.name.analyze(parent.clone())?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let name = self.name.analyze(parent.clone());
 
         let mut scope = Scope::new(parent);
 
         let case = match &self.name.symbol {
             Some(Symbol::VariantCase(x)) => x,
-            Some(x) => return Err(Error::InvalidSymbol("VariantCase", format!("{:?}", x))),
+            Some(x) => bail_report!(Error::invalid_symbol("VariantCase", x, &self.name)),
             _ => unreachable!(),
         };
 
@@ -194,23 +343,21 @@ impl Analyzable for VariantCaseConstructor {
 
         self.scope = Some(Rc::new(scope));
 
-        for field in self.fields.iter_mut() {
-            field.analyze(self.scope.clone())?;
-        }
+        let fields = self.fields.analyze(self.scope.clone());
 
-        Ok(())
+        name + fields
     }
 }
 
 impl Analyzable for DatumConstructor {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.r#type.analyze(parent.clone())?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let r#type = self.r#type.analyze(parent.clone());
 
         let mut scope = Scope::new(parent);
 
         let type_def = match &self.r#type.symbol {
             Some(Symbol::TypeDef(x)) => x,
-            Some(x) => return Err(Error::InvalidSymbol("TypeDef", format!("{:?}", x))),
+            Some(x) => bail_report!(Error::invalid_symbol("TypeDef", x, &self.r#type)),
             _ => unreachable!(),
         };
 
@@ -220,58 +367,56 @@ impl Analyzable for DatumConstructor {
 
         self.scope = Some(Rc::new(scope));
 
-        self.case.analyze(self.scope.clone())?;
+        let case = self.case.analyze(self.scope.clone());
 
-        Ok(())
+        r#type + case
     }
 }
 
 impl Analyzable for DataExpr {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
             DataExpr::Constructor(x) => x.analyze(parent),
             DataExpr::Identifier(x) => x.analyze(parent),
             DataExpr::PropertyAccess(x) => x.analyze(parent),
             DataExpr::BinaryOp(x) => x.analyze(parent),
-            _ => Ok(()),
+            _ => AnalyzeReport::default(),
         }
     }
 }
 
 impl Analyzable for AssetBinaryOp {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.left.analyze(parent.clone())?;
-        self.right.analyze(parent.clone())?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let left = self.left.analyze(parent.clone());
+        let right = self.right.analyze(parent.clone());
 
-        Ok(())
+        left + right
     }
 }
 
 impl Analyzable for AssetConstructor {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.amount.analyze(parent.clone())?;
-        self.r#type.analyze(parent.clone())?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let amount = self.amount.analyze(parent.clone());
+        let r#type = self.r#type.analyze(parent.clone());
 
-        Ok(())
+        amount + r#type
     }
 }
 
 impl Analyzable for PropertyAccess {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.object.analyze(parent.clone())?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let object = self.object.analyze(parent.clone());
 
         self.scope = Some(Rc::new(Scope::new(parent)));
 
-        for path in self.path.iter_mut() {
-            path.analyze(self.scope.clone())?;
-        }
+        let path = self.path.analyze(self.scope.clone());
 
-        Ok(())
+        object + path
     }
 }
 
 impl Analyzable for AssetExpr {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
             AssetExpr::Identifier(x) => x.analyze(parent),
             AssetExpr::Constructor(x) => x.analyze(parent),
@@ -282,129 +427,105 @@ impl Analyzable for AssetExpr {
 }
 
 impl Analyzable for AddressExpr {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
             AddressExpr::Identifier(x) => x.analyze(parent),
-            _ => Ok(()),
+            _ => AnalyzeReport::default(),
         }
     }
 }
 impl Analyzable for Identifier {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        let symbol = parent.map(|p| p.resolve(&self.value)).transpose()?;
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let symbol = parent.and_then(|p| p.resolve(&self.value));
+
+        if symbol.is_none() {
+            bail_report!(Error::not_in_scope(self.value.clone(), self));
+        }
 
         self.symbol = symbol;
 
-        Ok(())
+        AnalyzeReport::default()
     }
 }
 
 impl Analyzable for Type {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
             Type::Custom(x) => x.analyze(parent),
-            _ => Ok(()),
+            _ => AnalyzeReport::default(),
         }
     }
 }
 
 impl Analyzable for InputBlockField {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
-            InputBlockField::From(x) => x.analyze(parent.clone())?,
-            InputBlockField::DatumIs(x) => x.analyze(parent.clone())?,
-            InputBlockField::MinAmount(x) => x.analyze(parent.clone())?,
-            InputBlockField::Redeemer(x) => x.analyze(parent.clone())?,
-            InputBlockField::Ref(x) => x.analyze(parent.clone())?,
+            InputBlockField::From(x) => x.analyze(parent),
+            InputBlockField::DatumIs(x) => x.analyze(parent),
+            InputBlockField::MinAmount(x) => x.analyze(parent),
+            InputBlockField::Redeemer(x) => x.analyze(parent),
+            InputBlockField::Ref(x) => x.analyze(parent),
         }
-
-        Ok(())
     }
 }
 
 impl Analyzable for InputBlock {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        for field in self.fields.iter_mut() {
-            field.analyze(parent.clone())?;
-        }
-
-        Ok(())
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields.analyze(parent)
     }
 }
 
 impl Analyzable for OutputBlockField {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
-            OutputBlockField::To(x) => x.analyze(parent.clone())?,
-            OutputBlockField::Amount(x) => x.analyze(parent.clone())?,
-            OutputBlockField::Datum(x) => x.analyze(parent.clone())?,
+            OutputBlockField::To(x) => x.analyze(parent),
+            OutputBlockField::Amount(x) => x.analyze(parent),
+            OutputBlockField::Datum(x) => x.analyze(parent),
         }
-
-        Ok(())
     }
 }
 
 impl Analyzable for OutputBlock {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        for field in self.fields.iter_mut() {
-            field.analyze(parent.clone())?;
-        }
-
-        Ok(())
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields.analyze(parent)
     }
 }
 
 impl Analyzable for RecordField {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        self.r#type.analyze(parent.clone())?;
-
-        Ok(())
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.r#type.analyze(parent)
     }
 }
 
 impl Analyzable for VariantCase {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        for field in self.fields.iter_mut() {
-            field.analyze(parent.clone())?;
-        }
-
-        Ok(())
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields.analyze(parent)
     }
 }
 
 impl Analyzable for TypeDef {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        for case in self.cases.iter_mut() {
-            case.analyze(parent.clone())?;
-        }
-
-        Ok(())
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.cases.analyze(parent)
     }
 }
 
 impl Analyzable for MintBlockField {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
-            MintBlockField::Amount(x) => x.analyze(parent.clone())?,
-            MintBlockField::Redeemer(x) => x.analyze(parent.clone())?,
+            MintBlockField::Amount(x) => x.analyze(parent),
+            MintBlockField::Redeemer(x) => x.analyze(parent),
         }
-
-        Ok(())
     }
 }
 
 impl Analyzable for MintBlock {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
-        for field in self.fields.iter_mut() {
-            field.analyze(parent.clone())?;
-        }
-
-        Ok(())
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields.analyze(parent)
     }
 }
 
 impl Analyzable for ChainSpecificBlock {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
             ChainSpecificBlock::Cardano(x) => x.analyze(parent),
         }
@@ -412,7 +533,7 @@ impl Analyzable for ChainSpecificBlock {
 }
 
 impl Analyzable for TxDef {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         let mut scope = Scope::new(parent);
 
         scope.symbols.insert("fees".to_string(), Symbol::Fees);
@@ -427,23 +548,15 @@ impl Analyzable for TxDef {
 
         self.scope = Some(Rc::new(scope));
 
-        for input in self.inputs.iter_mut() {
-            input.analyze(self.scope.clone())?;
-        }
+        let inputs = self.inputs.analyze(self.scope.clone());
 
-        for output in self.outputs.iter_mut() {
-            output.analyze(self.scope.clone())?;
-        }
+        let outputs = self.outputs.analyze(self.scope.clone());
 
-        if let Some(mint) = &mut self.mint {
-            mint.analyze(self.scope.clone())?;
-        }
+        let mint = self.mint.analyze(self.scope.clone());
 
-        for directive in self.adhoc.iter_mut() {
-            directive.analyze(self.scope.clone())?;
-        }
+        let adhoc = self.adhoc.analyze(self.scope.clone());
 
-        Ok(())
+        inputs + outputs + mint + adhoc
     }
 }
 
@@ -451,10 +564,11 @@ static ADA: std::sync::LazyLock<AssetDef> = std::sync::LazyLock::new(|| AssetDef
     name: "Ada".to_string(),
     policy: HexStringLiteral::new("".to_string()),
     asset_name: "".to_string(),
+    span: Span::DUMMY,
 });
 
 impl Analyzable for Program {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> Result<(), Error> {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         let mut scope = Scope::new(parent);
 
         for party in self.parties.iter() {
@@ -477,15 +591,19 @@ impl Analyzable for Program {
 
         self.scope = Some(Rc::new(scope));
 
-        for type_def in self.types.iter_mut() {
-            type_def.analyze(self.scope.clone())?;
-        }
+        // TODO: Add parties
+        // let parties = self.parties.analyze(self.scope.clone());
 
-        for tx in self.txs.iter_mut() {
-            tx.analyze(self.scope.clone())?;
-        }
+        let policies = self.policies.analyze(self.scope.clone());
 
-        Ok(())
+        // TODO: Add assets
+        // let assets = self.assets.analyze(self.scope.clone());
+
+        let types = self.types.analyze(self.scope.clone());
+
+        let txs = self.txs.analyze(self.scope.clone());
+
+        policies + types + txs
     }
 }
 
@@ -501,9 +619,7 @@ impl Analyzable for Program {
 /// * `ast` - Mutable reference to the program AST to analyze
 ///
 /// # Returns
-/// * `Ok(())` if analysis succeeds
-/// * `Err(Error)` if any semantic errors are found
-pub fn analyze(ast: &mut Program) -> Result<(), Error> {
-    ast.analyze(None)?;
-    Ok(())
+/// * `AnalyzeReport` of the analysis. Empty if no errors are found.
+pub fn analyze(ast: &mut Program) -> AnalyzeReport {
+    ast.analyze(None)
 }
