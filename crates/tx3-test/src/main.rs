@@ -73,7 +73,7 @@ struct IrEnvelope {
 
 #[derive(Deserialize)]
 struct ResolveProtoTxRequest {
-    pub ir: IrEnvelope,
+    pub tir: IrEnvelope,
     pub args: serde_json::Value,
 }
 
@@ -114,12 +114,12 @@ async fn handle_resolve_proto_tx(
 ) -> Result<warp::reply::Json, Error> {
     let request = ResolveProtoTxRequest::try_from(request)?;
 
-    let tx = match request.ir.encoding {
+    let tx = match request.tir.encoding {
         IrEncoding::Base64 => {
-            base64::decode(request.ir.bytecode).map_err(|x| Error::InvalidIr(x.to_string()))?
+            base64::decode(request.tir.bytecode).map_err(|x| Error::InvalidIr(x.to_string()))?
         }
         IrEncoding::Hex => {
-            hex::decode(request.ir.bytecode).map_err(|x| Error::InvalidIr(x.to_string()))?
+            hex::decode(request.tir.bytecode).map_err(|x| Error::InvalidIr(x.to_string()))?
         }
     };
 
@@ -153,7 +153,7 @@ pub async fn handle_request(
     debug!(id = request.id, method = request.method, "handling request");
 
     let result = match request.method.as_str() {
-        "tx3v1alpha1.resolve_proto_tx" => handle_resolve_proto_tx(ledger, request).await,
+        "trp.resolve" => handle_resolve_proto_tx(ledger, request).await,
         x => Err(Error::UnknownMethod(x.to_string())),
     };
 

@@ -6,26 +6,26 @@ use swc_ecma_ast::*;
 
 use super::Job;
 
-fn ts_type_for_field(ty: &tx3_lang::ast::Type) -> TsType {
+fn ts_type_for_field(ty: &tx3_lang::ir::Type) -> TsType {
     match ty {
-        tx3_lang::ast::Type::Int => TsType::TsKeywordType(TsKeywordType {
+        tx3_lang::ir::Type::Int => TsType::TsKeywordType(TsKeywordType {
             span: DUMMY_SP,
             kind: TsKeywordTypeKind::TsNumberKeyword,
         }),
-        tx3_lang::ast::Type::Address => TsType::TsKeywordType(TsKeywordType {
+        tx3_lang::ir::Type::Address => TsType::TsKeywordType(TsKeywordType {
             span: DUMMY_SP,
             kind: TsKeywordTypeKind::TsStringKeyword,
         }),
-        tx3_lang::ast::Type::Bool => TsType::TsKeywordType(TsKeywordType {
+        tx3_lang::ir::Type::Bool => TsType::TsKeywordType(TsKeywordType {
             span: DUMMY_SP,
             kind: TsKeywordTypeKind::TsBooleanKeyword,
         }),
-        tx3_lang::ast::Type::Bytes => TsType::TsTypeRef(TsTypeRef {
+        tx3_lang::ir::Type::Bytes => TsType::TsTypeRef(TsTypeRef {
             span: DUMMY_SP,
             type_name: TsEntityName::Ident(Ident::new_no_ctxt("Uint8Array".into(), DUMMY_SP)),
             type_params: None,
         }),
-        tx3_lang::ast::Type::UtxoRef => TsType::TsKeywordType(TsKeywordType {
+        tx3_lang::ir::Type::UtxoRef => TsType::TsKeywordType(TsKeywordType {
             span: DUMMY_SP,
             kind: TsKeywordTypeKind::TsStringKeyword,
         }),
@@ -137,16 +137,19 @@ pub fn generate(job: &Job) {
 
     for tx_def in job.protocol.txs() {
         let tx_name = tx_def.name.as_str();
+        let prototx = job.protocol.new_tx(&tx_def.name).unwrap();
+
+        let ir_bytes_hex = hex::encode(prototx.ir_bytes());
+
         let type_name = format!("{}Params", tx_name.to_case(Case::Pascal));
         let fn_name = format!("{}Tx", tx_name.to_case(Case::Camel));
         let ir_const_name = format!("{}_IR", tx_name.to_case(Case::Constant));
 
-        let type_members = tx_def
-            .parameters
-            .parameters
+        let type_members = prototx
+            .find_params()
             .iter()
-            .map(|field| {
-                let field_name = field.name.as_str().to_case(Case::Camel);
+            .map(|(key, type_)| {
+                let field_name = key.as_str().to_case(Case::Camel);
 
                 TsTypeElement::TsPropertySignature(TsPropertySignature {
                     span: DUMMY_SP,
@@ -156,7 +159,7 @@ pub fn generate(job: &Job) {
                     optional: false,
                     type_ann: Box::new(TsTypeAnn {
                         span: DUMMY_SP,
-                        type_ann: ts_type_for_field(&field.r#type).into(),
+                        type_ann: ts_type_for_field(type_).into(),
                     })
                     .into(),
                 })
@@ -176,10 +179,6 @@ pub fn generate(job: &Job) {
             })),
             span: DUMMY_SP,
         })));
-
-        // Generate IR constant
-        let prototx = job.protocol.new_tx(&tx_def.name).unwrap();
-        let ir_bytes_hex = hex::encode(prototx.ir_bytes());
 
         let ir_define_stmt = swc_ecma_quote::quote!(
             "export const $ir_const_name = { bytecode: $ir_bytes, encoding: 'hex', version: 'v1alpha1' };" as ModuleItem,
