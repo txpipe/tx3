@@ -41,6 +41,10 @@
       {
         "command": "tx3.startServer",
         "title": "Start Tx3 Language Server"
+      },
+      {
+        "command": "tx3.startPreview",
+        "title": "Start Tx3 Preview Webview"
       }
     ]
   },
