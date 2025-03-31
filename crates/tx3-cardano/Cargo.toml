@@ -5,7 +5,8 @@ edition = "2021"
 
 [dependencies]
 # pallas = { version = "0.32.0" }
-pallas = { git = "https://github.com/txpipe/pallas", features = ["phase-two"] }
+# pallas = { git = "https://github.com/txpipe/pallas", features = ["phase-two"] }
+pallas = { git = "https://github.com/txpipe/pallas.git", features = ["hardano", "applying"] }
 
 hex = "0.4.3"
 thiserror = "2.0.11"

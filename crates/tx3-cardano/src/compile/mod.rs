@@ -161,6 +161,7 @@ fn coerce_expr_into_bytes(ir: &ir::Expression) -> Result<primitives::Bytes, Erro
     }
 }
 
+#[allow(dead_code)]
 fn coerce_expr_into_hash<const SIZE: usize>(
     ir: &ir::Expression,
 ) -> Result<primitives::Hash<SIZE>, Error> {
