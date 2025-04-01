@@ -165,26 +165,27 @@ impl LanguageServer for Backend {
         params: DocumentSymbolParams,
     ) -> Result<Option<DocumentSymbolResponse>> {
         
-        // TODO: Add a reference for the symbol type (e.g. party, tx, parameter) as a tag
-        // TODO: Add the parameter type as a tag, so it can be seen on the extension frontend
         fn make_symbol(
             name: String,
+            detail: String,
             kind: SymbolKind,
             range: Range,
-            uri: Url,
-        ) -> SymbolInformation {
+            children: Option<Vec<DocumentSymbol>>,
+        ) -> DocumentSymbol {
             #[allow(deprecated)]
-            SymbolInformation {
+            DocumentSymbol {
                 name,
+                detail: Some(detail),
                 kind,
+                range: range,
+                selection_range: range,
+                children: children,
                 tags: Default::default(),
                 deprecated: Default::default(),
-                location: Location::new(uri, range),
-                container_name: Default::default(),
             }
         }
 
-        let mut symbols: Vec<SymbolInformation> = Vec::new();
+        let mut symbols: Vec<DocumentSymbol> = Vec::new();
         let uri = &params.text_document.uri;
         let document = self.documents.get(uri);
         if let Some(document) = document {
@@ -195,54 +196,62 @@ impl LanguageServer for Backend {
                 for party in ast.parties {
                     symbols.push(make_symbol(
                         party.name.clone(),
+                        "party".to_string(),
                         SymbolKind::OBJECT,
                         span_to_lsp_range(document.value(), &party.span),
-                        uri.clone(),
+                        None,
                     ));
                 }
                 for tx in ast.txs {
-                    symbols.push(make_symbol(
-                        tx.name.clone(),
-                        SymbolKind::METHOD,
-                        span_to_lsp_range(document.value(), &tx.span),
-                        uri.clone(),
-                    ));
-
+                    let mut children: Vec<DocumentSymbol> = Vec::new();
                     for parameter in tx.parameters.parameters {
-                        symbols.push(make_symbol(
+                        children.push(make_symbol(
                             parameter.name.clone(),
+                            format!("parameter__{:?}", parameter.r#type),
                             SymbolKind::FIELD,
                             span_to_lsp_range(document.value(), &tx.parameters.span),
-                            uri.clone(),
+                            None,
                         ));
                     }
-
                     for input in tx.inputs {
-                        symbols.push(make_symbol(
+                        children.push(make_symbol(
                             input.name.clone(),
+                            "input".to_string(),
                             SymbolKind::OBJECT,
                             span_to_lsp_range(document.value(), &input.span),
-                            uri.clone(),
+                            None,
                         ));
                     }
-
                     for output in tx.outputs {
-                        symbols.push(make_symbol(
+                        children.push(make_symbol(
                             output.name.unwrap_or_else(|| {"output"}.to_string()),
+                            "output".to_string(),
                             SymbolKind::OBJECT,
                             span_to_lsp_range(document.value(), &output.span),
-                            uri.clone(),
+                            None,
                         ));
                     }
+                    symbols.push(make_symbol(
+                        tx.name.clone(),
+                        "tx".to_string(),
+                        SymbolKind::METHOD,
+                        span_to_lsp_range(document.value(), &tx.span),
+                        Some(children),
+                    ));
                 }
             }
         }
-        Ok(Some(DocumentSymbolResponse::Flat(symbols)))
+        Ok(Some(DocumentSymbolResponse::Nested(symbols)))
     }
 
     async fn symbol(&self, _: WorkspaceSymbolParams) -> Result<Option<Vec<SymbolInformation>>> {
         // Return empty workspace symbols list for now
         Ok(Some(vec![]))
+    }
+
+    async fn symbol_resolve(&self, params: WorkspaceSymbol) -> Result<WorkspaceSymbol> {
+        dbg!(&params);
+        Ok(params)
     }
 
     async fn shutdown(&self) -> Result<()> {

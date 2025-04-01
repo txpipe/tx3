@@ -57,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
     synchronize: {
       // Notify the server about file changes to '.clientrc files contain in the workspace
       fileEvents: vscode.workspace.createFileSystemWatcher("**/*.tx3"),
-    },
+    }
   };
 
   // Create the language client and start the client.
@@ -74,6 +74,16 @@ export function activate(context: vscode.ExtensionContext) {
   // Start commands subscriptions
   context.subscriptions.push(vscode.commands.registerCommand("tx3.startServer", () => client.start()));
   context.subscriptions.push(vscode.commands.registerCommand("tx3.startPreview", () => previewCommandHandler(context)));
+  
+  // Start editor subscriptions
+  vscode.workspace.onDidChangeTextDocument((event) => {
+    if (event.document.languageId !== "tx3") {
+      return;
+    }
+    if (previewPanel) {
+      refreshPreviewPanelData();
+    }
+  });
 }
 
 const previewCommandHandler = (context: vscode.ExtensionContext) => {
@@ -93,35 +103,49 @@ const previewCommandHandler = (context: vscode.ExtensionContext) => {
     context.subscriptions
   );
 
-  updatePreviewPanel();
+  _updatePreviewPanel();
+  refreshPreviewPanelData();
+}
 
+const refreshPreviewPanelData = () => {
   vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", vscode.window.activeTextEditor?.document.uri)
     .then(symbols => {
-      const data = { parties: [], transactions: [] } as any;
+      const data = { parties: [], txs: [] } as any;
       for (const symbol of symbols) {
-        // TODO: We need a better way to identify the symbols, probably using a tag for the symbol type (e.g. party, tx, parameter)
-        // TODO: We also need a way to identify the parameter type, probably using a tag as well
-        if (symbol.kind === vscode.SymbolKind.Object) {
+        if (symbol.detail === "party") {
           data.parties.push({ name: symbol.name });
         }
-        if (symbol.kind === vscode.SymbolKind.Method) {
+        if (symbol.detail === "tx") {
           const parameters = [] as any;
+          const inputs = [] as any;
+          const outputs = [] as any;
           for (const children of symbol.children) {
-            if (children.kind === vscode.SymbolKind.Field) {
-              parameters.push({ name: children.name });
+            const _details = children.detail.split("__");
+            const kind = _details.length >= 1 ? _details[0] : "";
+            const type = _details.length >= 2 ? _details[1] : "";
+            if (kind === "parameter") {
+              parameters.push({ name: children.name, type });
+            }
+            if (kind === "input") {
+              inputs.push({ name: children.name });
+            }
+            if (kind === "output") {
+              outputs.push({ name: children.name });
             }
           }
-          data.transactions.push({
+          data.txs.push({
             name: symbol.name,
-            parameters
+            parameters,
+            inputs,
+            outputs,
           });
         }
       }
-      updatePreviewPanel(JSON.stringify(data, null, 2));
+      _updatePreviewPanel(JSON.stringify(data, null, 2));
     });
 }
 
-const updatePreviewPanel = (content: string = "") => {
+const _updatePreviewPanel = (content: string = "") => {
   previewPanel!!.webview.html = `
     <!DOCTYPE html>
     <html lang="en">
