@@ -1,16 +1,16 @@
 use pallas::ledger::primitives::{
     conway::{self, Value},
-    Hash, NonEmptyKeyValuePairs, NonZeroInt, PositiveCoin,
+    Hash, NonZeroInt, PositiveCoin,
 };
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{btree_map::Entry, BTreeMap};
 
 fn fold_assets<T>(
-    acc: &mut HashMap<pallas::codec::utils::Bytes, T>,
-    item: NonEmptyKeyValuePairs<pallas::codec::utils::Bytes, T>,
+    acc: &mut BTreeMap<pallas::codec::utils::Bytes, T>,
+    item: BTreeMap<pallas::codec::utils::Bytes, T>,
 ) where
     T: SafeAdd + Copy,
 {
-    for (key, value) in item.to_vec() {
+    for (key, value) in item.into_iter() {
         match acc.entry(key) {
             Entry::Occupied(mut entry) => {
                 if let Some(new_val) = value.try_add(*entry.get()) {
@@ -27,12 +27,12 @@ fn fold_assets<T>(
 }
 
 pub fn fold_multiassets<T>(
-    acc: &mut HashMap<Hash<28>, HashMap<pallas::codec::utils::Bytes, T>>,
-    item: NonEmptyKeyValuePairs<Hash<28>, NonEmptyKeyValuePairs<pallas::codec::utils::Bytes, T>>,
+    acc: &mut BTreeMap<Hash<28>, BTreeMap<pallas::codec::utils::Bytes, T>>,
+    item: BTreeMap<Hash<28>, BTreeMap<pallas::codec::utils::Bytes, T>>,
 ) where
     T: SafeAdd + Copy,
 {
-    for (key, value) in item.to_vec() {
+    for (key, value) in item.into_iter() {
         let mut map = acc.remove(&key).unwrap_or_default();
         fold_assets(&mut map, value);
         acc.insert(key, map);
@@ -45,21 +45,17 @@ pub fn aggregate_assets<T>(
 where
     T: SafeAdd + Copy,
 {
-    let mut total_assets = HashMap::new();
+    let mut total_assets = BTreeMap::new();
 
     for assets in items {
         fold_multiassets(&mut total_assets, assets);
     }
 
-    let total_assets_vec = total_assets
-        .into_iter()
-        .filter_map(|(key, assets)| {
-            let assets_vec = assets.into_iter().collect();
-            Some((key, NonEmptyKeyValuePairs::from_vec(assets_vec)?))
-        })
-        .collect();
-
-    NonEmptyKeyValuePairs::from_vec(total_assets_vec)
+    if total_assets.is_empty() {
+        None
+    } else {
+        Some(total_assets)
+    }
 }
 
 pub fn aggregate_values(items: impl IntoIterator<Item = Value>) -> Value {
@@ -107,10 +103,21 @@ impl SafeAdd for PositiveCoin {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::str::FromStr as _;
 
     use super::*;
     use pallas::ledger::primitives::conway::Value;
+
+    macro_rules! asset {
+        ($policy:expr, $asset:expr, $amount:expr) => {{
+            let mut aux = BTreeMap::new();
+            aux.insert($asset, $amount);
+            let mut asset = BTreeMap::new();
+            asset.insert($policy, aux);
+            asset
+        }};
+    }
 
     #[test]
     fn test_add_values_coin_only() {
@@ -132,23 +139,11 @@ mod tests {
 
         let value_a = Value::Multiasset(
             100,
-            NonEmptyKeyValuePairs::Def(vec![(
-                policy_id,
-                NonEmptyKeyValuePairs::Def(vec![(
-                    asset_name.clone().into(),
-                    50.try_into().unwrap(),
-                )]),
-            )]),
+            asset!(policy_id, asset_name.clone().into(), 50.try_into().unwrap()),
         );
         let value_b = Value::Multiasset(
             200,
-            NonEmptyKeyValuePairs::Def(vec![(
-                policy_id,
-                NonEmptyKeyValuePairs::Def(vec![(
-                    asset_name.clone().into(),
-                    30.try_into().unwrap(),
-                )]),
-            )]),
+            asset!(policy_id, asset_name.clone().into(), 30.try_into().unwrap()),
         );
 
         let result = aggregate_values(vec![value_a, value_b]);
@@ -157,13 +152,7 @@ mod tests {
             result,
             Value::Multiasset(
                 300,
-                NonEmptyKeyValuePairs::Def(vec![(
-                    policy_id,
-                    NonEmptyKeyValuePairs::Def(vec![(
-                        asset_name.clone().into(),
-                        80.try_into().unwrap()
-                    )]),
-                )]),
+                asset!(policy_id, asset_name.clone().into(), 80.try_into().unwrap()),
             )
         );
     }
