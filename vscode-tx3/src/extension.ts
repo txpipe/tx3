@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as vscode from "vscode";
 import {
   LanguageClient,
@@ -76,24 +77,42 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.commands.registerCommand("tx3.startPreview", () => previewCommandHandler(context)));
   
   // Start editor subscriptions
+
+  // TODO: Check if it's okay to refresh when a file it's opened or if it's better to keep it
+  vscode.workspace.onDidOpenTextDocument((event) => {
+    if (event.languageId !== "tx3") {
+      return;
+    }
+    if (previewPanel) {
+      refreshPreviewPanelData(event.uri);
+    }
+  });
+
+  // TODO: Check if it's okay to do it on change or it's better to use on save
   vscode.workspace.onDidChangeTextDocument((event) => {
     if (event.document.languageId !== "tx3") {
       return;
     }
     if (previewPanel) {
-      refreshPreviewPanelData();
+      refreshPreviewPanelData(event.document.uri);
     }
   });
 }
 
+// TODO: We need to move the webview logic to a separate file
 const previewCommandHandler = (context: vscode.ExtensionContext) => {
+  const documentUri = vscode.window.activeTextEditor?.document.uri;
+
   previewPanel = vscode.window.createWebviewPanel(
     'tx3Preview',
     'Tx3 Preview',
     vscode.ViewColumn.Two,
     {
       enableScripts: true,
-      enableForms: true
+      enableForms: true,
+      localResourceRoots: [
+				vscode.Uri.file(path.join(context.extensionPath, 'frontend', 'dist'))
+			]
     }
   );
 
@@ -103,63 +122,88 @@ const previewCommandHandler = (context: vscode.ExtensionContext) => {
     context.subscriptions
   );
 
-  _updatePreviewPanel();
-  refreshPreviewPanelData();
-}
-
-const refreshPreviewPanelData = () => {
-  vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", vscode.window.activeTextEditor?.document.uri)
-    .then(symbols => {
-      const data = { parties: [], txs: [] } as any;
-      for (const symbol of symbols) {
-        if (symbol.detail === "party") {
-          data.parties.push({ name: symbol.name });
-        }
-        if (symbol.detail === "tx") {
-          const parameters = [] as any;
-          const inputs = [] as any;
-          const outputs = [] as any;
-          for (const children of symbol.children) {
-            const _details = children.detail.split("__");
-            const kind = _details.length >= 1 ? _details[0] : "";
-            const type = _details.length >= 2 ? _details[1] : "";
-            if (kind === "parameter") {
-              parameters.push({ name: children.name, type });
-            }
-            if (kind === "input") {
-              inputs.push({ name: children.name });
-            }
-            if (kind === "output") {
-              outputs.push({ name: children.name });
-            }
-          }
-          data.txs.push({
-            name: symbol.name,
-            parameters,
-            inputs,
-            outputs,
-          });
-        }
+  previewPanel!!.webview.onDidReceiveMessage(
+    message => {
+      if (message.event === 'init') {
+        refreshPreviewPanelData(documentUri);
       }
-      _updatePreviewPanel(JSON.stringify(data, null, 2));
-    });
-}
+    },
+    undefined,
+    context.subscriptions
+  );
 
-const _updatePreviewPanel = (content: string = "") => {
   previewPanel!!.webview.html = `
-    <!DOCTYPE html>
+    <!doctype html>
     <html lang="en">
       <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Tx3 preview</title>
+        <title>Tx3 Preview</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script type="module" crossorigin src="${previewPanel!!.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'frontend', 'dist', 'bundle.js'))}"></script>
+        <link rel="stylesheet" crossorigin href="${previewPanel!!.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'frontend', 'dist', 'bundle.css'))}">
       </head>
       <body>
-        <h1>Tx3 preview</h1>
-        <pre>${content}</pre>
+        <div id="root"></div>
+        <script>
+          const vscode = acquireVsCodeApi();
+        </script>
       </body>
     </html>
   `;
+}
+
+const refreshPreviewPanelData = (_documentUri?: vscode.Uri) => {
+  const documentUri = _documentUri || vscode.window.activeTextEditor?.document.uri;
+  getDocumentDataFromUri(documentUri!!).then(data => {
+    previewPanel!!.webview.postMessage(data);
+  });
+}
+
+// TODO: Add error handling and define an interface for the data
+const getDocumentDataFromUri = async (documentUri: vscode.Uri) => {
+  const data = { parties: [], txs: [] } as any;
+  const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", documentUri);
+
+  for (const symbol of symbols) {
+    if (symbol.detail === "party") {
+      data.parties.push({ name: symbol.name });
+    }
+    if (symbol.detail === "tx") {
+      const parameters = [] as any;
+      const inputs = [] as any;
+      const outputs = [] as any;
+      for (const children of symbol.children) {
+        const _details = children.detail.split("__");
+        const kind = _details.length >= 1 ? _details[0] : "";
+        const type = _details.length >= 2 ? _details[1] : "";
+        if (kind === "parameter") {
+          parameters.push({ name: children.name, type });
+        }
+        if (kind === "input") {
+          inputs.push({ name: children.name });
+        }
+        if (kind === "output") {
+          outputs.push({ name: children.name });
+        }
+      }
+
+      // TODO: Check if this is a good place for getting the IR
+      const ir = await client.sendRequest(
+        "workspace/executeCommand",
+        { command: "generate-tx-ir", arguments: [documentUri.toString(), symbol.name] }
+      );
+
+      data.txs.push({
+        name: symbol.name,
+        parameters,
+        inputs,
+        outputs,
+        ir
+      });
+    }
+  }
+
+  return data;
 }
 
 export function deactivate(): Thenable<void> | undefined {

@@ -1,9 +1,12 @@
 use dashmap::DashMap;
 use ropey::Rope;
+use serde_json::Value;
+use std::str::FromStr;
 use tower::ServiceBuilder;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
+use tx3_lang::Protocol;
 
 #[derive(Debug)]
 struct Backend {
@@ -98,7 +101,12 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
-
+                execute_command_provider: Some(
+                    ExecuteCommandOptions {
+                        commands: vec!["generate-tx-ir".to_string()],
+                        work_done_progress_options: WorkDoneProgressOptions { work_done_progress: None }
+                    }
+                ),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -160,6 +168,7 @@ impl LanguageServer for Backend {
         }))
     }
 
+    // TODO: Add error handling and improve
     async fn document_symbol(
         &self,
         params: DocumentSymbolParams,
@@ -252,6 +261,20 @@ impl LanguageServer for Backend {
     async fn symbol_resolve(&self, params: WorkspaceSymbol) -> Result<WorkspaceSymbol> {
         dbg!(&params);
         Ok(params)
+    }
+
+    // TODO: Add error handling
+    async fn execute_command(&self, params: ExecuteCommandParams) -> Result<Option<Value>> {
+        if params.command == "generate-tx-ir" {
+            let uri = Url::from_str(params.arguments[0].as_str().unwrap());
+            let document = self.documents.get(&uri.unwrap());
+            if let Some(document) = document {
+                let protocol = Protocol::from_string(document.value().to_string()).load().unwrap();
+                let tx = protocol.new_tx(params.arguments[1].as_str().unwrap()).unwrap();
+                return Ok(Some(Value::String(hex::encode(tx.ir_bytes()))));
+            }
+        }
+        Ok(None)
     }
 
     async fn shutdown(&self) -> Result<()> {
