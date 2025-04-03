@@ -33,7 +33,7 @@ struct Cli {
     template: String,
 
     /// TRP endpoint to use for code generation
-    #[arg(short, long)]
+    #[arg(short = 'R', long)]
     trp_endpoint: Option<String>,
 
     /// TRP headers to send to the TRP server
