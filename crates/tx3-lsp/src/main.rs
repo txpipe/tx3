@@ -1,6 +1,6 @@
 use dashmap::DashMap;
 use ropey::Rope;
-use serde_json::Value;
+use serde_json::{Value, Map};
 use std::str::FromStr;
 use tower::ServiceBuilder;
 use tower_lsp::jsonrpc::Result;
@@ -103,7 +103,7 @@ impl LanguageServer for Backend {
                 )),
                 execute_command_provider: Some(
                     ExecuteCommandOptions {
-                        commands: vec!["generate-tx-ir".to_string()],
+                        commands: vec!["generate-tir".to_string()],
                         work_done_progress_options: WorkDoneProgressOptions { work_done_progress: None }
                     }
                 ),
@@ -205,9 +205,18 @@ impl LanguageServer for Backend {
                 for party in ast.parties {
                     symbols.push(make_symbol(
                         party.name.clone(),
-                        "party".to_string(),
+                        "Party".to_string(),
                         SymbolKind::OBJECT,
                         span_to_lsp_range(document.value(), &party.span),
+                        None,
+                    ));
+                }
+                for policy in ast.policies {
+                    symbols.push(make_symbol(
+                        policy.name.clone(),
+                        "Policy".to_string(),
+                        SymbolKind::KEY,
+                        span_to_lsp_range(document.value(), &policy.span),
                         None,
                     ));
                 }
@@ -216,7 +225,7 @@ impl LanguageServer for Backend {
                     for parameter in tx.parameters.parameters {
                         children.push(make_symbol(
                             parameter.name.clone(),
-                            format!("parameter__{:?}", parameter.r#type),
+                            format!("Parameter<{:?}>", parameter.r#type),
                             SymbolKind::FIELD,
                             span_to_lsp_range(document.value(), &tx.parameters.span),
                             None,
@@ -225,7 +234,7 @@ impl LanguageServer for Backend {
                     for input in tx.inputs {
                         children.push(make_symbol(
                             input.name.clone(),
-                            "input".to_string(),
+                            "Input".to_string(),
                             SymbolKind::OBJECT,
                             span_to_lsp_range(document.value(), &input.span),
                             None,
@@ -234,7 +243,7 @@ impl LanguageServer for Backend {
                     for output in tx.outputs {
                         children.push(make_symbol(
                             output.name.unwrap_or_else(|| {"output"}.to_string()),
-                            "output".to_string(),
+                            "Output".to_string(),
                             SymbolKind::OBJECT,
                             span_to_lsp_range(document.value(), &output.span),
                             None,
@@ -242,7 +251,7 @@ impl LanguageServer for Backend {
                     }
                     symbols.push(make_symbol(
                         tx.name.clone(),
-                        "tx".to_string(),
+                        "Tx".to_string(),
                         SymbolKind::METHOD,
                         span_to_lsp_range(document.value(), &tx.span),
                         Some(children),
@@ -265,13 +274,23 @@ impl LanguageServer for Backend {
 
     // TODO: Add error handling
     async fn execute_command(&self, params: ExecuteCommandParams) -> Result<Option<Value>> {
-        if params.command == "generate-tx-ir" {
+        if params.command == "generate-tir" {
             let uri = Url::from_str(params.arguments[0].as_str().unwrap());
             let document = self.documents.get(&uri.unwrap());
             if let Some(document) = document {
                 let protocol = Protocol::from_string(document.value().to_string()).load().unwrap();
-                let tx = protocol.new_tx(params.arguments[1].as_str().unwrap()).unwrap();
-                return Ok(Some(Value::String(hex::encode(tx.ir_bytes()))));
+                let prototx = protocol.new_tx(params.arguments[1].as_str().unwrap()).unwrap();
+
+                let mut response = Map::new();
+                response.insert("tir".to_string(), Value::String(hex::encode(prototx.ir_bytes())));
+
+                let mut params = Map::new();
+                prototx.find_params().iter().for_each(|param| {
+                    params.insert(param.0.to_string(), serde_json::to_value(param.1).unwrap());
+                });
+                response.insert("parameters".to_string(), Value::Object(params));
+
+                return Ok(Some(Value::Object(response)));
             }
         }
         Ok(None)

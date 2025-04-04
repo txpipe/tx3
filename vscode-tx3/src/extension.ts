@@ -161,49 +161,19 @@ const refreshPreviewPanelData = (_documentUri?: vscode.Uri) => {
 
 // TODO: Add error handling and define an interface for the data
 const getDocumentDataFromUri = async (documentUri: vscode.Uri) => {
-  const data = { parties: [], txs: [] } as any;
+  const txs = [] as any;
   const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", documentUri);
-
   for (const symbol of symbols) {
-    if (symbol.detail === "party") {
-      data.parties.push({ name: symbol.name });
-    }
-    if (symbol.detail === "tx") {
-      const parameters = [] as any;
-      const inputs = [] as any;
-      const outputs = [] as any;
-      for (const children of symbol.children) {
-        const _details = children.detail.split("__");
-        const kind = _details.length >= 1 ? _details[0] : "";
-        const type = _details.length >= 2 ? _details[1] : "";
-        if (kind === "parameter") {
-          parameters.push({ name: children.name, type });
-        }
-        if (kind === "input") {
-          inputs.push({ name: children.name });
-        }
-        if (kind === "output") {
-          outputs.push({ name: children.name });
-        }
-      }
-
-      // TODO: Check if this is a good place for getting the IR
-      const ir = await client.sendRequest(
+    if (symbol.detail === "Tx") {
+      const { tir, parameters } = await client.sendRequest<any>(
         "workspace/executeCommand",
-        { command: "generate-tx-ir", arguments: [documentUri.toString(), symbol.name] }
+        { command: "generate-tir", arguments: [documentUri.toString(), symbol.name] }
       );
-
-      data.txs.push({
-        name: symbol.name,
-        parameters,
-        inputs,
-        outputs,
-        ir
-      });
+      txs.push({ name: symbol.name, tir, parameters });
     }
   }
 
-  return data;
+  return txs;
 }
 
 export function deactivate(): Thenable<void> | undefined {
