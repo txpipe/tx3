@@ -471,16 +471,16 @@ fn compile_spend_redeemers(
     let mut compiled_inputs = compiled_body.inputs.iter().collect::<Vec<_>>();
     compiled_inputs.sort_by_key(|x| (x.transaction_id, x.index));
 
-    let mut redeemers = Vec::new();
-
-    for input in tx.inputs.iter() {
-        for ref_ in input.refs.iter() {
-            let redeemer = compile_single_spend_redeemer(ref_, input, compiled_inputs.as_slice())?;
-            redeemers.push(redeemer);
-        }
-    }
-
-    Ok(redeemers)
+    tx.inputs
+        .iter()
+        .filter(|input| input.redeemer.is_some())
+        .flat_map(|input| {
+            input.refs.iter().map({
+                let value = compiled_inputs.clone();
+                move |ref_| compile_single_spend_redeemer(ref_, input, value.as_slice())
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()
 }
 
 fn compile_mint_redeemers(_tx: &ir::Tx) -> Result<Vec<primitives::Redeemer>, Error> {
