@@ -16,63 +16,8 @@ pub trait Ledger {
 
     async fn resolve_input(
         &self,
-        pattern: utxorpc::spec::cardano::TxOutputPattern,
-    ) -> Result<utxorpc::UtxoPage<utxorpc::Cardano>, Error>;
-}
-
-fn expr_to_address_pattern(
-    value: &tx3_lang::ir::Expression,
-) -> utxorpc::spec::cardano::AddressPattern {
-    let address = match value {
-        tx3_lang::ir::Expression::Address(address) => address.clone(),
-        tx3_lang::ir::Expression::String(address) => {
-            pallas::ledger::addresses::Address::from_bech32(address)
-                .unwrap()
-                .to_vec()
-        }
-        _ => return Default::default(),
-    };
-
-    utxorpc::spec::cardano::AddressPattern {
-        exact_address: address.into(),
-        ..Default::default()
-    }
-}
-
-fn input_query_to_pattern(query: &InputQuery) -> utxorpc::spec::cardano::TxOutputPattern {
-    let address = query.address.as_ref().map(expr_to_address_pattern);
-
-    utxorpc::spec::cardano::TxOutputPattern {
-        address,
-        ..Default::default()
-    }
-}
-
-fn utxo_from_u5c_to_tx3(u: utxorpc::ChainUtxo<utxorpc::spec::cardano::TxOutput>) -> tx3_lang::Utxo {
-    tx3_lang::Utxo {
-        r#ref: tx3_lang::UtxoRef {
-            txid: u.txo_ref.as_ref().unwrap().hash.clone().into(),
-            index: u.txo_ref.as_ref().unwrap().index,
-        },
-        address: u.parsed.as_ref().unwrap().address.clone().into(),
-        datum: None, //u.parsed.unwrap().datum.into(),
-        assets: vec![tx3_lang::ir::AssetExpr {
-            policy: vec![],
-            asset_name: tx3_lang::ir::Expression::Bytes(vec![]),
-            amount: tx3_lang::ir::Expression::Number(u.parsed.as_ref().unwrap().coin as i128),
-        }], //u.parsed.unwrap().assets.into(),
-        script: u
-            .parsed
-            .as_ref()
-            .and_then(|x| x.script.as_ref())
-            .and_then(|x| x.script.as_ref())
-            .map(|x| {
-                let mut buf = vec![];
-                x.encode(&mut buf);
-                buf
-            })
-            .map(tx3_lang::ir::Expression::Bytes),
-    }
+        query: &InputQuery,
+    ) -> Result<tx3_lang::UtxoSet, Error>;
 }
 
 fn eval_size_fees(tx: &[u8], pparams: &PParams) -> Result<u64, Error> {
@@ -99,12 +44,8 @@ async fn eval_pass<L: Ledger>(
 
     for (name, query) in tx.find_queries() {
         let utxos = ledger
-            .resolve_input(input_query_to_pattern(&query))
-            .await?
-            .items
-            .into_iter()
-            .map(utxo_from_u5c_to_tx3)
-            .collect();
+            .resolve_input(&query)
+            .await?;
 
         // TODO: actually filter utxos
 

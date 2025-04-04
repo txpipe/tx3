@@ -1,5 +1,5 @@
-use pallas::ledger::primitives::conway as primitives;
-use std::str::FromStr;
+use pallas::{codec::utils::MaybeIndefArray, ledger::primitives::conway as primitives};
+use std::{collections::BTreeMap, str::FromStr};
 use tx3_lang::ir;
 
 use super::*;
@@ -10,16 +10,13 @@ pub(crate) mod plutus_data;
 use plutus_data::{IntoData as _, TryIntoData as _};
 
 macro_rules! asset {
-    ($policy:expr, $asset:expr, $amount:expr) => {
-        pallas::ledger::primitives::conway::NonEmptyKeyValuePairs::from_vec(vec![(
-            $policy,
-            pallas::ledger::primitives::conway::NonEmptyKeyValuePairs::from_vec(vec![(
-                $asset, $amount,
-            )])
-            .unwrap(),
-        )])
-        .unwrap()
-    };
+    ($policy:expr, $asset:expr, $amount:expr) => {{
+        let mut aux = BTreeMap::new();
+        aux.insert($asset, $amount);
+        let mut asset = BTreeMap::new();
+        asset.insert($policy, aux);
+        asset
+    }};
 }
 
 macro_rules! value {
@@ -161,6 +158,7 @@ fn coerce_expr_into_bytes(ir: &ir::Expression) -> Result<primitives::Bytes, Erro
     }
 }
 
+#[allow(dead_code)]
 fn coerce_expr_into_hash<const SIZE: usize>(
     ir: &ir::Expression,
 ) -> Result<primitives::Hash<SIZE>, Error> {
@@ -530,7 +528,7 @@ fn compile_redeemers(
         Ok(None)
     } else {
         Ok(Some(primitives::Redeemers::List(
-            primitives::MaybeIndefArray::Def(redeemers),
+            MaybeIndefArray::Def(redeemers).to_vec(),
         )))
     }
 }

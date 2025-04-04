@@ -78,3 +78,4 @@ pub struct PParams {
 
 pub use compile::compile_tx;
 pub use resolve::resolve_tx;
+pub use resolve::Ledger;

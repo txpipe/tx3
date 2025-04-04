@@ -116,12 +116,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b964d184e89d9b6b67dd2715bc8e74cf3107fb2b529990c90cf517326150bf4"
 
 [[package]]
-name = "arrayvec"
-version = "0.7.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
-
-[[package]]
 name = "ascii"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -253,12 +247,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "az"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b7e4c2464d97fe331d41de9d5db0def0a96f4d823b8b32a2efd503578988973"
-
-[[package]]
 name = "backtrace"
 version = "0.3.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -325,6 +313,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "binary-layout"
+version = "3.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5845e3504cf59b9588fff324710f27ee519515b8a8a9f1207042da9a9e64f819"
+dependencies = [
+ "doc-comment",
+ "paste",
+]
+
+[[package]]
 name = "bincode"
 version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -339,7 +337,7 @@ version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "33415e24172c1b7d6066f6d999545375ab8e1d95421d6784bdfff9496f292387"
 dependencies = [
- "bitcoin_hashes 0.13.0",
+ "bitcoin_hashes",
  "rand_core",
  "serde",
  "unicode-normalization",
@@ -352,29 +350,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9425c3bf7089c983facbae04de54513cce73b41c7f9ff8c845b54e7bc64ebbfb"
 
 [[package]]
-name = "bitcoin-io"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b47c4ab7a93edb0c7198c5535ed9b52b63095f4e9b45279c6736cec4b856baf"
-
-[[package]]
 name = "bitcoin_hashes"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1930a4dabfebb8d7d9992db18ebe3ae2876f0a305fab206fd168df931ede293b"
 dependencies = [
  "bitcoin-internals",
- "hex-conservative 0.1.2",
-]
-
-[[package]]
-name = "bitcoin_hashes"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb18c03d0db0247e147a21a6faafd5a7eb851c743db062de72018b6b7e8e4d16"
-dependencies = [
- "bitcoin-io",
- "hex-conservative 0.2.1",
+ "hex-conservative",
 ]
 
 [[package]]
@@ -408,18 +390,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
 dependencies = [
  "generic-array",
-]
-
-[[package]]
-name = "blst"
-version = "0.3.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47c79a94619fade3c0b887670333513a67ac28a6a7e653eb260bf0d4103db38d"
-dependencies = [
- "cc",
- "glob",
- "threadpool",
- "zeroize",
 ]
 
 [[package]]
@@ -512,19 +482,6 @@ dependencies = [
  "serde",
  "wasm-bindgen",
  "windows-link",
-]
-
-[[package]]
-name = "chumsky"
-version = "1.0.0-alpha.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7b80276986f86789dc56ca6542d53bba9cda3c66091ebbe7bd96fc1bdf20f1f"
-dependencies = [
- "hashbrown 0.14.5",
- "regex-automata 0.3.9",
- "serde",
- "stacker",
- "unicode-ident",
 ]
 
 [[package]]
@@ -814,6 +771,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
+
+[[package]]
 name = "ed25519-bip32"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1034,22 +997,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
-name = "glob"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8d1add55171497b4705a648c6b583acafb01d58050a51727785f0b2c8e0a2b2"
-
-[[package]]
-name = "gmp-mpfr-sys"
-version = "1.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0205cd82059bc63b63cf516d714352a30c44f2c74da9961dfda2617ae6b5918"
-dependencies = [
- "libc",
- "windows-sys 0.52.0",
-]
-
-[[package]]
 name = "h2"
 version = "0.3.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1166,15 +1113,6 @@ name = "hex-conservative"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "212ab92002354b4819390025006c897e8140934349e8635c9b077f47b4dcbd20"
-
-[[package]]
-name = "hex-conservative"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5313b072ce3c597065a808dbf612c4c8e8590bdbf8b579508bf7a762c5eae6cd"
-dependencies = [
- "arrayvec",
-]
 
 [[package]]
 name = "hstr"
@@ -1596,12 +1534,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "875b3680cb2f8f71bdcf9a30f38d48282f5d3c95cbf9b3fa57269bb5d5c06828"
 
 [[package]]
-name = "libm"
-version = "0.2.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8355be11b20d696c8f18f6cc018c4e372165b1fa8126cef092399c9951984ffa"
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1703,32 +1635,12 @@ dependencies = [
 
 [[package]]
 name = "minicbor"
-version = "0.25.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0452a60c1863c1f50b5f77cd295e8d2786849f35883f0b9e18e7e6e1b5691b0"
-dependencies = [
- "minicbor-derive 0.15.3",
-]
-
-[[package]]
-name = "minicbor"
 version = "0.26.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dedac5a67c5a5ddd9d3216db985a091b0503484725ce5e106551e0459bcbf61f"
 dependencies = [
  "half",
- "minicbor-derive 0.16.0",
-]
-
-[[package]]
-name = "minicbor-derive"
-version = "0.15.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd2209fff77f705b00c737016a48e73733d7fbccb8b007194db148f03561fb70"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "minicbor-derive",
 ]
 
 [[package]]
@@ -1894,12 +1806,13 @@ checksum = "1036865bb9422d3300cf723f657c2851d0e9ab12567854b1f4eba3d77decf564"
 [[package]]
 name = "pallas"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "pallas-addresses",
  "pallas-codec",
  "pallas-configs",
  "pallas-crypto",
+ "pallas-hardano",
  "pallas-network",
  "pallas-primitives",
  "pallas-traverse",
@@ -1911,7 +1824,7 @@ dependencies = [
 [[package]]
 name = "pallas-addresses"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "base58",
  "bech32",
@@ -1926,10 +1839,10 @@ dependencies = [
 [[package]]
 name = "pallas-codec"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "hex",
- "minicbor 0.26.1",
+ "minicbor",
  "serde",
  "thiserror 1.0.69",
 ]
@@ -1937,7 +1850,7 @@ dependencies = [
 [[package]]
 name = "pallas-configs"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "base64 0.22.1",
  "num-rational",
@@ -1952,7 +1865,7 @@ dependencies = [
 [[package]]
 name = "pallas-crypto"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "cryptoxide",
  "hex",
@@ -1963,9 +1876,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallas-hardano"
+version = "0.32.0"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
+dependencies = [
+ "binary-layout",
+ "hex",
+ "pallas-addresses",
+ "pallas-codec",
+ "pallas-crypto",
+ "pallas-network",
+ "pallas-traverse",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "tap",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "pallas-network"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "byteorder",
  "hex",
@@ -1982,7 +1915,7 @@ dependencies = [
 [[package]]
 name = "pallas-primitives"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "hex",
  "pallas-codec",
@@ -1994,7 +1927,7 @@ dependencies = [
 [[package]]
 name = "pallas-traverse"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "hex",
  "itertools 0.13.0",
@@ -2010,7 +1943,7 @@ dependencies = [
 [[package]]
 name = "pallas-txbuilder"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "hex",
  "pallas-addresses",
@@ -2027,7 +1960,7 @@ dependencies = [
 [[package]]
 name = "pallas-utxorpc"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "pallas-codec",
  "pallas-crypto",
@@ -2041,7 +1974,7 @@ dependencies = [
 [[package]]
 name = "pallas-validate"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "chrono",
  "hex",
@@ -2051,17 +1984,15 @@ dependencies = [
  "pallas-crypto",
  "pallas-primitives",
  "pallas-traverse",
- "rug",
  "serde",
  "thiserror 1.0.69",
  "tracing",
- "uplc",
 ]
 
 [[package]]
 name = "pallas-wallet"
 version = "0.32.0"
-source = "git+https://github.com/txpipe/pallas#90219be08165e3f0e15bb461d4d53366e69ce497"
+source = "git+https://github.com/txpipe/pallas.git#c1cb1b444f85fe226bce57fe459fb7bd5874aa04"
 dependencies = [
  "bech32",
  "bip39",
@@ -2463,19 +2394,8 @@ checksum = "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-automata 0.4.9",
- "regex-syntax 0.8.5",
-]
-
-[[package]]
-name = "regex-automata"
-version = "0.3.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59b23e92ee4318893fa3fe3e6fb365258efbfe6ac6ab30f090cdcbb7aa37efa9"
-dependencies = [
- "aho-corasick",
- "memchr",
- "regex-syntax 0.7.5",
+ "regex-automata",
+ "regex-syntax",
 ]
 
 [[package]]
@@ -2486,14 +2406,8 @@ checksum = "809e8dc61f6de73b46c85f4c96486310fe304c434cfa43669d7b40f711150908"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-syntax 0.8.5",
+ "regex-syntax",
 ]
-
-[[package]]
-name = "regex-syntax"
-version = "0.7.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbb5fb1acd8a1a18b3dd5be62d25485eb770e05afb408a9627d14d451bae12da"
 
 [[package]]
 name = "regex-syntax"
@@ -2523,18 +2437,6 @@ checksum = "93411e420bcd1a75ddd1dc3caf18c23155eda2c090631a85af21ba19e97093b5"
 dependencies = [
  "smallvec",
  "str_indices",
-]
-
-[[package]]
-name = "rug"
-version = "1.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4207e8d668e5b8eb574bda8322088ccd0d7782d3d03c7e8d562e82ed82bdcbc3"
-dependencies = [
- "az",
- "gmp-mpfr-sys",
- "libc",
- "libm",
 ]
 
 [[package]]
@@ -2679,26 +2581,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
-name = "secp256k1"
-version = "0.30.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b50c5943d326858130af85e049f2661ba3c78b26589b8ab98e65e80ae44a1252"
-dependencies = [
- "bitcoin_hashes 0.14.0",
- "rand",
- "secp256k1-sys",
-]
-
-[[package]]
-name = "secp256k1-sys"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4387882333d3aa8cb20530a17c69a3752e97837832f34f6dccc760e715001d9"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "security-framework"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2767,9 +2649,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.139"
+version = "1.0.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44f86c3acccc9c65b153fe1b85a3be07fe5515274ec9f0653b4a0875731c72a6"
+checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
 dependencies = [
  "itoa",
  "memchr",
@@ -3423,15 +3305,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "threadpool"
-version = "1.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d050e60b33d41c19108b32cea32164033a9013fe3b46cbd4457559bfbf77afaa"
-dependencies = [
- "num_cpus",
-]
-
-[[package]]
 name = "time"
 version = "0.3.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3907,22 +3780,6 @@ name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
-
-[[package]]
-name = "uplc"
-version = "0.1.0"
-source = "git+https://github.com/pragma-org/uplc.git#0c307f84123c51a7436aad0e3ef853e9f6b12662"
-dependencies = [
- "blst",
- "bumpalo",
- "chumsky",
- "cryptoxide",
- "minicbor 0.25.1",
- "once_cell",
- "rug",
- "secp256k1",
- "thiserror 1.0.69",
-]
 
 [[package]]
 name = "url"
@@ -4417,20 +4274,6 @@ name = "zeroize"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ced3678a2879b30306d323f4542626697a464a97c0a07c9aebf7ebca65cd4dde"
-dependencies = [
- "zeroize_derive",
-]
-
-[[package]]
-name = "zeroize_derive"
-version = "1.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "zerovec"
