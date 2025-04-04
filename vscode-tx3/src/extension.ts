@@ -1,3 +1,4 @@
+import * as path from "path";
 import * as vscode from "vscode";
 import {
   LanguageClient,
@@ -57,7 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
     synchronize: {
       // Notify the server about file changes to '.clientrc files contain in the workspace
       fileEvents: vscode.workspace.createFileSystemWatcher("**/*.tx3"),
-    },
+    }
   };
 
   // Create the language client and start the client.
@@ -74,16 +75,44 @@ export function activate(context: vscode.ExtensionContext) {
   // Start commands subscriptions
   context.subscriptions.push(vscode.commands.registerCommand("tx3.startServer", () => client.start()));
   context.subscriptions.push(vscode.commands.registerCommand("tx3.startPreview", () => previewCommandHandler(context)));
+  
+  // Start editor subscriptions
+
+  // TODO: Check if it's okay to refresh when a file it's opened or if it's better to keep it
+  vscode.workspace.onDidOpenTextDocument((event) => {
+    if (event.languageId !== "tx3") {
+      return;
+    }
+    if (previewPanel) {
+      refreshPreviewPanelData(event.uri);
+    }
+  });
+
+  // TODO: Check if it's okay to do it on change or it's better to use on save
+  vscode.workspace.onDidChangeTextDocument((event) => {
+    if (event.document.languageId !== "tx3") {
+      return;
+    }
+    if (previewPanel) {
+      refreshPreviewPanelData(event.document.uri);
+    }
+  });
 }
 
+// TODO: We need to move the webview logic to a separate file
 const previewCommandHandler = (context: vscode.ExtensionContext) => {
+  const documentUri = vscode.window.activeTextEditor?.document.uri;
+
   previewPanel = vscode.window.createWebviewPanel(
     'tx3Preview',
     'Tx3 Preview',
     vscode.ViewColumn.Two,
     {
       enableScripts: true,
-      enableForms: true
+      enableForms: true,
+      localResourceRoots: [
+				vscode.Uri.file(path.join(context.extensionPath, 'frontend', 'dist'))
+			]
     }
   );
 
@@ -93,49 +122,58 @@ const previewCommandHandler = (context: vscode.ExtensionContext) => {
     context.subscriptions
   );
 
-  updatePreviewPanel();
-
-  vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", vscode.window.activeTextEditor?.document.uri)
-    .then(symbols => {
-      const data = { parties: [], transactions: [] } as any;
-      for (const symbol of symbols) {
-        // TODO: We need a better way to identify the symbols, probably using a tag for the symbol type (e.g. party, tx, parameter)
-        // TODO: We also need a way to identify the parameter type, probably using a tag as well
-        if (symbol.kind === vscode.SymbolKind.Object) {
-          data.parties.push({ name: symbol.name });
-        }
-        if (symbol.kind === vscode.SymbolKind.Method) {
-          const parameters = [] as any;
-          for (const children of symbol.children) {
-            if (children.kind === vscode.SymbolKind.Field) {
-              parameters.push({ name: children.name });
-            }
-          }
-          data.transactions.push({
-            name: symbol.name,
-            parameters
-          });
-        }
+  previewPanel!!.webview.onDidReceiveMessage(
+    message => {
+      if (message.event === 'init') {
+        refreshPreviewPanelData(documentUri);
       }
-      updatePreviewPanel(JSON.stringify(data, null, 2));
-    });
-}
+    },
+    undefined,
+    context.subscriptions
+  );
 
-const updatePreviewPanel = (content: string = "") => {
   previewPanel!!.webview.html = `
-    <!DOCTYPE html>
+    <!doctype html>
     <html lang="en">
       <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Tx3 preview</title>
+        <title>Tx3 Preview</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script type="module" crossorigin src="${previewPanel!!.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'frontend', 'dist', 'bundle.js'))}"></script>
+        <link rel="stylesheet" crossorigin href="${previewPanel!!.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'frontend', 'dist', 'bundle.css'))}">
       </head>
       <body>
-        <h1>Tx3 preview</h1>
-        <pre>${content}</pre>
+        <div id="root"></div>
+        <script>
+          const vscode = acquireVsCodeApi();
+        </script>
       </body>
     </html>
   `;
+}
+
+const refreshPreviewPanelData = (_documentUri?: vscode.Uri) => {
+  const documentUri = _documentUri || vscode.window.activeTextEditor?.document.uri;
+  getDocumentDataFromUri(documentUri!!).then(data => {
+    previewPanel!!.webview.postMessage(data);
+  });
+}
+
+// TODO: Add error handling and define an interface for the data
+const getDocumentDataFromUri = async (documentUri: vscode.Uri) => {
+  const txs = [] as any;
+  const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>("vscode.executeDocumentSymbolProvider", documentUri);
+  for (const symbol of symbols) {
+    if (symbol.detail === "Tx") {
+      const { tir, parameters } = await client.sendRequest<any>(
+        "workspace/executeCommand",
+        { command: "generate-tir", arguments: [documentUri.toString(), symbol.name] }
+      );
+      txs.push({ name: symbol.name, tir, parameters });
+    }
+  }
+
+  return txs;
 }
 
 export function deactivate(): Thenable<void> | undefined {

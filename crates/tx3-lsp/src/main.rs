@@ -1,9 +1,12 @@
 use dashmap::DashMap;
 use ropey::Rope;
+use serde_json::{Value, Map};
+use std::str::FromStr;
 use tower::ServiceBuilder;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
+use tx3_lang::Protocol;
 
 #[derive(Debug)]
 struct Backend {
@@ -98,7 +101,12 @@ impl LanguageServer for Backend {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
                     TextDocumentSyncKind::FULL,
                 )),
-
+                execute_command_provider: Some(
+                    ExecuteCommandOptions {
+                        commands: vec!["generate-tir".to_string()],
+                        work_done_progress_options: WorkDoneProgressOptions { work_done_progress: None }
+                    }
+                ),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -160,31 +168,33 @@ impl LanguageServer for Backend {
         }))
     }
 
+    // TODO: Add error handling and improve
     async fn document_symbol(
         &self,
         params: DocumentSymbolParams,
     ) -> Result<Option<DocumentSymbolResponse>> {
         
-        // TODO: Add a reference for the symbol type (e.g. party, tx, parameter) as a tag
-        // TODO: Add the parameter type as a tag, so it can be seen on the extension frontend
         fn make_symbol(
             name: String,
+            detail: String,
             kind: SymbolKind,
             range: Range,
-            uri: Url,
-        ) -> SymbolInformation {
+            children: Option<Vec<DocumentSymbol>>,
+        ) -> DocumentSymbol {
             #[allow(deprecated)]
-            SymbolInformation {
+            DocumentSymbol {
                 name,
+                detail: Some(detail),
                 kind,
+                range: range,
+                selection_range: range,
+                children: children,
                 tags: Default::default(),
                 deprecated: Default::default(),
-                location: Location::new(uri, range),
-                container_name: Default::default(),
             }
         }
 
-        let mut symbols: Vec<SymbolInformation> = Vec::new();
+        let mut symbols: Vec<DocumentSymbol> = Vec::new();
         let uri = &params.text_document.uri;
         let document = self.documents.get(uri);
         if let Some(document) = document {
@@ -195,54 +205,95 @@ impl LanguageServer for Backend {
                 for party in ast.parties {
                     symbols.push(make_symbol(
                         party.name.clone(),
+                        "Party".to_string(),
                         SymbolKind::OBJECT,
                         span_to_lsp_range(document.value(), &party.span),
-                        uri.clone(),
+                        None,
+                    ));
+                }
+                for policy in ast.policies {
+                    symbols.push(make_symbol(
+                        policy.name.clone(),
+                        "Policy".to_string(),
+                        SymbolKind::KEY,
+                        span_to_lsp_range(document.value(), &policy.span),
+                        None,
                     ));
                 }
                 for tx in ast.txs {
-                    symbols.push(make_symbol(
-                        tx.name.clone(),
-                        SymbolKind::METHOD,
-                        span_to_lsp_range(document.value(), &tx.span),
-                        uri.clone(),
-                    ));
-
+                    let mut children: Vec<DocumentSymbol> = Vec::new();
                     for parameter in tx.parameters.parameters {
-                        symbols.push(make_symbol(
+                        children.push(make_symbol(
                             parameter.name.clone(),
+                            format!("Parameter<{:?}>", parameter.r#type),
                             SymbolKind::FIELD,
                             span_to_lsp_range(document.value(), &tx.parameters.span),
-                            uri.clone(),
+                            None,
                         ));
                     }
-
                     for input in tx.inputs {
-                        symbols.push(make_symbol(
+                        children.push(make_symbol(
                             input.name.clone(),
+                            "Input".to_string(),
                             SymbolKind::OBJECT,
                             span_to_lsp_range(document.value(), &input.span),
-                            uri.clone(),
+                            None,
                         ));
                     }
-
                     for output in tx.outputs {
-                        symbols.push(make_symbol(
+                        children.push(make_symbol(
                             output.name.unwrap_or_else(|| {"output"}.to_string()),
+                            "Output".to_string(),
                             SymbolKind::OBJECT,
                             span_to_lsp_range(document.value(), &output.span),
-                            uri.clone(),
+                            None,
                         ));
                     }
+                    symbols.push(make_symbol(
+                        tx.name.clone(),
+                        "Tx".to_string(),
+                        SymbolKind::METHOD,
+                        span_to_lsp_range(document.value(), &tx.span),
+                        Some(children),
+                    ));
                 }
             }
         }
-        Ok(Some(DocumentSymbolResponse::Flat(symbols)))
+        Ok(Some(DocumentSymbolResponse::Nested(symbols)))
     }
 
     async fn symbol(&self, _: WorkspaceSymbolParams) -> Result<Option<Vec<SymbolInformation>>> {
         // Return empty workspace symbols list for now
         Ok(Some(vec![]))
+    }
+
+    async fn symbol_resolve(&self, params: WorkspaceSymbol) -> Result<WorkspaceSymbol> {
+        dbg!(&params);
+        Ok(params)
+    }
+
+    // TODO: Add error handling
+    async fn execute_command(&self, params: ExecuteCommandParams) -> Result<Option<Value>> {
+        if params.command == "generate-tir" {
+            let uri = Url::from_str(params.arguments[0].as_str().unwrap());
+            let document = self.documents.get(&uri.unwrap());
+            if let Some(document) = document {
+                let protocol = Protocol::from_string(document.value().to_string()).load().unwrap();
+                let prototx = protocol.new_tx(params.arguments[1].as_str().unwrap()).unwrap();
+
+                let mut response = Map::new();
+                response.insert("tir".to_string(), Value::String(hex::encode(prototx.ir_bytes())));
+
+                let mut params = Map::new();
+                prototx.find_params().iter().for_each(|param| {
+                    params.insert(param.0.to_string(), serde_json::to_value(param.1).unwrap());
+                });
+                response.insert("parameters".to_string(), Value::Object(params));
+
+                return Ok(Some(Value::Object(response)));
+            }
+        }
+        Ok(None)
     }
 
     async fn shutdown(&self) -> Result<()> {
