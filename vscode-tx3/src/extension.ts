@@ -8,7 +8,7 @@ import {
 } from "vscode-languageclient/node";
 
 let client: LanguageClient;
-let previewPanel: vscode.WebviewPanel | null = null;
+let resolvePanel: vscode.WebviewPanel | null = null;
 
 function getServerPath(context: vscode.ExtensionContext) {
   if (context.extensionMode === vscode.ExtensionMode.Development) {
@@ -74,7 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Start commands subscriptions
   context.subscriptions.push(vscode.commands.registerCommand("tx3.startServer", () => client.start()));
-  context.subscriptions.push(vscode.commands.registerCommand("tx3.startPreview", () => previewCommandHandler(context)));
+  context.subscriptions.push(vscode.commands.registerCommand("tx3.openResolvePanel", () => resolvePanelCommandHandler(context)));
   
   // Start editor subscriptions
 
@@ -83,8 +83,8 @@ export function activate(context: vscode.ExtensionContext) {
     if (event.languageId !== "tx3") {
       return;
     }
-    if (previewPanel) {
-      refreshPreviewPanelData(event.uri);
+    if (resolvePanel) {
+      refreshResolvePanelData(event.uri);
     }
   });
 
@@ -93,19 +93,19 @@ export function activate(context: vscode.ExtensionContext) {
     if (event.document.languageId !== "tx3") {
       return;
     }
-    if (previewPanel) {
-      refreshPreviewPanelData(event.document.uri);
+    if (resolvePanel) {
+      refreshResolvePanelData(event.document.uri);
     }
   });
 }
 
 // TODO: We need to move the webview logic to a separate file
-const previewCommandHandler = (context: vscode.ExtensionContext) => {
+const resolvePanelCommandHandler = (context: vscode.ExtensionContext) => {
   const documentUri = vscode.window.activeTextEditor?.document.uri;
 
-  previewPanel = vscode.window.createWebviewPanel(
-    'tx3Preview',
-    'Tx3 Preview',
+  resolvePanel = vscode.window.createWebviewPanel(
+    'tx3-resolve-panel',
+    'Tx3 Resolve',
     vscode.ViewColumn.Two,
     {
       enableScripts: true,
@@ -116,31 +116,31 @@ const previewCommandHandler = (context: vscode.ExtensionContext) => {
     }
   );
 
-  previewPanel.onDidDispose(
-    () => previewPanel = null,
+  resolvePanel.onDidDispose(
+    () => resolvePanel = null,
     null,
     context.subscriptions
   );
 
-  previewPanel!!.webview.onDidReceiveMessage(
+  resolvePanel!!.webview.onDidReceiveMessage(
     message => {
       if (message.event === 'init') {
-        refreshPreviewPanelData(documentUri);
+        refreshResolvePanelData(documentUri);
       }
     },
     undefined,
     context.subscriptions
   );
 
-  previewPanel!!.webview.html = `
+  resolvePanel!!.webview.html = `
     <!doctype html>
     <html lang="en">
       <head>
-        <title>Tx3 Preview</title>
+        <title>Tx3 Resolve</title>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <script type="module" crossorigin src="${previewPanel!!.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'frontend', 'dist', 'bundle.js'))}"></script>
-        <link rel="stylesheet" crossorigin href="${previewPanel!!.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'frontend', 'dist', 'bundle.css'))}">
+        <script type="module" crossorigin src="${resolvePanel!!.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'frontend', 'dist', 'bundle.js'))}"></script>
+        <link rel="stylesheet" crossorigin href="${resolvePanel!!.webview.asWebviewUri(vscode.Uri.joinPath(context.extensionUri, 'frontend', 'dist', 'bundle.css'))}">
       </head>
       <body>
         <div id="root"></div>
@@ -152,10 +152,10 @@ const previewCommandHandler = (context: vscode.ExtensionContext) => {
   `;
 }
 
-const refreshPreviewPanelData = (_documentUri?: vscode.Uri) => {
+const refreshResolvePanelData = (_documentUri?: vscode.Uri) => {
   const documentUri = _documentUri || vscode.window.activeTextEditor?.document.uri;
   getDocumentDataFromUri(documentUri!!).then(data => {
-    previewPanel!!.webview.postMessage(data);
+    resolvePanel!!.webview.postMessage(data);
   });
 }
 

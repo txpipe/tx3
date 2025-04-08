@@ -43,8 +43,8 @@
         "title": "Start Tx3 Language Server"
       },
       {
-        "command": "tx3.startPreview",
-        "title": "Start Tx3 Preview Webview"
+        "command": "tx3.openResolvePanel",
+        "title": "Open Tx3 Resolve Panel"
       }
     ]
   },

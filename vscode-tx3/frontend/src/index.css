@@ -1,2 +1,57 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
 @config "../tailwind.config.js";
 @import "tailwindcss";
+
+@theme {
+  --font-inter: "Inter", sans-serif;
+}
+
+@layer utilities {
+  .root {
+    @apply w-full min-h-screen py-1 px-6 bg-[#262626] font-inter;
+  }
+  .title {
+    @apply text-2xl text-white font-semibold my-4 pb-1 border-b border-b-[#515151];
+  }
+  .label {
+    @apply text-base text-[#878787] mb-1;
+  }
+  .input {
+    @apply w-full mb-3 px-3 py-2 text-base text-white rounded-md bg-[#222222] border border-[#3E3E3E] disabled:bg-[#3E3E3E];
+  }
+  .button {
+    @apply bg-[#C2026C] text-white text-lg font-semibold mb-3 py-2 px-4 cursor-pointer;
+  }
+  .button-loading {
+    @apply bg-[#C2026C99] text-white text-lg font-semibold mb-3 py-2 px-4;
+  }
+
+  .box {
+    @apply pt-4 my-4 rounded-md bg-[#313131] border border-[#3E3E3E];
+  }
+  .box-header {
+    @apply pb-4 px-4 flex flex-row items-center cursor-pointer;
+  }
+  .box-icon {
+    @apply mr-3 size-5;
+  }
+  .box-title {
+    @apply grow text-xl text-white font-semibold opacity-80 select-none;
+  }
+  .box-content {
+    @apply pb-1 px-4 transition-all ease-in-out duration-500 overflow-y-scroll max-h-[100vh];
+  }
+  .box-content-hidden {
+    @apply pb-0 px-4 transition-all ease-in-out duration-500 overflow-y-hidden max-h-[0vh];
+  }
+
+  .tx-response {
+    @apply mt-1 mb-3 py-3 px-4 rounded-md bg-[#3E3E3E];
+  }
+  .tx-response-title {
+    @apply text-lg font-normal text-white opacity-30 select-none mb-2;
+  }
+  .tx-response-content {
+    @apply text-sm font-mono text-white text-wrap break-all;
+  }
+}
