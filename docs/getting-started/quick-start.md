@@ -1,12 +1,14 @@
-# Quick Start Guide
+---
+title: Quick Start Guide
+---
 
 This guide will help you write your first Tx3 program. We'll create a simple transfer program that allows one party to send ADA to another.
 
 ## Prerequisites
 
-- Basic understanding of UTxO model (see [Basic Concepts](basic-concepts.md))
-- Tx3 installed (see [Installation](installation.md))
-- Development environment set up (see [Development Environment](development-environment.md))
+- Basic understanding of UTxO model (see [Basic Concepts](basic-concepts))
+- Tx3 installed (see [Installation](installation))
+- Development environment set up (see [Development Environment](development-environment))
 
 ## Your First Tx3 Program
 
@@ -116,6 +118,6 @@ To use this program:
 
 ## Next Steps
 
-- [Language Guide](../language-guide/index.md) - Learn more about Tx3 syntax and features
-- [Examples](../examples/index.md) - See more complex examples
-- [Reference](../reference/index.md) - Complete language reference 
+- [Language Guide](../language-guide) - Learn more about Tx3 syntax and features
+- [Examples](../examples) - See more complex examples
+- [Reference](../reference) - Complete language reference 

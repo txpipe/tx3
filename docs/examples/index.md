@@ -1,42 +1,44 @@
-# Examples & Tutorials
+---
+title: Examples & Tutorials
+---
 
 This section contains examples and tutorials demonstrating various Tx3 features and use cases.
 
 ## Basic Examples
 
-- [Simple Transfer](basic/transfer.md) - Basic ADA transfer between parties
-- [Multi-Asset Transfer](basic/multi-asset.md) - Transferring multiple assets
-- [Time-Locked Transfer](basic/time-lock.md) - Transfer with time-based conditions
+- [Simple Transfer](./examples/basic/transfer) - Basic ADA transfer between parties
+- [Multi-Asset Transfer](./examples/basic/multi-asset) - Transferring multiple assets
+- [Time-Locked Transfer](./examples/basic/time-lock) - Transfer with time-based conditions
 
 ## Smart Contract Examples
 
-- [Vesting Contract](contracts/vesting.md) - Time-based vesting of assets
-- [Escrow Contract](contracts/escrow.md) - Multi-party escrow with timeouts
-- [Auction Contract](contracts/auction.md) - Simple sealed-bid auction
+- [Vesting Contract](./examples/contracts/vesting) - Time-based vesting of assets
+- [Escrow Contract](./examples/contracts/escrow) - Multi-party escrow with timeouts
+- [Auction Contract](./examples/contracts/auction) - Simple sealed-bid auction
 
 ## Advanced Features
 
-- [Custom Validators](advanced/validators.md) - Writing custom validation scripts
-- [Complex Asset Logic](advanced/assets.md) - Advanced asset handling
-- [Transaction Optimization](advanced/optimization.md) - Optimizing transaction size and fees
+- [Custom Validators](./examples/advanced/validators) - Writing custom validation scripts
+- [Complex Asset Logic](./examples/advanced/assets) - Advanced asset handling
+- [Transaction Optimization](./examples/advanced/optimization) - Optimizing transaction size and fees
 
 ## Real-World Examples
 
-- [DEX Integration](real-world/dex.md) - Integrating with a DEX
-- [NFT Marketplace](real-world/nft-market.md) - Simple NFT marketplace
-- [Staking Protocol](real-world/staking.md) - Basic staking protocol
+- [DEX Integration](./examples/real-world/dex) - Integrating with a DEX
+- [NFT Marketplace](./examples/real-world/nft-market) - Simple NFT marketplace
+- [Staking Protocol](./examples/real-world/staking) - Basic staking protocol
 
 ## Tutorials
 
-- [Building a DEX](tutorials/dex.md) - Step-by-step guide to building a DEX
-- [Creating an NFT](tutorials/nft.md) - Creating and managing NFTs
-- [Multi-Signature Wallet](tutorials/multisig.md) - Implementing multi-signature functionality
+- [Building a DEX](./examples/tutorials/dex) - Step-by-step guide to building a DEX
+- [Creating an NFT](./examples/tutorials/nft) - Creating and managing NFTs
+- [Multi-Signature Wallet](./examples/tutorials/multisig) - Implementing multi-signature functionality
 
 ## Best Practices
 
-- [Security Considerations](best-practices/security.md) - Security best practices
-- [Performance Optimization](best-practices/performance.md) - Optimizing performance
-- [Testing Strategies](best-practices/testing.md) - Testing Tx3 programs
+- [Security Considerations](./examples/best-practices/security) - Security best practices
+- [Performance Optimization](./examples/best-practices/performance) - Optimizing performance
+- [Testing Strategies](./examples/best-practices/testing) - Testing Tx3 programs
 
 ## Contributing Examples
 
@@ -48,4 +50,4 @@ We welcome community contributions! If you have an example you'd like to share:
 4. Update this index
 5. Submit a pull request
 
-See our [Contributing Guidelines](../community/contributing.md) for more details. 
+See our [Contributing Guidelines](../community/contributing) for more details. 

@@ -1,4 +1,8 @@
-# Data Types
+---
+title: Data Types
+sidebar:
+    order: 2
+---
 
 This guide covers the data types available in Tx3 and how to use them.
 
@@ -163,6 +167,6 @@ Tx3 provides several type safety features:
 
 ## Next Steps
 
-- [Transaction Templates](templates.md) - Learn how to use types in templates
-- [Expressions](expressions.md) - Understanding type expressions
-- [Chain-Specific Features](chain-specific.md) - Chain-specific type handling 
+- [Transaction Templates](templates) - Learn how to use types in templates
+- [Expressions](expressions) - Understanding type expressions
+- [Chain-Specific Features](../chain-specific) - Chain-specific type handling 

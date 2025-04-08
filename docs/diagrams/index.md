@@ -1,5 +1,6 @@
-# Visualization
-
+---
+title: Visualization
+---
 This guide covers the three levels of visualization in Tx3, inspired by the C4 model approach.
 
 ## Overview
@@ -248,6 +249,6 @@ Script Context
 
 ## Next Steps
 
-- [Examples](../examples/index.md) - Visualization examples
-- [Best Practices](../best-practices/index.md) - Visualization guidelines
-- [Reference](../reference/index.md) - Complete visualization reference 
+- [Examples](./examples) - Visualization examples
+- [Best Practices](./best-practices) - Visualization guidelines
+- [Reference](./reference) - Complete visualization reference 
