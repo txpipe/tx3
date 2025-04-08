@@ -1,4 +1,8 @@
-# Parties and Policies
+---
+title: Parties and Policies
+sidebar:
+    order: 4
+---
 
 This guide covers how to work with parties and validation policies in Tx3.
 
@@ -251,6 +255,6 @@ tx threshold_transfer(
 
 ## Next Steps
 
-- [Chain-Specific Features](chain-specific.md) - Learn about blockchain-specific features
-- [Expressions](expressions.md) - Understanding expressions with parties and policies
-- [Best Practices](../best-practices/index.md) - Security and design guidelines 
+- [Chain-Specific Features](../chain-specific) - Learn about blockchain-specific features
+- [Expressions](expressions) - Understanding expressions with parties and policies
+- [Best Practices](../best-practices) - Security and design guidelines 

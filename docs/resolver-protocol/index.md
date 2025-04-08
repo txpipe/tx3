@@ -1,4 +1,6 @@
-# TRP: Transaction Resolver Protocol
+---
+title: "TRP: Transaction Resolver Protocol"
+---
 
 Sequence diagram of how the Client interacts with the chain through a TRP endpoint.
 

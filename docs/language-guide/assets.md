@@ -1,4 +1,8 @@
-# Assets and Values
+---
+title: Assets and Values
+sidebar:
+    order: 5
+---
 
 This guide covers how to work with blockchain assets and values in Tx3.
 
@@ -231,6 +235,6 @@ tx lock_assets(
 
 ## Next Steps
 
-- [Expressions](expressions.md) - Learn about asset expressions
-- [Chain-Specific Features](chain-specific.md) - Blockchain-specific asset handling
-- [Best Practices](../best-practices/index.md) - Asset management guidelines 
+- [Expressions](expressions) - Learn about asset expressions
+- [Chain-Specific Features](../chain-specific) - Blockchain-specific asset handling
+- [Best Practices](../best-practices) - Asset management guidelines 

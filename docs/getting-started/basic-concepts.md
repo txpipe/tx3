@@ -1,4 +1,6 @@
-# Basic Concepts
+---
+title: Basic Concepts
+---
 
 This guide introduces the fundamental concepts you need to understand to work with Tx3.
 

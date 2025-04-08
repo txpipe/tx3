@@ -1,4 +1,8 @@
-# Syntax Overview
+---
+title: Syntax Overview
+sidebar:
+    order: 1
+---
 
 This guide covers the basic syntax of the Tx3 language.
 
@@ -167,6 +171,6 @@ expr.amount
 
 ## Next Steps
 
-- [Data Types](types.md) - Learn about available types
-- [Transaction Templates](templates.md) - Deep dive into templates
-- [Expressions](expressions.md) - Understanding expressions 
+- [Data Types](types) - Learn about available types
+- [Transaction Templates](templates) - Deep dive into templates
+- [Expressions](expressions) - Understanding expressions 

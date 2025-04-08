@@ -1,5 +1,9 @@
-# Cardano-specific Features
-
+---
+title: Cardano-specific Features
+sidebar:
+  label: Cardano
+  order: 2
+---
 This guide covers blockchain-specific features in Tx3 for the Cardano blockchain.
 
 ### Protocol Parameters
@@ -208,6 +212,6 @@ pparams.mainnet = true
 
 ## Next Steps
 
-- [Best Practices](../best-practices/index.md) - Chain-specific guidelines
-- [Reference](../reference/index.md) - Complete chain-specific reference
-- [Examples](../examples/index.md) - Chain-specific examples 
+- [Best Practices](../best-practices) - Chain-specific guidelines
+- [Reference](../reference) - Complete chain-specific reference
+- [Examples](../examples) - Chain-specific examples 

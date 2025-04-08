@@ -1,5 +1,9 @@
-# Chain-Specific Features
-
+---
+title: Chain-Specific Features
+sidebar:
+  label: Features
+  order: 1
+---
 This guide covers blockchain-specific features in Tx3, with a focus on Cardano.
 
 ## Overview
@@ -13,4 +17,4 @@ Tx3 provides support for blockchain-specific features through:
 
 ## Contents
 
-- [Cardano](./cardano.md) - Chain-specific guidelines
+- [Cardano](./chain-specific/cardano) - Chain-specific guidelines
