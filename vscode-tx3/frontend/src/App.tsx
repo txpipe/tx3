@@ -6,7 +6,7 @@ import TxForm from "./components/TxForm";
 
 export interface Tx {
   name: string;
-  parameters: Object;
+  parameters: Record<string, string>;
   tir: string;
 }
 

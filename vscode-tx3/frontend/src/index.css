@@ -13,11 +13,18 @@
   .title {
     @apply text-2xl text-white font-semibold my-4 pb-1 border-b border-b-[#515151];
   }
-  .label {
-    @apply text-base text-[#878787] mb-1;
+
+  .input-container {
+    @apply mb-2;
   }
   .input {
-    @apply w-full mb-3 px-3 py-2 text-base text-white rounded-md bg-[#222222] border border-[#3E3E3E] disabled:bg-[#3E3E3E];
+    @apply w-full mb-1 px-3 py-2 text-base text-white rounded-md bg-[#222222] border border-[#3E3E3E] disabled:bg-[#3E3E3E];
+  }
+  .input-error {
+    @apply text-sm text-red-500 mb-1;
+  }
+  .input-label {
+    @apply text-base text-[#878787] mb-1;
   }
   .button {
     @apply bg-[#C2026C] text-white text-lg font-semibold mb-3 py-2 px-4 cursor-pointer;

@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { TRPClient, TxEnvelope, ProtoTx } from "tx3-trp";
 
 import Box from "./Box";
-import Input from "./Input";
-import Button from "./Button";
+import Form, { FieldType } from "./Form";
 
 import type { Tx } from "../App";
 
@@ -14,27 +13,15 @@ interface TxFormProps {
   collapsed?: boolean;
 }
 
-const getParameterType = (key: string, tx: Tx): string => (
-  Object.entries(tx.parameters).find(([name, type]) => name === key)!![1]
-);
-
-const getFormValue = (key: string, value: FormDataEntryValue, tx: Tx): string|number => (
-  getParameterType(key, tx) === "Int" ? parseInt(value.toString()) : value.toString()
-);
-
 const TxForm: React.FC<TxFormProps> = (props: TxFormProps) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [response, setResponse] = useState<string>("");
   const [error, setError] = useState<string>("");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (args: Record<string, string|number|boolean>) => {
     setLoading(true);
     setError("");
     setResponse("");
-
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const args = Object.fromEntries([...formData].map(([key, value]) => [key, getFormValue(key, value, props.tx)]));
     
     const protoTx: ProtoTx = {
       tir: {
@@ -71,26 +58,18 @@ const TxForm: React.FC<TxFormProps> = (props: TxFormProps) => {
       collapsed={props.collapsed}
       title={`Tx ${props.tx.name}`}
     >
-      <form onSubmit={handleSubmit}>
-        {props.tx.parameters && Object.entries(props.tx.parameters).map(([name, type], index) =>
-          <Input
-            key={index}
-            label={name}
-            placeholder={type}
-            name={name}
-            type={type}
-            disabled={loading}
-          />
-        )}
-
-        <div className="text-right">
-          <Button
-            loading={loading}
-            loadingLabel="Resolving..."
-            label="Resolve Tx"
-          />
-        </div>
-      </form>
+      <Form
+        loading={loading}
+        onSubmit={handleSubmit}
+        fields={
+          Object.entries(props.tx.parameters).map(([name, type]) => ({
+            name: name,
+            type: FieldType[type as keyof typeof FieldType],
+            required: true,
+            placeholder: type,
+          }))
+        }
+      />
 
       {response.length > 0 &&
         <div className="tx-response">

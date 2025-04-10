@@ -8,12 +8,13 @@ export interface ButtonProps {
 }
 
 const Button: React.FC<ButtonProps> = (props: ButtonProps) => (
-  <input
+  <button
     type="submit"
     disabled={props.loading}
-    value={props.loading && props.loadingLabel ? props.loadingLabel : props.label}
     className={props.loading ? "button-loading" : "button"}
-  />
+  >
+    {props.loading && props.loadingLabel ? props.loadingLabel : props.label}
+  </button>
 );
 
 export default Button;

@@ -77,24 +77,12 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.commands.registerCommand("tx3.openResolvePanel", () => resolvePanelCommandHandler(context)));
   
   // Start editor subscriptions
-
-  // TODO: Check if it's okay to refresh when a file it's opened or if it's better to keep it
-  vscode.workspace.onDidOpenTextDocument((event) => {
+  vscode.workspace.onDidSaveTextDocument((event) => {
     if (event.languageId !== "tx3") {
       return;
     }
     if (resolvePanel) {
       refreshResolvePanelData(event.uri);
-    }
-  });
-
-  // TODO: Check if it's okay to do it on change or it's better to use on save
-  vscode.workspace.onDidChangeTextDocument((event) => {
-    if (event.document.languageId !== "tx3") {
-      return;
-    }
-    if (resolvePanel) {
-      refreshResolvePanelData(event.document.uri);
     }
   });
 }
@@ -172,7 +160,6 @@ const getDocumentDataFromUri = async (documentUri: vscode.Uri) => {
       txs.push({ name: symbol.name, tir, parameters });
     }
   }
-
   return txs;
 }
 

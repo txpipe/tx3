@@ -2,72 +2,69 @@ import React, { useState, useEffect } from "react";
 
 import Box from "./Box";
 import Title from "./Title";
-import Input from "./Input";
+import Form, { FieldType, FormMode } from "./Form";
 
 export interface TrpServerFormProps {
   onUpdate: (trpUrl: string, headers?: Record<string, string>) => void;
 }
 
+interface FormData {
+  trpEndpoint: string;
+  trpUrl: string;
+  demeterApiKey: string;
+}
+
+const DEMETER_TRP_URL = "https://cardano-preview.trp-m1.demeter.run";
+const DEMETER_API_KEY = "trpjodqbmjblunzpbikpcrl";
+
 const TrpServerForm: React.FC<TrpServerFormProps> = (props: TrpServerFormProps) => {
-  const demeterTrpUrl = "https://cardano-preview.trp-m1.demeter.run";
+  const [formData, setFormData] = useState<FormData>({
+    trpEndpoint: "demeter",
+    trpUrl: "",
+    demeterApiKey: DEMETER_API_KEY,
+  });
 
-  const [trpEndpoint, setTrpEndpoint] = useState<string>("demeter");
-  const [trpUrl, setTrpUrl] = useState<string>(demeterTrpUrl);
-  const [demeterApiKey, setDemeterApiKey] = useState<string>("trpjodqbmjblunzpbikpcrl");
+  useEffect(() => onUpdate(formData), []);
 
-  useEffect(() => onUpdate(), []);
-
-  const handleTrpEndpointChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTrpEndpoint(e.target.value);
-    if (e.target.value === "demeter") {
-      setTrpUrl(demeterTrpUrl);
+  const onUpdate = (formData: FormData) => {
+    setFormData(formData);
+    if (formData.trpEndpoint === "demeter") {
+      props.onUpdate(DEMETER_TRP_URL, { "dmtr-api-key": formData.demeterApiKey });
+    } else {
+      props.onUpdate(formData.trpUrl);
     }
-    onUpdate();
-  }
-
-  const handleTrpUrlChange = (value: string) => {
-    setTrpUrl(value);
-    onUpdate();
-  }
-
-  const handleDemeterApiKeyChange = (value: string) => {
-    setDemeterApiKey(value);
-    onUpdate();
-  }
-
-  const onUpdate = () => {
-    const headers = trpEndpoint === "demeter" ? { "dmtr-api-key": demeterApiKey } : undefined;
-    props.onUpdate(trpUrl, headers);
   }
 
   return (
     <div className="mb-4">
       <Title>TRP Server</Title>
       <Box>
-        <p className="label">TRP Endpoint</p>
-        <select
-          className="form-input input"
-          value={trpEndpoint}
-          onChange={handleTrpEndpointChange}
-        >
-          <option value="demeter">Demeter Cardano Preview</option>
-          <option value="custom">Custom TRP Endpoint</option>
-        </select>
-
-        <Input
-          label="TRP Url"
-          value={trpUrl}
-          onChange={handleTrpUrlChange}
-          disabled={trpEndpoint === "demeter"}
+        <Form
+          mode={FormMode.Blur}
+          onSubmit={data => onUpdate(data as any)}
+          fields={[{
+            name: "trpEndpoint",
+            label: "TRP Endpoint",
+            type: FieldType.Select,
+            defaultValue: formData.trpEndpoint,
+            options: [
+              { value: "demeter", label: "Demeter Cardano Preview" },
+              { value: "custom", label: "Custom TRP Endpoint" }
+            ],
+          }, {
+            name: "trpUrl",
+            label: "TRP Url",
+            type: FieldType.Text,
+            defaultValue: formData.trpUrl,
+            hidden: formData.trpEndpoint === "demeter",
+          }, {
+            name: "demeterApiKey",
+            label: "Demeter API Key",
+            type: FieldType.Text,
+            defaultValue: formData.demeterApiKey,
+            hidden: formData.trpEndpoint !== "demeter",
+          }]}
         />
-        
-        {trpEndpoint === "demeter" &&
-          <Input
-            label="Demeter API Key"
-            value={demeterApiKey}
-            onChange={handleDemeterApiKeyChange}
-          />
-        }
       </Box>
     </div>
   );
