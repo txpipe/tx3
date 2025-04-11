@@ -110,6 +110,7 @@ const resolvePanelCommandHandler = (context: vscode.ExtensionContext) => {
     {
       enableScripts: true,
       enableForms: true,
+      retainContextWhenHidden: true,
       localResourceRoots: [
 				vscode.Uri.file(path.join(context.extensionPath, 'frontend', 'dist'))
 			]
