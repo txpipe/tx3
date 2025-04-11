@@ -3,8 +3,9 @@
   "displayName": "Tx3 Language Support - DSL for building UTxO Transactions",
   "description": "Language support for Tx3 including syntax highlighting and LSP",
   "publisher": "TxPipe",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "repository": "https://github.com/txpipe/tx3",
+  "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -43,13 +44,23 @@
       {
         "command": "tx3.openResolvePanel",
         "title": "Open Tx3 Resolve Panel",
-        "icon": "$(play-circle)"
+        "icon": "$(play)"
+      },
+      {
+        "command": "tx3.openDiagramPanel",
+        "title": "Open Tx3 Diagram Panel",
+        "icon": "$(symbol-class)"
       }
     ],
     "menus": {
       "editor/title": [
         {
           "command": "tx3.openResolvePanel",
+          "group": "navigation",
+          "when": "editorLangId == tx3"
+        },
+        {
+          "command": "tx3.openDiagramPanel",
           "group": "navigation",
           "when": "editorLangId == tx3"
         }
@@ -61,7 +72,7 @@
       "properties": {
         "tx3.trpServers": {
           "type": "array",
-          "description": "TRP servers to use",
+          "description": "TRP servers list",
           "minItems": 1,
           "editPresentation": "multilineText",
           "default": [
@@ -88,7 +99,7 @@
             },
             {
               "name": "Custom Endpoint",
-              "url": "http://localhost:<port-here>"
+              "url": "http://localhost:<port>"
             }
           ],
           "items": {
@@ -99,16 +110,16 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 100,
-                "description": "Name to identify this server in the UI"
+                "description": "TRP server name"
               },
               "url": {
                 "type": "string",
                 "format": "uri",
-                "description": "URL of the TRP server"
+                "description": "TRP server URL"
               },
               "headers": {
                 "type": "object",
-                "description": "Custom headers to send with requests to this server",
+                "description": "TRP server headers",
                 "additionalProperties": {
                   "type": "string"
                 }

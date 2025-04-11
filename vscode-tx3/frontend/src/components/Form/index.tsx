@@ -25,11 +25,10 @@ export enum FieldType {
 export interface Field {
   name: string;
   type: FieldType;
-  label?: string;
+  label?: string | null;
   placeholder?: string;
   defaultValue?: string|number|boolean;
   required?: boolean;
-  disabled?: boolean;
   hidden?: boolean;
   options?: {
     value: string,
@@ -54,10 +53,14 @@ interface InputProps<T extends FieldValues = any> {
 
 const Input: React.FC<InputProps> = (props: InputProps) => (
   <div className="input-container">
-    <label htmlFor={props.field.name} className="input-label">{props.field.label || props.field.name}</label>
+    {props.field.label !== null &&
+      <label htmlFor={props.field.name} className="input-label">
+        {props.field.label || props.field.name}
+      </label>
+    }
     <div className="flex flex-row gap-2 items-center">
       {!!props.field.prefix && (
-        <div className="w-fit">
+        <div className="w-fit mr-2">
           {props.field.prefix}
         </div>
       )}
@@ -66,14 +69,14 @@ const Input: React.FC<InputProps> = (props: InputProps) => (
           type="text"
           className="form-input input"
           placeholder={props.field.placeholder}
-          disabled={props.field.disabled || props.formState.isSubmitting}
+          disabled={props.formState.isSubmitting}
           {...props.register(props.field.name, { required: true })}
         />
       }
       {props.field.type === FieldType.Select &&
         <select
           className="form-input input"
-          disabled={props.field.disabled || props.formState.isSubmitting}
+          disabled={props.formState.isSubmitting}
           {...props.register(props.field.name, { required: true })}
         >
           {props.field.options?.map((option, index) =>
@@ -82,7 +85,7 @@ const Input: React.FC<InputProps> = (props: InputProps) => (
         </select>
       }
       {!!props.field.suffix && (
-        <div className="w-fit">
+        <div className="w-fit ml-2">
           {props.field.suffix}
         </div>
       )}

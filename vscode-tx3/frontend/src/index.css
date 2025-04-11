@@ -10,6 +10,9 @@
   .root {
     @apply w-full min-h-screen py-1 px-6 bg-[#262626] font-inter;
   }
+  .panel-title {
+    @apply text-2xl text-white font-semibold my-5 pb-1 opacity-50;
+  }
   .title {
     @apply text-2xl text-white font-semibold my-4 pb-1 border-b border-b-[#515151];
   }

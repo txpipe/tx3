@@ -38,10 +38,13 @@ function App() {
 
   return (
     <div className="root">
+      <h3 className="panel-title">Tx3 Resolve</h3>
+
       <TrpServerForm
         onUpdate={setTrpServer}
         trpServers={trpServers}
       />
+      
       <Title>Transactions</Title>
       {txs.map((tx, index) =>
         <TxForm

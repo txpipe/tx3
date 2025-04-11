@@ -65,7 +65,7 @@ const TrpServerForm: React.FC<TrpServerFormProps> = (props: TrpServerFormProps) 
           onSubmit={data => setFormData(data as any)}
           fields={[{
             name: "trpServer",
-            label: "TRP Server",
+            label: null,
             type: FieldType.Select,
             defaultValue: formData.trpServer,
             options,

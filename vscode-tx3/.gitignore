@@ -1,4 +1,4 @@
 node_modules
 out
-tx3-lsp
+tx3-lsp-*
 *.vsix

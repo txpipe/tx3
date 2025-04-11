@@ -32,12 +32,11 @@ const TxForm: React.FC<TxFormProps> = (props: TxFormProps) => {
     
     const result = await executeTx(protoTx).catch(error => {
       console.error(error);
-      setError(error.message);
+      setError(`${error.message}${error.cause?`\n${error.cause}`:""}`);
     });
 
     if (result) {
-      console.log(result);
-      setResponse((result as any).tx);
+      setResponse(result.tx);
     }
   };
 
@@ -46,6 +45,7 @@ const TxForm: React.FC<TxFormProps> = (props: TxFormProps) => {
       endpoint: props.trpEndpoint,
       headers: props.trpHeaders,
     });
+
     return await client.resolve(tx);
   }
 
@@ -59,10 +59,10 @@ const TxForm: React.FC<TxFormProps> = (props: TxFormProps) => {
         onSubmit={handleSubmit}
         fields={
           Object.entries(props.tx.parameters).map(([name, type]) => ({
-            name: name,
+            name,
+            placeholder: type,
             type: FieldType[type as keyof typeof FieldType],
             required: true,
-            placeholder: type,
           }))
         }
       />
@@ -77,7 +77,7 @@ const TxForm: React.FC<TxFormProps> = (props: TxFormProps) => {
       {error.length > 0 &&
         <div className="tx-response">
           <h3 className="tx-response-title">Error resolving Tx</h3>
-          <p className="tx-response-content">{error}</p>
+          <p className="tx-response-content whitespace-pre-line">{error}</p>
         </div>
       }
     </Box>
