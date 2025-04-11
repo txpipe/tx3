@@ -18,20 +18,10 @@ function getServerPath(context: vscode.ExtensionContext) {
     };
   }
 
-  // Get the path to the Rust LSP server binary
-  // This assumes the binary is in the extension's root directory
-  switch (process.platform) {
-    case "win32":
-      return {
-        command: context.asAbsolutePath("tx3-lsp.exe"),
-        args: [],
-      };
-    default:
-      return {
-        command: context.asAbsolutePath("tx3-lsp"),
-        args: [],
-      };
-  }
+  return {
+    command: context.asAbsolutePath(`tx3-lsp-${process.platform}-${process.arch}`),
+    args: [],
+  };
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -75,6 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Start commands subscriptions
   context.subscriptions.push(vscode.commands.registerCommand("tx3.startServer", () => client.start()));
   context.subscriptions.push(vscode.commands.registerCommand("tx3.openResolvePanel", () => resolvePanelCommandHandler(context)));
+  context.subscriptions.push(vscode.commands.registerCommand("tx3.openDiagramPanel", () => resolvePanelCommandHandler(context)));
   
   // Start editor subscriptions
   vscode.workspace.onDidSaveTextDocument((event) => {

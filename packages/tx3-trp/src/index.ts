@@ -16,6 +16,7 @@ export type ProtoTx = {
 };
 
 export type TxEnvelope = {
+  tx: string;
   bytes: string;
   encoding: "base64" | "hex" | string;
 };
@@ -59,7 +60,7 @@ export class TRPClient {
     const result = await response.json();
 
     if (result.error) {
-      throw new Error(`JSON-RPC error: ${result.error.message}`);
+      throw new Error(`JSON-RPC error: ${result.error.message}`, { cause: result.error.data });
     }
 
     return result.result as TxEnvelope;
