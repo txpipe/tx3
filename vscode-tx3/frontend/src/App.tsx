@@ -27,12 +27,15 @@ function App() {
 
   return (
     <div className="root">
+      <h3 className="panel-title">Tx3 Resolve</h3>
+
       <TrpServerForm
         onUpdate={(url: string, headers?: Record<string, string>) => {
           setTrpEndpoint(url);
           setTrpHeaders(headers);
         }}
       />
+      
       <Title>Transactions</Title>
       {txs.map((tx, index) =>
         <TxForm

@@ -5,6 +5,7 @@
   "publisher": "TxPipe",
   "version": "0.0.1",
   "repository": "https://github.com/txpipe/tx3",
+  "icon": "images/logo.png",
   "engines": {
     "vscode": "^1.85.0"
   },
