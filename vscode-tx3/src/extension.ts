@@ -85,6 +85,18 @@ export function activate(context: vscode.ExtensionContext) {
       refreshResolvePanelData(event.uri);
     }
   });
+
+  vscode.workspace.onDidChangeConfiguration((event) => {
+    if (resolvePanel) {
+      const config = vscode.workspace.getConfiguration('tx3');
+      resolvePanel.webview.postMessage({
+        type: 'config',
+        data: {
+          trpServers: config.get('trpServers')
+        }
+      });
+    }
+  });
 }
 
 // TODO: We need to move the webview logic to a separate file
@@ -114,11 +126,17 @@ const resolvePanelCommandHandler = (context: vscode.ExtensionContext) => {
     message => {
       if (message.event === 'init') {
         refreshResolvePanelData(documentUri);
+      } else if (message.event === 'open-settings') {
+        // Open settings with custom destination
+        // This destination could be empty
+        vscode.commands.executeCommand('workbench.action.openSettings', message.dest);
       }
     },
     undefined,
     context.subscriptions
   );
+
+  const config = vscode.workspace.getConfiguration('tx3');
 
   resolvePanel!!.webview.html = `
     <!doctype html>
@@ -134,6 +152,7 @@ const resolvePanelCommandHandler = (context: vscode.ExtensionContext) => {
         <div id="root"></div>
         <script>
           const vscode = acquireVsCodeApi();
+          const config = { trpServers: ${JSON.stringify(config.get('trpServers'))} };
         </script>
       </body>
     </html>
@@ -143,7 +162,10 @@ const resolvePanelCommandHandler = (context: vscode.ExtensionContext) => {
 const refreshResolvePanelData = (_documentUri?: vscode.Uri) => {
   const documentUri = _documentUri || vscode.window.activeTextEditor?.document.uri;
   getDocumentDataFromUri(documentUri!!).then(data => {
-    resolvePanel!!.webview.postMessage(data);
+    resolvePanel?.webview.postMessage({
+      type: 'txs',
+      data
+    });
   });
 }
 
