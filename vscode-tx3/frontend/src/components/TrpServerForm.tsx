@@ -5,35 +5,56 @@ import Title from "./Title";
 import Form, { FieldType, FormMode } from "./Form";
 
 export interface TrpServerFormProps {
-  onUpdate: (trpUrl: string, headers?: Record<string, string>) => void;
+  onUpdate: (trpData: TrpServer) => void;
+  trpServers: TrpServer[];
 }
 
 interface FormData {
-  trpEndpoint: string;
-  trpUrl: string;
-  demeterApiKey: string;
+  trpServer: string;
 }
 
-const DEMETER_TRP_URL = "https://cardano-preview.trp-m1.demeter.run";
-const DEMETER_API_KEY = "trpjodqbmjblunzpbikpcrl";
+function getValueFromTrpServer(server: TrpServer) {
+  return JSON.stringify(server);
+}
+
+function fromValueToTrpServer(server: string): TrpServer | null {
+  try {
+    return JSON.parse(server);
+  } catch {}
+  return null;
+}
+
+function SettingsButton() {
+  return (
+    <button
+      type="button"
+      className="cursor-pointer"
+      onClick={() => { vscode.postMessage({ event: 'open-settings', dest: 'tx3.trpServers' }) }}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.25" viewBox="0 0 24 24">
+        <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37 1 .608 2.296.07 2.572-1.065z"/>
+        <path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0"/>
+      </svg>
+    </button>
+  )
+}
 
 const TrpServerForm: React.FC<TrpServerFormProps> = (props: TrpServerFormProps) => {
   const [formData, setFormData] = useState<FormData>({
-    trpEndpoint: "demeter",
-    trpUrl: "",
-    demeterApiKey: DEMETER_API_KEY,
+    trpServer: getValueFromTrpServer(props.trpServers[0]),
   });
 
-  useEffect(() => onUpdate(formData), []);
-
-  const onUpdate = (formData: FormData) => {
-    setFormData(formData);
-    if (formData.trpEndpoint === "demeter") {
-      props.onUpdate(DEMETER_TRP_URL, { "dmtr-api-key": formData.demeterApiKey });
-    } else {
-      props.onUpdate(formData.trpUrl);
+  useEffect(() => {
+    const server = fromValueToTrpServer(formData.trpServer);
+    if (server) {
+      props.onUpdate(server)
     }
-  }
+  }, [formData]);
+
+  const options = props.trpServers.map(server => ({
+    label: server.name,
+    value: getValueFromTrpServer(server),
+  }));
 
   return (
     <div className="mb-4">
@@ -41,28 +62,14 @@ const TrpServerForm: React.FC<TrpServerFormProps> = (props: TrpServerFormProps) 
       <Box>
         <Form
           mode={FormMode.Blur}
-          onSubmit={data => onUpdate(data as any)}
+          onSubmit={data => setFormData(data as any)}
           fields={[{
-            name: "trpEndpoint",
-            label: "TRP Endpoint",
+            name: "trpServer",
+            label: "TRP Server",
             type: FieldType.Select,
-            defaultValue: formData.trpEndpoint,
-            options: [
-              { value: "demeter", label: "Demeter Cardano Preview" },
-              { value: "custom", label: "Custom TRP Endpoint" }
-            ],
-          }, {
-            name: "trpUrl",
-            label: "TRP Url",
-            type: FieldType.Text,
-            defaultValue: formData.trpUrl,
-            hidden: formData.trpEndpoint === "demeter",
-          }, {
-            name: "demeterApiKey",
-            label: "Demeter API Key",
-            type: FieldType.Text,
-            defaultValue: formData.demeterApiKey,
-            hidden: formData.trpEndpoint !== "demeter",
+            defaultValue: formData.trpServer,
+            options,
+            suffix: <SettingsButton />,
           }]}
         />
       </Box>

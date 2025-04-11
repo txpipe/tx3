@@ -12,8 +12,8 @@ export interface Tx {
 
 function App() {
   const [txs, setTxs] = useState<Tx[]>([]);
-  const [trpEndpoint, setTrpEndpoint] = useState<string>("");
-  const [trpHeaders, setTrpHeaders] = useState<Record<string, string>|undefined>(undefined);
+  const [trpServer, setTrpServer] = useState<TrpServer>(config.trpServers[0]);
+  const [trpServers, setTrpServers] = useState<TrpServer[]>(config.trpServers);
 
   useEffect(() => {
     window.addEventListener('message', handleMessage);
@@ -21,25 +21,34 @@ function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  const handleMessage = (event: MessageEvent<Tx[]>) => {
-    setTxs(event.data);
+  const handleMessage = (event: MessageEvent<AppEvent>) => {
+    const eventData = event.data;
+    switch (eventData.type) {
+      // If servers changed, notify the form
+      case 'config':
+        setTrpServers(eventData.data.trpServers);
+        break;
+      case 'txs':
+        setTxs(eventData.data);
+        break;
+      default:
+        break;
+    }
   };
 
   return (
     <div className="root">
       <TrpServerForm
-        onUpdate={(url: string, headers?: Record<string, string>) => {
-          setTrpEndpoint(url);
-          setTrpHeaders(headers);
-        }}
+        onUpdate={setTrpServer}
+        trpServers={trpServers}
       />
       <Title>Transactions</Title>
       {txs.map((tx, index) =>
         <TxForm
           key={index}
           tx={tx}
-          trpEndpoint={trpEndpoint}
-          trpHeaders={trpHeaders}
+          trpEndpoint={trpServer.url}
+          trpHeaders={trpServer.headers}
           collapsed={index !== 0}
         />
       )}

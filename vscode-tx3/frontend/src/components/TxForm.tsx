@@ -14,12 +14,10 @@ interface TxFormProps {
 }
 
 const TxForm: React.FC<TxFormProps> = (props: TxFormProps) => {
-  const [loading, setLoading] = useState<boolean>(false);
   const [response, setResponse] = useState<string>("");
   const [error, setError] = useState<string>("");
 
-  const handleSubmit = (args: Record<string, string|number|boolean>) => {
-    setLoading(true);
+  const handleSubmit = async (args: Record<string, string|number|boolean>) => {
     setError("");
     setResponse("");
     
@@ -31,17 +29,16 @@ const TxForm: React.FC<TxFormProps> = (props: TxFormProps) => {
       },
       args
     };
+    
+    const result = await executeTx(protoTx).catch(error => {
+      console.error(error);
+      setError(error.message);
+    });
 
-    executeTx(protoTx)
-      .then((response: TxEnvelope) => {
-        console.log(response);
-        setResponse((response as any).tx);
-      })
-      .catch((error: Error) => {
-        console.error(error);
-        setError(error.message);
-      })
-      .finally(() => setLoading(false));
+    if (result) {
+      console.log(result);
+      setResponse((result as any).tx);
+    }
   };
 
   const executeTx = async (tx: ProtoTx): Promise<TxEnvelope> => {
@@ -59,7 +56,6 @@ const TxForm: React.FC<TxFormProps> = (props: TxFormProps) => {
       title={`Tx ${props.tx.name}`}
     >
       <Form
-        loading={loading}
         onSubmit={handleSubmit}
         fields={
           Object.entries(props.tx.parameters).map(([name, type]) => ({
