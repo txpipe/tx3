@@ -43,9 +43,82 @@
       },
       {
         "command": "tx3.openResolvePanel",
-        "title": "Open Tx3 Resolve Panel"
+        "title": "Open Tx3 Resolve Panel",
+        "icon": "$(play-circle)"
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "tx3.openResolvePanel",
+          "group": "navigation",
+          "when": "editorLangId == tx3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Tx3 Language Support",
+      "type": "object",
+      "properties": {
+        "tx3.trpServers": {
+          "type": "array",
+          "description": "TRP servers list",
+          "minItems": 1,
+          "editPresentation": "multilineText",
+          "default": [
+            {
+              "name": "Demeter Cardano Preview",
+              "url": "https://cardano-preview.trp-m1.demeter.run",
+              "headers": {
+                "dmtr-api-key": "trpjodqbmjblunzpbikpcrl"
+              }
+            },
+            {
+              "name": "Demeter Cardano Preprod",
+              "url": "https://cardano-preprod.trp-m1.demeter.run",
+              "headers": {
+                "dmtr-api-key": "API KEY HERE"
+              }
+            },
+            {
+              "name": "Demeter Cardano Mainnet",
+              "url": "https://cardano-mainnet.trp-m1.demeter.run",
+              "headers": {
+                "dmtr-api-key": "API KEY HERE"
+              }
+            },
+            {
+              "name": "Custom Endpoint",
+              "url": "http://localhost:<port>"
+            }
+          ],
+          "items": {
+            "type": "object",
+            "required": ["name", "url"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "description": "TRP server name"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "TRP server URL"
+              },
+              "headers": {
+                "type": "object",
+                "description": "TRP server headers",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

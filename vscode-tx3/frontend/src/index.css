@@ -33,7 +33,7 @@
     @apply bg-[#C2026C] text-white text-lg font-semibold mb-3 py-2 px-4 cursor-pointer;
   }
   .button-loading {
-    @apply bg-[#C2026C99] text-white text-lg font-semibold mb-3 py-2 px-4;
+    @apply bg-[#C2026C]/60 text-white text-lg font-semibold mb-3 py-2 px-4;
   }
 
   .box {
