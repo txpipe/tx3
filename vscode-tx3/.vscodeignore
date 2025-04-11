@@ -1,0 +1,4 @@
+!frontend/dist
+frontend/**/*
+!tx3-lsp
+!tx3-lsp.exe
