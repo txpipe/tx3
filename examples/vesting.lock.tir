@@ -1,0 +1,154 @@
+{
+  "fees": "FeeQuery",
+  "inputs": [
+    {
+      "name": "source",
+      "query": {
+        "address": {
+          "EvalParameter": [
+            "owner",
+            "Address"
+          ]
+        },
+        "min_amount": {
+          "Assets": [
+            {
+              "policy": [],
+              "asset_name": {
+                "Bytes": []
+              },
+              "amount": {
+                "EvalParameter": [
+                  "quantity",
+                  "Int"
+                ]
+              }
+            }
+          ]
+        },
+        "ref": null
+      },
+      "refs": [],
+      "redeemer": null,
+      "policy": null
+    }
+  ],
+  "outputs": [
+    {
+      "address": {
+        "Hash": [
+          107,
+          156,
+          69,
+          106,
+          166,
+          80,
+          203,
+          128,
+          138,
+          154,
+          181,
+          67,
+          38,
+          224,
+          57,
+          213,
+          35,
+          94,
+          214,
+          159,
+          6,
+          156,
+          150,
+          100,
+          168,
+          254,
+          91,
+          105
+        ]
+      },
+      "datum": {
+        "Struct": {
+          "constructor": 0,
+          "fields": [
+            {
+              "EvalParameter": [
+                "until",
+                "Int"
+              ]
+            },
+            {
+              "EvalParameter": [
+                "owner",
+                "Address"
+              ]
+            },
+            {
+              "EvalParameter": [
+                "beneficiary",
+                "Address"
+              ]
+            }
+          ]
+        }
+      },
+      "amount": {
+        "Assets": [
+          {
+            "policy": [],
+            "asset_name": {
+              "Bytes": []
+            },
+            "amount": {
+              "EvalParameter": [
+                "quantity",
+                "Int"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "address": {
+        "EvalParameter": [
+          "owner",
+          "Address"
+        ]
+      },
+      "datum": null,
+      "amount": {
+        "EvalCustom": {
+          "left": {
+            "EvalCustom": {
+              "left": {
+                "EvalInputAssets": "source"
+              },
+              "right": {
+                "Assets": [
+                  {
+                    "policy": [],
+                    "asset_name": {
+                      "Bytes": []
+                    },
+                    "amount": {
+                      "EvalParameter": [
+                        "quantity",
+                        "Int"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "op": "Sub"
+            }
+          },
+          "right": "FeeQuery",
+          "op": "Sub"
+        }
+      }
+    }
+  ],
+  "mint": null,
+  "adhoc": []
+}

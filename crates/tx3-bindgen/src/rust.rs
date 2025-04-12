@@ -9,9 +9,11 @@ fn to_syn_type(ty: &tx3_lang::ir::Type) -> syn::Type {
         tx3_lang::ir::Type::Int => syn::parse_str("i64").unwrap(),
         tx3_lang::ir::Type::Bool => syn::parse_str("bool").unwrap(),
         tx3_lang::ir::Type::Bytes => syn::parse_str("Vec<u8>").unwrap(),
+        tx3_lang::ir::Type::Unit => syn::parse_str("()").unwrap(),
         tx3_lang::ir::Type::Address => syn::parse_str("tx3_lang::ArgValue").unwrap(),
         tx3_lang::ir::Type::UtxoRef => syn::parse_str("tx3_lang::ArgValue").unwrap(),
         tx3_lang::ir::Type::Custom(name) => syn::parse_str(name).unwrap(),
+        tx3_lang::ir::Type::AnyAsset => syn::parse_str("tx3_lang::ArgValue").unwrap(),
     }
 }
 

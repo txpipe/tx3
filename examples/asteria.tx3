@@ -2,18 +2,18 @@ party Player;
 
 party Game;
 
-asset Fuel = 0x11111.FUEL;
+asset Fuel = 0x6b9c456aa650cb808a9ab54326e039d5235ed69f069c9664a8fe5b69.FUEL;
 
-asset Ship = 0x33333.SHIP;
+asset Ship = 0x6b9c456aa650cb808a9ab54326e039d5235ed69f069c9664a8fe5b69.SHIP;
 
-asset Pilot = 0x33333.PILOT;
+asset Pilot = 0x6b9c456aa650cb808a9ab54326e039d5235ed69f069c9664a8fe5b69.PILOT;
 
 type ShipState {
     pos_x: Int,
     pos_y: Int,
-    ship_token_name: AssetName,
-    pilot_token_name: AssetName,
-    last_move_latest_time: PosixTime,
+    ship_token_name: Bytes,
+    pilot_token_name: Bytes,
+    last_move_latest_time: Int,
 }
 
 type ShipCommand {
@@ -52,7 +52,7 @@ tx move_ship(
     
     input fees {
         from: Player,
-        min_amount: fee,
+        min_amount: fees,
     }
 
     burn {
@@ -61,17 +61,17 @@ tx move_ship(
     
     output {
         to: Game,
-        amount: inputs.ship.amount - Fuel(required_fuel),
+        amount: ship - Fuel(required_fuel),
 
-        datum: ShipState::Playing {
-            pos_x: inputs.ship.pos_x + delta_x,
-            pos_y: inputs.ship.pos_y + delta_y,
-            ...inputs.ship.datum
+        datum: ShipState {
+            pos_x: ship.pos_x + delta_x,
+            pos_y: ship.pos_y + delta_y,
+            ...ship
         },
     }
 
     output {
         to: Player,
-        amount: inputs.pilot.amount +  inputs.fees.amount - fee,
+        amount: pilot - fees,
     }
 }

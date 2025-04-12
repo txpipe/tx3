@@ -88,12 +88,20 @@ pub struct PolicyExpr {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Type {
+    Unit,
     Int,
     Bool,
     Bytes,
     Address,
     UtxoRef,
+    AnyAsset,
     Custom(String),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct PropertyAccess {
+    pub object: Box<Expression>,
+    pub field: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -111,6 +119,7 @@ pub enum Expression {
     Assets(Vec<AssetExpr>),
 
     EvalParameter(String, Type),
+    EvalProperty(Box<PropertyAccess>),
     EvalInputDatum(String),
     EvalInputAssets(String),
     EvalCustom(Box<BinaryOp>),

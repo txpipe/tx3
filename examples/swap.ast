@@ -6,35 +6,17 @@
         "parameters": [
           {
             "name": "ask",
-            "type": {
-              "Custom": {
-                "value": "Token",
-                "span": {
-                  "dummy": true,
-                  "start": 0,
-                  "end": 0
-                }
-              }
-            }
+            "type": "AnyAsset"
           },
           {
             "name": "bid",
-            "type": {
-              "Custom": {
-                "value": "Token",
-                "span": {
-                  "dummy": true,
-                  "start": 0,
-                  "end": 0
-                }
-              }
-            }
+            "type": "AnyAsset"
           }
         ],
         "span": {
           "dummy": false,
-          "start": 145,
-          "end": 179
+          "start": 161,
+          "end": 202
         }
       },
       "inputs": [
@@ -48,8 +30,8 @@
                   "value": "Dex",
                   "span": {
                     "dummy": false,
-                    "start": 213,
-                    "end": 216
+                    "start": 236,
+                    "end": 239
                   }
                 }
               }
@@ -73,8 +55,8 @@
                     "value": "SwapParams",
                     "span": {
                       "dummy": false,
-                      "start": 266,
-                      "end": 276
+                      "start": 289,
+                      "end": 299
                     }
                   },
                   "case": {
@@ -92,8 +74,8 @@
                           "value": "ask",
                           "span": {
                             "dummy": false,
-                            "start": 291,
-                            "end": 294
+                            "start": 314,
+                            "end": 317
                           }
                         },
                         "value": {
@@ -101,15 +83,15 @@
                             "value": "ask",
                             "span": {
                               "dummy": false,
-                              "start": 296,
-                              "end": 299
+                              "start": 319,
+                              "end": 322
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 291,
-                          "end": 299
+                          "start": 314,
+                          "end": 322
                         }
                       },
                       {
@@ -117,8 +99,8 @@
                           "value": "bid",
                           "span": {
                             "dummy": false,
-                            "start": 313,
-                            "end": 316
+                            "start": 336,
+                            "end": 339
                           }
                         },
                         "value": {
@@ -126,29 +108,29 @@
                             "value": "ask",
                             "span": {
                               "dummy": false,
-                              "start": 318,
-                              "end": 321
+                              "start": 341,
+                              "end": 344
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 313,
-                          "end": 321
+                          "start": 336,
+                          "end": 344
                         }
                       }
                     ],
                     "spread": null,
                     "span": {
                       "dummy": false,
-                      "start": 277,
-                      "end": 332
+                      "start": 300,
+                      "end": 355
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 266,
-                    "end": 332
+                    "start": 289,
+                    "end": 355
                   }
                 }
               }
@@ -156,8 +138,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 186,
-            "end": 339
+            "start": 209,
+            "end": 362
           }
         },
         {
@@ -170,8 +152,8 @@
                   "value": "Buyer",
                   "span": {
                     "dummy": false,
-                    "start": 379,
-                    "end": 384
+                    "start": 402,
+                    "end": 407
                   }
                 }
               }
@@ -184,8 +166,8 @@
                       "value": "fees",
                       "span": {
                         "dummy": false,
-                        "start": 406,
-                        "end": 410
+                        "start": 429,
+                        "end": 433
                       }
                     }
                   },
@@ -195,15 +177,15 @@
                       "value": "bid",
                       "span": {
                         "dummy": false,
-                        "start": 413,
-                        "end": 416
+                        "start": 436,
+                        "end": 439
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 411,
-                    "end": 412
+                    "start": 434,
+                    "end": 435
                   }
                 }
               }
@@ -211,8 +193,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 349,
-            "end": 423
+            "start": 372,
+            "end": 446
           }
         }
       ],
@@ -226,8 +208,8 @@
                   "value": "Dex",
                   "span": {
                     "dummy": false,
-                    "start": 454,
-                    "end": 457
+                    "start": 477,
+                    "end": 480
                   }
                 }
               }
@@ -239,8 +221,8 @@
                     "value": "PoolState",
                     "span": {
                       "dummy": false,
-                      "start": 474,
-                      "end": 483
+                      "start": 497,
+                      "end": 506
                     }
                   },
                   "case": {
@@ -258,8 +240,8 @@
                           "value": "pair_a",
                           "span": {
                             "dummy": false,
-                            "start": 498,
-                            "end": 504
+                            "start": 521,
+                            "end": 527
                           }
                         },
                         "value": {
@@ -267,60 +249,69 @@
                             "left": {
                               "PropertyAccess": {
                                 "object": {
-                                  "value": "inputs",
+                                  "value": "pool",
                                   "span": {
                                     "dummy": false,
-                                    "start": 506,
-                                    "end": 512
+                                    "start": 529,
+                                    "end": 533
                                   }
                                 },
                                 "path": [
                                   {
-                                    "value": "pool",
-                                    "span": {
-                                      "dummy": false,
-                                      "start": 513,
-                                      "end": 517
-                                    }
-                                  },
-                                  {
                                     "value": "pair_a",
                                     "span": {
                                       "dummy": false,
-                                      "start": 518,
-                                      "end": 524
+                                      "start": 534,
+                                      "end": 540
                                     }
                                   }
                                 ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 506,
-                                  "end": 524
+                                  "start": 529,
+                                  "end": 541
                                 }
                               }
                             },
                             "operator": "Subtract",
                             "right": {
-                              "Identifier": {
-                                "value": "ask",
+                              "PropertyAccess": {
+                                "object": {
+                                  "value": "bid",
+                                  "span": {
+                                    "dummy": false,
+                                    "start": 543,
+                                    "end": 546
+                                  }
+                                },
+                                "path": [
+                                  {
+                                    "value": "amount",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 547,
+                                      "end": 553
+                                    }
+                                  }
+                                ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 527,
-                                  "end": 530
+                                  "start": 543,
+                                  "end": 553
                                 }
                               }
                             },
                             "span": {
                               "dummy": false,
-                              "start": 525,
-                              "end": 526
+                              "start": 541,
+                              "end": 542
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 498,
-                          "end": 530
+                          "start": 521,
+                          "end": 553
                         }
                       },
                       {
@@ -328,8 +319,8 @@
                           "value": "pair_b",
                           "span": {
                             "dummy": false,
-                            "start": 544,
-                            "end": 550
+                            "start": 567,
+                            "end": 573
                           }
                         },
                         "value": {
@@ -337,108 +328,92 @@
                             "left": {
                               "PropertyAccess": {
                                 "object": {
-                                  "value": "inputs",
+                                  "value": "pool",
                                   "span": {
                                     "dummy": false,
-                                    "start": 552,
-                                    "end": 558
+                                    "start": 575,
+                                    "end": 579
                                   }
                                 },
                                 "path": [
                                   {
-                                    "value": "pool",
-                                    "span": {
-                                      "dummy": false,
-                                      "start": 559,
-                                      "end": 563
-                                    }
-                                  },
-                                  {
                                     "value": "pair_b",
                                     "span": {
                                       "dummy": false,
-                                      "start": 564,
-                                      "end": 570
+                                      "start": 580,
+                                      "end": 586
                                     }
                                   }
                                 ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 552,
-                                  "end": 570
+                                  "start": 575,
+                                  "end": 587
                                 }
                               }
                             },
                             "operator": "Add",
                             "right": {
-                              "Identifier": {
-                                "value": "bid",
+                              "PropertyAccess": {
+                                "object": {
+                                  "value": "ask",
+                                  "span": {
+                                    "dummy": false,
+                                    "start": 589,
+                                    "end": 592
+                                  }
+                                },
+                                "path": [
+                                  {
+                                    "value": "amount",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 593,
+                                      "end": 599
+                                    }
+                                  }
+                                ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 573,
-                                  "end": 576
+                                  "start": 589,
+                                  "end": 599
                                 }
                               }
                             },
                             "span": {
                               "dummy": false,
-                              "start": 571,
-                              "end": 572
+                              "start": 587,
+                              "end": 588
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 544,
-                          "end": 576
+                          "start": 567,
+                          "end": 599
                         }
                       }
                     ],
                     "spread": {
-                      "PropertyAccess": {
-                        "object": {
-                          "value": "inputs",
-                          "span": {
-                            "dummy": false,
-                            "start": 593,
-                            "end": 599
-                          }
-                        },
-                        "path": [
-                          {
-                            "value": "pool",
-                            "span": {
-                              "dummy": false,
-                              "start": 600,
-                              "end": 604
-                            }
-                          },
-                          {
-                            "value": "datum",
-                            "span": {
-                              "dummy": false,
-                              "start": 605,
-                              "end": 610
-                            }
-                          }
-                        ],
+                      "Identifier": {
+                        "value": "pool",
                         "span": {
                           "dummy": false,
-                          "start": 593,
-                          "end": 610
+                          "start": 616,
+                          "end": 620
                         }
                       }
                     },
                     "span": {
                       "dummy": false,
-                      "start": 484,
-                      "end": 620
+                      "start": 507,
+                      "end": 630
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 474,
-                    "end": 620
+                    "start": 497,
+                    "end": 630
                   }
                 }
               }
@@ -449,8 +424,8 @@
                   "value": "pool",
                   "span": {
                     "dummy": false,
-                    "start": 638,
-                    "end": 642
+                    "start": 648,
+                    "end": 652
                   }
                 }
               }
@@ -458,8 +433,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 433,
-            "end": 649
+            "start": 456,
+            "end": 659
           }
         },
         {
@@ -471,8 +446,8 @@
                   "value": "Buyer",
                   "span": {
                     "dummy": false,
-                    "start": 676,
-                    "end": 681
+                    "start": 686,
+                    "end": 691
                   }
                 }
               }
@@ -489,8 +464,8 @@
                               "value": "payment",
                               "span": {
                                 "dummy": false,
-                                "start": 699,
-                                "end": 706
+                                "start": 709,
+                                "end": 716
                               }
                             }
                           },
@@ -500,15 +475,15 @@
                               "value": "ask",
                               "span": {
                                 "dummy": false,
-                                "start": 709,
-                                "end": 712
+                                "start": 719,
+                                "end": 722
                               }
                             }
                           },
                           "span": {
                             "dummy": false,
-                            "start": 707,
-                            "end": 708
+                            "start": 717,
+                            "end": 718
                           }
                         }
                       },
@@ -518,15 +493,15 @@
                           "value": "bid",
                           "span": {
                             "dummy": false,
-                            "start": 715,
-                            "end": 718
+                            "start": 725,
+                            "end": 728
                           }
                         }
                       },
                       "span": {
                         "dummy": false,
-                        "start": 713,
-                        "end": 714
+                        "start": 723,
+                        "end": 724
                       }
                     }
                   },
@@ -536,15 +511,15 @@
                       "value": "fees",
                       "span": {
                         "dummy": false,
-                        "start": 721,
-                        "end": 725
+                        "start": 731,
+                        "end": 735
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 719,
-                    "end": 720
+                    "start": 729,
+                    "end": 730
                   }
                 }
               }
@@ -552,8 +527,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 655,
-            "end": 732
+            "start": 665,
+            "end": 742
           }
         }
       ],
@@ -562,8 +537,8 @@
       "adhoc": [],
       "span": {
         "dummy": false,
-        "start": 138,
-        "end": 734
+        "start": 154,
+        "end": 744
       }
     }
   ],
@@ -576,52 +551,34 @@
           "fields": [
             {
               "name": "pair_a",
-              "type": {
-                "Custom": {
-                  "value": "Token",
-                  "span": {
-                    "dummy": true,
-                    "start": 0,
-                    "end": 0
-                  }
-                }
-              },
+              "type": "AnyAsset",
               "span": {
                 "dummy": false,
                 "start": 21,
-                "end": 34
+                "end": 37
               }
             },
             {
               "name": "pair_b",
-              "type": {
-                "Custom": {
-                  "value": "Token",
-                  "span": {
-                    "dummy": true,
-                    "start": 0,
-                    "end": 0
-                  }
-                }
-              },
+              "type": "AnyAsset",
               "span": {
                 "dummy": false,
-                "start": 40,
-                "end": 53
+                "start": 43,
+                "end": 59
               }
             }
           ],
           "span": {
             "dummy": false,
             "start": 0,
-            "end": 56
+            "end": 62
           }
         }
       ],
       "span": {
         "dummy": false,
         "start": 0,
-        "end": 56
+        "end": 62
       }
     },
     {
@@ -632,34 +589,34 @@
           "fields": [
             {
               "name": "amount",
-              "type": "Int",
+              "type": "AnyAsset",
               "span": {
                 "dummy": false,
-                "start": 80,
-                "end": 91
+                "start": 86,
+                "end": 102
               }
             },
             {
               "name": "ratio",
-              "type": "Int",
+              "type": "AnyAsset",
               "span": {
                 "dummy": false,
-                "start": 97,
-                "end": 107
+                "start": 108,
+                "end": 123
               }
             }
           ],
           "span": {
             "dummy": false,
-            "start": 58,
-            "end": 110
+            "start": 64,
+            "end": 126
           }
         }
       ],
       "span": {
         "dummy": false,
-        "start": 58,
-        "end": 110
+        "start": 64,
+        "end": 126
       }
     }
   ],
@@ -669,16 +626,16 @@
       "name": "Buyer",
       "span": {
         "dummy": false,
-        "start": 112,
-        "end": 124
+        "start": 128,
+        "end": 140
       }
     },
     {
       "name": "Dex",
       "span": {
         "dummy": false,
-        "start": 126,
-        "end": 136
+        "start": 142,
+        "end": 152
       }
     }
   ],
@@ -686,6 +643,6 @@
   "span": {
     "dummy": false,
     "start": 0,
-    "end": 734
+    "end": 744
   }
 }
