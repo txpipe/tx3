@@ -1,0 +1,57 @@
+party Owner;
+
+party Beneficiary;
+
+policy TimeLock = 0x6b9c456aa650cb808a9ab54326e039d5235ed69f069c9664a8fe5b69;
+
+type State {
+  lock_until: Int,
+  owner: Bytes,
+  beneficiary: Bytes,
+  
+}
+
+tx lock(
+    quantity: Int,
+    until: Int,
+) {
+    input source {
+        from: Owner,
+        min_amount: Ada(quantity),
+    }
+    
+    output target {
+        to: TimeLock,
+        amount: Ada(quantity),
+        datum: State {
+            lock_until: until,
+            owner: Owner,
+            beneficiary: Beneficiary,
+        },
+    }
+
+    output {
+        to: Owner,
+        amount: source - Ada(quantity) - fees,
+    }
+}
+
+tx unlock(
+    locked_utxo: UtxoRef
+) {
+    input gas {
+        from: Beneficiary,
+        min_amount: fees,
+    }
+
+    input locked {
+        from: TimeLock,
+        ref: locked_utxo,
+        redeemer: (),
+    }
+
+    output target {
+        to: Beneficiary,
+        amount: gas + locked - fees,
+    }
+}

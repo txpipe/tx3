@@ -1,0 +1,65 @@
+{
+  "fees": "FeeQuery",
+  "inputs": [
+    {
+      "name": "source",
+      "query": {
+        "address": {
+          "EvalParameter": [
+            "myparty",
+            "Address"
+          ]
+        },
+        "min_amount": {
+          "Assets": [
+            {
+              "policy": [],
+              "asset_name": {
+                "Bytes": []
+              },
+              "amount": {
+                "EvalParameter": [
+                  "quantity",
+                  "Int"
+                ]
+              }
+            }
+          ]
+        },
+        "ref": null
+      },
+      "refs": [],
+      "redeemer": null,
+      "policy": null
+    }
+  ],
+  "outputs": [
+    {
+      "address": {
+        "EvalParameter": [
+          "myparty",
+          "Address"
+        ]
+      },
+      "datum": {
+        "Struct": {
+          "constructor": 0,
+          "fields": [
+            {
+              "EvalParameter": [
+                "quantity",
+                "Int"
+              ]
+            },
+            {
+              "Number": 54
+            }
+          ]
+        }
+      },
+      "amount": null
+    }
+  ],
+  "mint": null,
+  "adhoc": []
+}

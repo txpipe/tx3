@@ -1,11 +1,11 @@
 type PoolState {
-    pair_a: Token,
-    pair_b: Token,
+    pair_a: AnyAsset,
+    pair_b: AnyAsset,
 }
 
 type SwapParams {
-    amount: Int,
-    ratio: Int,
+    amount: AnyAsset,
+    ratio: AnyAsset,
 }
 
 party Buyer;
@@ -13,8 +13,8 @@ party Buyer;
 party Dex;
 
 tx swap(
-    ask: Token,
-    bid: Token
+    ask: AnyAsset,
+    bid: AnyAsset,
 ) {
     input pool {
         from: Dex,
@@ -34,9 +34,9 @@ tx swap(
     output {
         to: Dex,
         datum: PoolState {
-            pair_a: inputs.pool.pair_a - ask,
-            pair_b: inputs.pool.pair_b + bid,
-            ...inputs.pool.datum
+            pair_a: pool.pair_a - bid.amount,
+            pair_b: pool.pair_b + ask.amount,
+            ...pool
         },
         amount: pool,
     }

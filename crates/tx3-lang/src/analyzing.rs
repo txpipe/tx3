@@ -229,8 +229,22 @@ impl Scope {
     }
 
     pub fn track_input(&mut self, input: &InputBlock) {
-        self.symbols
-            .insert(input.name.clone(), Symbol::Input(input.name.clone()));
+        self.symbols.insert(
+            input.name.clone(),
+            Symbol::Input(input.name.clone(), Box::new(input.datum_is())),
+        );
+    }
+
+    pub fn track_record_fields_for_type(&mut self, r#type: &Type) {
+        let schema = resolve_type_schema(r#type);
+
+        for (name, r#type) in schema {
+            self.track_record_field(&RecordField {
+                name,
+                r#type,
+                span: Span::DUMMY,
+            });
+        }
     }
 
     pub fn resolve(&self, name: &str) -> Option<Symbol> {
@@ -241,6 +255,37 @@ impl Scope {
         } else {
             None
         }
+    }
+}
+
+fn resolve_type_schema(ty: &Type) -> Vec<(String, Type)> {
+    match ty {
+        Type::AnyAsset => {
+            vec![
+                ("amount".to_string(), Type::Int),
+                ("policy".to_string(), Type::Bytes),
+                ("asset_name".to_string(), Type::Bytes),
+            ]
+        }
+        Type::UtxoRef => {
+            vec![
+                ("tx_hash".to_string(), Type::Bytes),
+                ("output_index".to_string(), Type::Int),
+            ]
+        }
+        Type::Custom(identifier) => {
+            let def = identifier.symbol.as_ref().and_then(|s| s.as_type_def());
+
+            match def {
+                Some(ty) if ty.cases.len() == 1 => ty.cases[0]
+                    .fields
+                    .iter()
+                    .map(|f| (f.name.clone(), f.r#type.clone()))
+                    .collect(),
+                _ => vec![],
+            }
+        }
+        _ => vec![],
     }
 }
 
@@ -334,7 +379,7 @@ impl Analyzable for VariantCaseConstructor {
         let case = match &self.name.symbol {
             Some(Symbol::VariantCase(x)) => x,
             Some(x) => bail_report!(Error::invalid_symbol("VariantCase", x, &self.name)),
-            _ => unreachable!(),
+            None => bail_report!(Error::not_in_scope(self.name.value.clone(), &self.name)),
         };
 
         for field in case.fields.iter() {
@@ -345,7 +390,9 @@ impl Analyzable for VariantCaseConstructor {
 
         let fields = self.fields.analyze(self.scope.clone());
 
-        name + fields
+        let spread = self.spread.analyze(self.scope.clone());
+
+        name + fields + spread
     }
 }
 
@@ -407,7 +454,13 @@ impl Analyzable for PropertyAccess {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         let object = self.object.analyze(parent.clone());
 
-        self.scope = Some(Rc::new(Scope::new(parent)));
+        let mut scope = Scope::new(parent);
+
+        if let Some(ty) = self.object.symbol.as_ref().and_then(|s| s.target_type()) {
+            scope.track_record_fields_for_type(&ty);
+        }
+
+        self.scope = Some(Rc::new(scope));
 
         let path = self.path.analyze(self.scope.clone());
 

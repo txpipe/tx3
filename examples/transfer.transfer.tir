@@ -1,0 +1,104 @@
+{
+  "fees": "FeeQuery",
+  "inputs": [
+    {
+      "name": "source",
+      "query": {
+        "address": {
+          "EvalParameter": [
+            "sender",
+            "Address"
+          ]
+        },
+        "min_amount": {
+          "Assets": [
+            {
+              "policy": [],
+              "asset_name": {
+                "Bytes": []
+              },
+              "amount": {
+                "EvalParameter": [
+                  "quantity",
+                  "Int"
+                ]
+              }
+            }
+          ]
+        },
+        "ref": null
+      },
+      "refs": [],
+      "redeemer": null,
+      "policy": null
+    }
+  ],
+  "outputs": [
+    {
+      "address": {
+        "EvalParameter": [
+          "receiver",
+          "Address"
+        ]
+      },
+      "datum": null,
+      "amount": {
+        "Assets": [
+          {
+            "policy": [],
+            "asset_name": {
+              "Bytes": []
+            },
+            "amount": {
+              "EvalParameter": [
+                "quantity",
+                "Int"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "address": {
+        "EvalParameter": [
+          "sender",
+          "Address"
+        ]
+      },
+      "datum": null,
+      "amount": {
+        "EvalCustom": {
+          "left": {
+            "EvalCustom": {
+              "left": {
+                "EvalInputAssets": "source"
+              },
+              "right": {
+                "Assets": [
+                  {
+                    "policy": [],
+                    "asset_name": {
+                      "Bytes": []
+                    },
+                    "amount": {
+                      "EvalParameter": [
+                        "quantity",
+                        "Int"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "op": "Sub"
+            }
+          },
+          "right": "FeeQuery",
+          "op": "Sub"
+        }
+      }
+    }
+  ],
+  "mint": null,
+  "adhoc": []
+}

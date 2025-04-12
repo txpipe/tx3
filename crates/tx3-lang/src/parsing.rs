@@ -902,6 +902,7 @@ impl AstNode for Type {
             "Bytes" => Ok(Type::Bytes),
             "Address" => Ok(Type::Address),
             "UtxoRef" => Ok(Type::UtxoRef),
+            "AnyAsset" => Ok(Type::AnyAsset),
             t => Ok(Type::Custom(Identifier::new(t.to_string()))),
         }
     }
@@ -1094,6 +1095,14 @@ pub fn parse_string(input: &str) -> Result<Program, Error> {
 }
 
 #[cfg(test)]
+pub fn parse_well_known_example(example: &str) -> Program {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let test_file = format!("{}/../../examples/{}.tx3", manifest_dir, example);
+    let input = std::fs::read_to_string(&test_file).unwrap();
+    parse_string(&input).unwrap()
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use assert_json_diff::assert_json_eq;
@@ -1131,6 +1140,8 @@ mod tests {
     input_to_ast_check!(Type, "address", "Address", Type::Address);
 
     input_to_ast_check!(Type, "utxo_ref", "UtxoRef", Type::UtxoRef);
+
+    input_to_ast_check!(Type, "any_asset", "AnyAsset", Type::AnyAsset);
 
     input_to_ast_check!(
         TypeDef,
@@ -1487,13 +1498,6 @@ mod tests {
             },
         ))
     );
-
-    fn parse_well_known_example(example: &str) -> Program {
-        let manifest_dir = env!("CARGO_MANIFEST_DIR");
-        let test_file = format!("{}/../../examples/{}.tx3", manifest_dir, example);
-        let input = std::fs::read_to_string(&test_file).unwrap();
-        parse_string(&input).unwrap()
-    }
 
     #[test]
     fn test_spans_are_respected() {

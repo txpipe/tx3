@@ -4,6 +4,7 @@
 //! into the intermediate representation (IR) of the Tx3 language.
 
 use std::collections::HashSet;
+use std::ops::Deref;
 
 use crate::ast;
 use crate::ir;
@@ -15,6 +16,9 @@ pub enum Error {
 
     #[error("symbol '{0}' expected to be '{1}'")]
     InvalidSymbol(String, &'static str),
+
+    #[error("symbol '{0}' expected to be of type '{1}'")]
+    InvalidSymbolType(String, &'static str),
 
     #[error("invalid ast: {0}")]
     InvalidAst(String),
@@ -59,8 +63,18 @@ fn coerce_identifier_into_asset_expr(
     identifier: &ast::Identifier,
 ) -> Result<ir::Expression, Error> {
     match identifier.try_symbol()? {
-        ast::Symbol::Input(x) => Ok(ir::Expression::EvalInputAssets(x.clone())),
+        ast::Symbol::Input(x, _) => Ok(ir::Expression::EvalInputAssets(x.clone())),
         ast::Symbol::Fees => Ok(ir::Expression::FeeQuery),
+        ast::Symbol::ParamVar(name, ty) => match ty.deref() {
+            ast::Type::AnyAsset => Ok(ir::Expression::EvalParameter(
+                name.to_lowercase().clone(),
+                ir::Type::AnyAsset,
+            )),
+            _ => Err(Error::InvalidSymbolType(
+                identifier.value.clone(),
+                "AnyAsset",
+            )),
+        },
         _ => Err(Error::InvalidSymbol(identifier.value.clone(), "AssetExpr")),
     }
 }
@@ -107,6 +121,30 @@ where
     }
 }
 
+impl IntoLower for ast::Identifier {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let symbol = self.symbol.as_ref().expect("analyze phase must be run");
+
+        match symbol {
+            ast::Symbol::ParamVar(n, ty) => Ok(ir::Expression::EvalParameter(
+                n.to_lowercase().clone(),
+                ty.into_lower()?,
+            )),
+            ast::Symbol::PartyDef(x) => Ok(ir::Expression::EvalParameter(
+                x.name.to_lowercase().clone(),
+                ir::Type::Address,
+            )),
+            ast::Symbol::Input(n, _) => Ok(ir::Expression::EvalInputDatum(n.clone())),
+            _ => {
+                dbg!(&self);
+                todo!();
+            }
+        }
+    }
+}
+
 impl IntoLower for ast::DatumConstructor {
     type Output = ir::StructExpr;
 
@@ -127,7 +165,17 @@ impl IntoLower for ast::DatumConstructor {
             if let Some(value) = value {
                 fields.push(value.into_lower()?);
             } else {
-                todo!();
+                let spread_target = self
+                    .case
+                    .spread
+                    .as_ref()
+                    .expect("spread must be set for missing explicit field")
+                    .into_lower()?;
+
+                fields.push(ir::Expression::EvalProperty(Box::new(ir::PropertyAccess {
+                    object: Box::new(spread_target),
+                    field: field_def.name.clone(),
+                })));
             }
         }
 
@@ -197,13 +245,50 @@ impl IntoLower for ast::Type {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         match self {
+            ast::Type::Unit => Ok(ir::Type::Unit),
             ast::Type::Int => Ok(ir::Type::Int),
             ast::Type::Bool => Ok(ir::Type::Bool),
             ast::Type::Bytes => Ok(ir::Type::Bytes),
             ast::Type::Address => Ok(ir::Type::Address),
             ast::Type::UtxoRef => Ok(ir::Type::UtxoRef),
+            ast::Type::AnyAsset => Ok(ir::Type::AnyAsset),
             ast::Type::Custom(x) => Ok(ir::Type::Custom(x.value.clone())),
         }
+    }
+}
+
+impl IntoLower for ast::DataBinaryOp {
+    type Output = ir::BinaryOp;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let left = self.left.into_lower()?;
+        let right = self.right.into_lower()?;
+
+        Ok(ir::BinaryOp {
+            left,
+            right,
+            op: match self.operator {
+                ast::BinaryOperator::Add => ir::BinaryOpKind::Add,
+                ast::BinaryOperator::Subtract => ir::BinaryOpKind::Sub,
+            },
+        })
+    }
+}
+
+impl IntoLower for ast::PropertyAccess {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let mut object = self.object.into_lower()?;
+
+        for field in self.path.iter() {
+            object = ir::Expression::EvalProperty(Box::new(ir::PropertyAccess {
+                object: Box::new(object),
+                field: field.value.clone(),
+            }));
+        }
+
+        Ok(object)
     }
 }
 
@@ -219,20 +304,9 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::HexString(x) => ir::Expression::Bytes(hex::decode(&x.value)?),
             ast::DataExpr::Constructor(x) => ir::Expression::Struct(x.into_lower()?),
             ast::DataExpr::Unit => ir::Expression::Struct(ir::StructExpr::unit()),
-            ast::DataExpr::Identifier(x) => match &x.symbol {
-                Some(ast::Symbol::ParamVar(n, ty)) => {
-                    ir::Expression::EvalParameter(n.to_lowercase().clone(), ty.into_lower()?)
-                }
-                Some(ast::Symbol::PartyDef(x)) => {
-                    ir::Expression::EvalParameter(x.name.to_lowercase().clone(), ir::Type::Address)
-                }
-                _ => {
-                    dbg!(&x);
-                    todo!();
-                }
-            },
-            ast::DataExpr::PropertyAccess(_x) => todo!(),
-            ast::DataExpr::BinaryOp(_x) => todo!(),
+            ast::DataExpr::Identifier(x) => x.into_lower()?,
+            ast::DataExpr::BinaryOp(x) => ir::Expression::EvalCustom(Box::new(x.into_lower()?)),
+            ast::DataExpr::PropertyAccess(x) => x.into_lower()?,
         };
 
         Ok(out)
@@ -453,16 +527,67 @@ pub fn lower(ast: &ast::Program, template: &str) -> Result<ir::Tx, Error> {
 
 #[cfg(test)]
 mod tests {
+    use assert_json_diff::assert_json_eq;
+    use paste::paste;
+
     use super::*;
+    use crate::parsing;
 
-    #[test]
-    fn test_lower() {
+    fn make_snapshot_if_missing(example: &str, name: &str, tx: &ir::Tx) {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
-        let test_file = format!("{}/../../examples/lang_tour.tx3", manifest_dir);
-        let mut ast = crate::loading::parse_file(&test_file).unwrap();
-        crate::analyzing::analyze(&mut ast).ok().unwrap();
-        let ir = lower(&ast, "my_tx").unwrap();
 
-        dbg!(ir);
+        let path = format!("{}/../../examples/{}.{}.tir", manifest_dir, example, name);
+
+        if !std::fs::exists(&path).unwrap() {
+            let ir = serde_json::to_string_pretty(tx).unwrap();
+            std::fs::write(&path, ir).unwrap();
+        }
     }
+
+    fn test_lowering_example(example: &str) {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let mut program = parsing::parse_well_known_example(example);
+
+        crate::analyzing::analyze(&mut program).ok().unwrap();
+
+        for tx in program.txs.iter() {
+            let tir = lower(&program, &tx.name).unwrap();
+
+            make_snapshot_if_missing(example, &tx.name, &tir);
+
+            let tir_file = format!(
+                "{}/../../examples/{}.{}.tir",
+                manifest_dir, example, tx.name
+            );
+
+            let expected = std::fs::read_to_string(tir_file).unwrap();
+            let expected: ir::Tx = serde_json::from_str(&expected).unwrap();
+
+            assert_json_eq!(tir, expected);
+        }
+    }
+
+    #[macro_export]
+    macro_rules! test_lowering {
+        ($name:ident) => {
+            paste! {
+                #[test]
+                fn [<test_example_ $name>]() {
+                    test_lowering_example(stringify!($name));
+                }
+            }
+        };
+    }
+
+    test_lowering!(lang_tour);
+
+    test_lowering!(transfer);
+
+    test_lowering!(swap);
+
+    test_lowering!(asteria);
+
+    test_lowering!(vesting);
+
+    test_lowering!(faucet);
 }

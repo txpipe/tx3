@@ -1,0 +1,372 @@
+{
+  "fees": "FeeQuery",
+  "inputs": [
+    {
+      "name": "ship",
+      "query": {
+        "address": {
+          "EvalParameter": [
+            "game",
+            "Address"
+          ]
+        },
+        "min_amount": {
+          "EvalCustom": {
+            "left": {
+              "Assets": [
+                {
+                  "policy": [
+                    107,
+                    156,
+                    69,
+                    106,
+                    166,
+                    80,
+                    203,
+                    128,
+                    138,
+                    154,
+                    181,
+                    67,
+                    38,
+                    224,
+                    57,
+                    213,
+                    35,
+                    94,
+                    214,
+                    159,
+                    6,
+                    156,
+                    150,
+                    100,
+                    168,
+                    254,
+                    91,
+                    105
+                  ],
+                  "asset_name": {
+                    "Bytes": [
+                      83,
+                      72,
+                      73,
+                      80
+                    ]
+                  },
+                  "amount": {
+                    "EvalParameter": [
+                      "ship_name",
+                      {
+                        "Custom": "AssetName"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "right": {
+              "Assets": [
+                {
+                  "policy": [
+                    107,
+                    156,
+                    69,
+                    106,
+                    166,
+                    80,
+                    203,
+                    128,
+                    138,
+                    154,
+                    181,
+                    67,
+                    38,
+                    224,
+                    57,
+                    213,
+                    35,
+                    94,
+                    214,
+                    159,
+                    6,
+                    156,
+                    150,
+                    100,
+                    168,
+                    254,
+                    91,
+                    105
+                  ],
+                  "asset_name": {
+                    "Bytes": [
+                      70,
+                      85,
+                      69,
+                      76
+                    ]
+                  },
+                  "amount": {
+                    "EvalParameter": [
+                      "required_fuel",
+                      "Int"
+                    ]
+                  }
+                }
+              ]
+            },
+            "op": "Add"
+          }
+        },
+        "ref": null
+      },
+      "refs": [],
+      "redeemer": null,
+      "policy": null
+    },
+    {
+      "name": "pilot",
+      "query": {
+        "address": {
+          "EvalParameter": [
+            "player",
+            "Address"
+          ]
+        },
+        "min_amount": {
+          "Assets": [
+            {
+              "policy": [
+                107,
+                156,
+                69,
+                106,
+                166,
+                80,
+                203,
+                128,
+                138,
+                154,
+                181,
+                67,
+                38,
+                224,
+                57,
+                213,
+                35,
+                94,
+                214,
+                159,
+                6,
+                156,
+                150,
+                100,
+                168,
+                254,
+                91,
+                105
+              ],
+              "asset_name": {
+                "Bytes": [
+                  80,
+                  73,
+                  76,
+                  79,
+                  84
+                ]
+              },
+              "amount": {
+                "EvalParameter": [
+                  "ship_name",
+                  {
+                    "Custom": "AssetName"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "ref": null
+      },
+      "refs": [],
+      "redeemer": null,
+      "policy": null
+    },
+    {
+      "name": "fees",
+      "query": {
+        "address": {
+          "EvalParameter": [
+            "player",
+            "Address"
+          ]
+        },
+        "min_amount": {
+          "EvalInputAssets": "fees"
+        },
+        "ref": null
+      },
+      "refs": [],
+      "redeemer": null,
+      "policy": null
+    }
+  ],
+  "outputs": [
+    {
+      "address": {
+        "EvalParameter": [
+          "game",
+          "Address"
+        ]
+      },
+      "datum": {
+        "Struct": {
+          "constructor": 0,
+          "fields": [
+            {
+              "EvalCustom": {
+                "left": {
+                  "EvalProperty": {
+                    "object": {
+                      "EvalInputDatum": "ship"
+                    },
+                    "field": "pos_x"
+                  }
+                },
+                "right": {
+                  "EvalParameter": [
+                    "delta_x",
+                    "Int"
+                  ]
+                },
+                "op": "Add"
+              }
+            },
+            {
+              "EvalCustom": {
+                "left": {
+                  "EvalProperty": {
+                    "object": {
+                      "EvalInputDatum": "ship"
+                    },
+                    "field": "pos_y"
+                  }
+                },
+                "right": {
+                  "EvalParameter": [
+                    "delta_y",
+                    "Int"
+                  ]
+                },
+                "op": "Add"
+              }
+            },
+            {
+              "EvalProperty": {
+                "object": {
+                  "EvalInputDatum": "ship"
+                },
+                "field": "ship_token_name"
+              }
+            },
+            {
+              "EvalProperty": {
+                "object": {
+                  "EvalInputDatum": "ship"
+                },
+                "field": "pilot_token_name"
+              }
+            },
+            {
+              "EvalProperty": {
+                "object": {
+                  "EvalInputDatum": "ship"
+                },
+                "field": "last_move_latest_time"
+              }
+            }
+          ]
+        }
+      },
+      "amount": {
+        "EvalCustom": {
+          "left": {
+            "EvalInputAssets": "ship"
+          },
+          "right": {
+            "Assets": [
+              {
+                "policy": [
+                  107,
+                  156,
+                  69,
+                  106,
+                  166,
+                  80,
+                  203,
+                  128,
+                  138,
+                  154,
+                  181,
+                  67,
+                  38,
+                  224,
+                  57,
+                  213,
+                  35,
+                  94,
+                  214,
+                  159,
+                  6,
+                  156,
+                  150,
+                  100,
+                  168,
+                  254,
+                  91,
+                  105
+                ],
+                "asset_name": {
+                  "Bytes": [
+                    70,
+                    85,
+                    69,
+                    76
+                  ]
+                },
+                "amount": {
+                  "EvalParameter": [
+                    "required_fuel",
+                    "Int"
+                  ]
+                }
+              }
+            ]
+          },
+          "op": "Sub"
+        }
+      }
+    },
+    {
+      "address": {
+        "EvalParameter": [
+          "player",
+          "Address"
+        ]
+      },
+      "datum": null,
+      "amount": {
+        "EvalCustom": {
+          "left": {
+            "EvalInputAssets": "pilot"
+          },
+          "right": {
+            "EvalInputAssets": "fees"
+          },
+          "op": "Sub"
+        }
+      }
+    }
+  ],
+  "mint": null,
+  "adhoc": []
+}

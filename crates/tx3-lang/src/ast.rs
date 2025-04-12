@@ -20,7 +20,7 @@ pub struct Scope {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Symbol {
     ParamVar(String, Box<Type>),
-    Input(String),
+    Input(String, Box<Type>),
     PartyDef(Box<PartyDef>),
     PolicyDef(Box<PolicyDef>),
     AssetDef(Box<AssetDef>),
@@ -98,6 +98,18 @@ impl Symbol {
         match self {
             Symbol::PolicyDef(x) => Some(x.as_ref()),
             _ => None,
+        }
+    }
+
+    pub fn target_type(&self) -> Option<Type> {
+        match self {
+            Symbol::ParamVar(_, ty) => Some(ty.as_ref().clone()),
+            Symbol::RecordField(x) => Some(x.r#type.clone()),
+            Symbol::Input(_, ty) => Some(ty.as_ref().clone()),
+            x => {
+                dbg!(x);
+                None
+            }
         }
     }
 }
@@ -242,6 +254,13 @@ impl InputBlockField {
             _ => None,
         }
     }
+
+    pub fn as_datum_type(&self) -> Option<&Type> {
+        match self {
+            InputBlockField::DatumIs(x) => Some(x),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -255,6 +274,13 @@ pub struct InputBlock {
 impl InputBlock {
     pub(crate) fn find(&self, key: &str) -> Option<&InputBlockField> {
         self.fields.iter().find(|x| x.key() == key)
+    }
+
+    pub(crate) fn datum_is(&self) -> Type {
+        self.find("datum_is")
+            .and_then(|x| x.as_datum_type())
+            .cloned()
+            .unwrap_or(Type::Unit)
     }
 }
 
@@ -538,11 +564,13 @@ pub enum BinaryOperator {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Type {
+    Unit,
     Int,
     Bool,
     Bytes,
     Address,
     UtxoRef,
+    AnyAsset,
     Custom(Identifier),
 }
 
