@@ -1,6 +1,0 @@
-type Foo {
-    name: Bytes,
-    age: Int,
-} 
-
-tx swap(from: Bytes, to: Bytes, quantity: Int) {}
