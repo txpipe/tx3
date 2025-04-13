@@ -1,7 +1,16 @@
 [package]
 name = "tx3-lsp"
-version = "0.1.0"
-edition = "2024"
+description = "Language Server Protocol implementation for tx3-lang"
+publish.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+keywords.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
 
 [dependencies]
 tokio = { version = "1.44.1", features = ["full"] }
@@ -9,7 +18,7 @@ tower-lsp = "0.20.0"
 tower = { version = "0.4", features = ["util"] }
 dashmap = "6.1.0"
 ropey = "1.6.1"
-tx3-lang = { version = "0.1.0", path = "../tx3-lang" }
+tx3-lang = { path = "../tx3-lang" }
 pest = "2.7.15"
 miette = "7.5.0"
 serde_json = "1.0.140"

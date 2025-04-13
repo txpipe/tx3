@@ -1,7 +1,17 @@
 [package]
 name = "tx3-lang"
-version = "0.1.0"
-edition = "2021"
+description = "A DSL for defining protocols that run on UTxO blockchains"
+publish.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+keywords.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
 
 [dependencies]
 miette = { version = "7.4.0", features = ["fancy"] }

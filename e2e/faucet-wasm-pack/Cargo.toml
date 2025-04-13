@@ -3,6 +3,7 @@ name = "faucet"
 version = "0.1.0"
 authors = ["Santiago Carmuega <santiago@carmuega.me>"]
 edition = "2018"
+publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -19,8 +20,8 @@ wasm-bindgen-futures = "0.4.50"
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.7", optional = true }
-tx3-lang = { version = "0.1.0", path = "../../crates/tx3-lang" }
-tx3-cardano = { version = "0.1.0", path = "../../crates/tx3-cardano" }
+tx3-lang = { path = "../../crates/tx3-lang" }
+tx3-cardano = { path = "../../crates/tx3-cardano" }
 
 [dev-dependencies]
 hex = "0.4.3"
@@ -31,4 +32,4 @@ wasm-bindgen-test = "0.3.34"
 opt-level = "s"
 
 [build-dependencies]
-tx3-bindgen = { version = "0.1.0", path = "../../crates/tx3-bindgen" }
+tx3-bindgen = { path = "../../crates/tx3-bindgen" }
