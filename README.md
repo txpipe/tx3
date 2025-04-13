@@ -1,8 +1,6 @@
 # Tx3
 
-⚠️ This is an early experimental project, everything here is subject to change or even disappear.
-
-A domain-specific language for describing and visualizing transactions in UTxO-based blockchains, with a particular focus on Cardano.
+A domain-specific language for describing protocols that run on UTxO-based blockchains, with a particular focus on Cardano.
 
 ## Rationale
 
