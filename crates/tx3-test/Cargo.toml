@@ -1,10 +1,21 @@
 [package]
 name = "tx3-test"
-version = "0.1.0"
-edition = "2021"
+description = "Test utilities for tx3-lang"
+publish.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+keywords.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
 
 [dependencies]
-tx3-lang = { version = "0.1.0", path = "../tx3-lang" }
+tx3-lang = { path = "../tx3-lang" }
+tx3-cardano = { path = "../tx3-cardano" }
+
 hex = "0.4.3"
 thiserror = "2.0.11"
 tokio = { version = "1.43.0", features = ["rt-multi-thread"] }
@@ -13,5 +24,4 @@ serde_json = "1.0.140"
 tokio-util = "0.7.13"
 tracing = "0.1.41"
 serde = "1.0.218"
-tx3-cardano = { version = "0.1.0", path = "../tx3-cardano" }
 base64 = "0.22.1"
