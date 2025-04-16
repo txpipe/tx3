@@ -175,11 +175,129 @@ tx Lend(lend_params_list: LendParams[]) {
     }
 }
 
-tx Borrow(
+// Version 1: Introducing a way to filter inputs 
+tx BorrowVersion1(loan_amount: Lovelace, max_interest: Int) {
+    input lend_positions {
+        from: TokenValidator,
+        min_amount: Ada(loan_amount),
+        datum_is: TokenDatum::BorrowTokenDatum(BorrowTokenDetails),
+        // We can use a filter to get the inputs that we need
+        // this is useful for batch transactions
+        filter: (input) => {
+            let interest = (input.interest_amount * 10_000 /* Inflate value */) / input.loan_amount
+            interest <= max_interest 
+        },
+        redeemer: TokenAction::BorrowTokenAction,
+    }
+
+    // In this version we need a way to interate over the inputs and also a wayt to have a variable
+    // that can be updated
+    let unfilled_loan_amount = loan_amount;
+    let total_collateral = 0;
+    foreach(lend_position in lend_positions)
+    {
+        // It would be helpful to have a way to compute some values
+        // and store the result in a variable, this is useful for complex 
+        // validation logic, otherwise we can just pass it as params
+        let current_loan_amount = unfilled_loan_amount > lend_position.loan_amount ? lend_position.loan_amount : unfilled_loan_amount;
+        let loan_ratio = lend_position.loan_amount / params.loan_amount; // if float values are supported, otherwise we inflate
+        let collateral_amount = lend_position.token_amount * loan_ratio;
+        let interest_amount = lend_position.interest_amount * loan_ratio;
+
+        // Borrow output that holds the collateral
+        output {
+            to: TokenValidator,
+            // The use of `Asset` that accepts a policy_id, asset_name and amount
+            // this is useful for assets that are not known at compile time
+            amount: Asset(lend_position.policy_id, lend_position.asset_name, collateral_amount),
+            datum: TokenDatum::BorrowTokenDatum(BorrowTokenDetails {
+                ada_owner: lend_position.ada_owner,
+                asset_owner: plutus_addresses.to_plutus_address(Borrower),
+                policy_id: lend_position.policy_id,
+                asset_name: lend_position.asset_name,
+                token_amount: collateral_amount,
+                loan_amount: params.loan_amount,
+                interest_amount: interest_amount,
+                // We can introduce a `now()` function to get the current unix timestamp
+                // this is useful for a lot of use cases that require time-based logic
+                loan_end_time: now() + lend_position.loan_duration,
+                output_reference: params.lend_position_outref
+            }),
+        }
+
+        // Platorm fee sent to the treasury wallet
+        output {
+            to: Treasury,
+            amount: Ada(interest_amount) * 0.15,
+            datum: PaymentDatum {
+                output_reference: params.lend_position_outref,
+            },
+        }
+
+        // We need some sort of conditional logic support
+        // even just a basic if statement would be helpful
+        if (current_loan_amount < lend_position.loan_amount) {
+            // There is an extra output in case of a partial loan
+            output {
+                to: TokenValidator,
+                amount: Ada(lend_position.loan_amount) - params.loan_amount,
+                datum: TokenDatum::LendTokenDatum(LendTokenDetails {
+                    ada_owner: lend_position.ada_owner,
+                    policy_id: lend_position.policy_id,
+                    asset_name: lend_position.asset_name,
+                    token_amount: lend_position.token_amount - collateral_amount,
+                    loan_amount: lend_position.loan_amount - params.loan_amount,
+                    interest_amount: lend_position.interest_amount - interest_amount,
+                    loan_duration: lend_position.loan_duration,
+                    output_reference: params.lend_position_outref
+                }),
+            }
+        }
+
+        // Update the total collateral amount
+        total_collateral += collateral_amount;
+
+        // Update the unfilled loan amount
+        unfilled_loan_amount -= current_loan_amount;
+    }
+
+    // This section here aggregates the result of the previous batch transaction
+    // This is the total asset amount that the borrower needs to lock
+    input borrower_collateral_input {
+        from: Borrower,
+        min_amount: Asset(collateral_asset.policy_id, collateral_asset.asset_name, total_collateral)
+    }
+
+    // This is the total amount the borrower loaned plus whatever is left from the inputs used
+    // for the collateral
+    output {
+        to: Borrower,
+        amount: loan_amount + borrower_collateral_input - fees
+    }
+
+    // Maybe a special field for reference input?
+    reference_input TokenValidatorRefScript
+
+    // Since this is a smart contract transaction, we may want a way to set collateral
+    // this can be ommitted if this will be handled automatically
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+
+    // Also, for time-based logic, we need to pass validity range
+    // somthing like this:
+    valid_from now()
+    valid_until now() + 1000
+}
+
+// Version 2: Passing the UTxOs as params
+tx BorrowVersion2(
     borrow_params_list: BorrowParams[], 
     total_collateral: Int,
     collateral_asset: AssetClass
 ) {
+    // Version 2: UTxOs directly passed as params
     batch borrow_positions = foreach (params in borrow_params_list) {
         input lend_position {
             from: TokenValidator,
