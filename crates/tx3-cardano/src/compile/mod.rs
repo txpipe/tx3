@@ -1,4 +1,7 @@
-use pallas::{codec::utils::MaybeIndefArray, ledger::primitives::conway as primitives};
+use pallas::{
+    codec::utils::{KeepRaw, MaybeIndefArray},
+    ledger::primitives::conway::{self as primitives, Redeemers},
+};
 use std::{collections::BTreeMap, str::FromStr};
 use tx3_lang::ir;
 
@@ -273,7 +276,7 @@ fn eval_minutxo_constructor(&self, ctr: &ir::AssetConstructor) -> Result<primiti
 fn compile_output_block(
     ir: &ir::Output,
     pparams: &PParams,
-) -> Result<primitives::TransactionOutput, Error> {
+) -> Result<primitives::TransactionOutput<'static>, Error> {
     let address = ir
         .address
         .as_ref()
@@ -297,14 +300,17 @@ fn compile_output_block(
 
     let datum_option = ir.datum.as_ref().map(compile_data_expr).transpose()?;
 
-    let output =
-        primitives::TransactionOutput::PostAlonzo(primitives::PostAlonzoTransactionOutput {
+    let output = primitives::TransactionOutput::PostAlonzo(
+        primitives::PostAlonzoTransactionOutput {
             address: address.to_vec().into(),
             value,
-            datum_option: datum_option
-                .map(|x| primitives::DatumOption::Data(pallas::codec::utils::CborWrap(x))),
+            datum_option: datum_option.map(|x| {
+                primitives::DatumOption::Data(pallas::codec::utils::CborWrap(x.into())).into()
+            }),
             script_ref: None, // TODO: add script ref
-        });
+        }
+        .into(),
+    );
 
     Ok(output)
 }
@@ -348,7 +354,7 @@ fn compile_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionInput>, Erro
 fn compile_outputs(
     tx: &ir::Tx,
     pparams: &PParams,
-) -> Result<Vec<primitives::TransactionOutput>, Error> {
+) -> Result<Vec<primitives::TransactionOutput<'static>>, Error> {
     let resolved = tx
         .outputs
         .iter()
@@ -399,7 +405,10 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
     Ok(refs)
 }
 
-fn compile_tx_body(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::TransactionBody, Error> {
+fn compile_tx_body(
+    tx: &ir::Tx,
+    pparams: &PParams,
+) -> Result<primitives::TransactionBody<'static>, Error> {
     let out = primitives::TransactionBody {
         inputs: compile_inputs(tx)?.into(),
         outputs: compile_outputs(tx, pparams)?,
@@ -517,7 +526,7 @@ fn compile_mint_redeemers(_tx: &ir::Tx) -> Result<Vec<primitives::Redeemer>, Err
 fn compile_redeemers(
     tx: &ir::Tx,
     compiled_body: &primitives::TransactionBody,
-) -> Result<Option<primitives::Redeemers>, Error> {
+) -> Result<Option<Redeemers>, Error> {
     let spend_redeemers = compile_spend_redeemers(tx, compiled_body)?;
     let mint_redeemers = compile_mint_redeemers(tx)?;
 
@@ -536,9 +545,9 @@ fn compile_redeemers(
 fn compile_witness_set(
     tx: &ir::Tx,
     compiled_body: &primitives::TransactionBody,
-) -> Result<primitives::WitnessSet, Error> {
+) -> Result<primitives::WitnessSet<'static>, Error> {
     let out = primitives::WitnessSet {
-        redeemer: compile_redeemers(tx, compiled_body)?,
+        redeemer: compile_redeemers(tx, compiled_body)?.map(|x| x.into()),
         vkeywitness: None,
         native_script: None,
         bootstrap_witness: None,
@@ -551,15 +560,15 @@ fn compile_witness_set(
     Ok(out)
 }
 
-pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx, Error> {
+pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'static>, Error> {
     let transaction_body = compile_tx_body(tx, pparams)?;
     let transaction_witness_set = compile_witness_set(tx, &transaction_body)?;
     let auxiliary_data = compile_auxiliary_data(tx)?;
 
     let tx = primitives::Tx {
-        transaction_body,
-        transaction_witness_set,
-        auxiliary_data: auxiliary_data.into(),
+        transaction_body: transaction_body.into(),
+        transaction_witness_set: transaction_witness_set.into(),
+        auxiliary_data: primitives::Nullable::from(auxiliary_data.map(KeepRaw::from)),
         success: true,
     };
 
