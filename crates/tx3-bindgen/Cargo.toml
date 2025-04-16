@@ -19,7 +19,7 @@ hex = "0.4.3"
 proc-macro2 = "1.0.93"
 quote = "1.0.38"
 syn = "2.0.98"
-tx3-lang = { path = "../tx3-lang" }
+tx3-lang = { version = "0.1.0", path = "../tx3-lang" }
 clap = { version = "4.5", features = ["derive"] }
 swc_ecma_ast = "8.0.0"
 swc_ecma_codegen = "8.0.2"
