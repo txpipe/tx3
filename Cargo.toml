@@ -1,13 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/tx3-bindgen",
-    "crates/tx3-cardano",
-    "crates/tx3-lang",
-    "crates/tx3-lsp",
-    "crates/tx3-test",
-    "e2e/faucet-wasm-pack",
-]
+members = ["crates/tx3-bindgen", "crates/tx3-cardano", "crates/tx3-lang", "crates/tx3-test", "e2e/faucet-wasm-pack"]
 
 [workspace.package]
 publish = true
