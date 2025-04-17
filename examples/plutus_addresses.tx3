@@ -1,0 +1,55 @@
+type Address =  {
+    payment_credential: PaymentCredential
+    stake_credential: Option<StakeCredential>
+}
+
+type VerificationKey = Bytes
+type VerificationKeyHash = Hash<Blake2b_224, VerificationKey>
+
+type Script = Bytes
+type ScriptHash = Hash<Blake2b_224, Script>
+
+type Credential = VerificationKey | Script
+type PaymentCredential = Credential
+type StakeCredential = Referenced<Credential>
+
+// For flexibility, we should be able to define a generic type
+type Referenced<Any> = Inline(Any) | Pointer
+type Pointer {
+    slot_number: Int,
+    tx_index: Int,
+    certificate_index: Int,
+}
+
+// Should we support simple functions? 
+func to_plutus_address(address: Party) -> Address {
+    let stake_credential = 
+        if address.stake_credential == null {
+            None
+        } else {
+            Some(address.stake_credential)
+        }
+    let payment_credential = 
+        if address.payment_part.is_script {
+            Script(address.script)
+        } else {
+            VerificationKey(address.verification_key)
+        }
+
+     // We're going to assume that it's inline for now
+     let stake_credential = 
+        if address.stake_credential == null {
+            None
+        } else {
+            if address.delegation_part.is_script {
+                Some(Referenced<Credential>::Inline(Script(address.script)))
+            } else {
+                Some(Referenced<Credential>::Inline(VerificationKey(address.verification_key)))
+            }
+        }
+
+    return Address {
+        payment_credential: payment_credential,
+        stake_credential: stake_credential,
+    }
+}

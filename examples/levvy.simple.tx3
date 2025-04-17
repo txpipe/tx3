@@ -1,0 +1,310 @@
+party Lender;
+party Borrower;
+party Treasury;
+
+policy TokenValidator = { 
+    script_hash: "5dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+    outref: OutputReference { 
+        tx_hash: "dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+        index: 0 
+    }
+};
+
+type OutputReference {
+    tx_hash: Bytes,
+    index: Int,
+}
+
+type LendTokenDetails {
+    ada_owner: Bytes,
+    policy_id: Bytes,
+    asset_name: Bytes,
+    token_amount: Int,
+    loan_amount: Int,
+    interest_amount: Int,
+    loan_duration: Int,
+    output_reference: OutputReference,
+}
+
+type BorrowTokenDetails {
+    ada_owner: Bytes,
+    asset_owner: Bytes,
+    policy_id: Bytes,
+    asset_name: Bytes,
+    token_amount: Int,
+    loan_amount: Int,
+    interest_amount: Int,
+    loan_end_time: Int,
+    output_reference: OutputReference,
+}
+
+type RepayTokenDetails {
+    ada_owner: Bytes,
+    token_amount: Int,
+    loan_amount: Int,
+    interest_amount: Int,
+    output_reference: OutputReference,
+}
+
+type TokenAction {
+    BorrowTokenAction,
+    RepayTokenAction,
+    ClaimTokenAction,
+    ForecloseTokenAction,
+    CancelTokenAction,
+}
+
+type PaymentDatum {
+  output_reference: OutputReference,
+}
+
+type TokenDatum {
+  LendTokenDatum(LendTokenDetails),
+  BorrowTokenDatum(BorrowTokenDetails),
+  RepayTokenDatum(RepayTokenDetails),
+}
+
+type TokenAction {
+  BorrowTokenAction
+  RepayTokenAction
+  ClaimTokenAction
+  ForecloseTokenAction
+  CancelTokenAction
+}
+
+type LendParams {
+    collateral_asset: AssetClass,
+    collateral_amount: Int,
+    principal_amount: Int,
+    interest_amount: Int,
+    loan_duration: Int,
+    output_reference: OutputReference,
+}
+
+type RedeemerParams {
+    outref: OutputReference,
+    platform_fee: Int
+}
+
+tx Lend(params: LendParams) {
+    input source {
+        from: Lender,
+        min_amount: Ada(params.loan_amount)
+    }
+
+    output {
+        to: TokenValidator,
+        amount: Ada(param.loan_amount),
+        datum: TokenDatum::LendTokenDatum(LendTokenDetails {
+            ada_owner: PlutusAddress(Lender), // PlutusAddress is just a placeholder
+            policy_id: params.collateral_asset.policy_id,
+            asset_name: params.collateral_asset.asset_name,
+            token_amount: params.collateral_amount,
+            loan_amount: params.principal_amount,
+            interest_amount: params.interest_amount,
+            loan_duration: params.loan_duration,
+            output_reference: params.output_reference
+        }),   
+    }
+
+    output {
+        to: Lender,
+        amount: source - Ada(params.loan_amount) - fees,
+    }
+}
+
+tx Borrow(params: RedeemerParams) {
+    input lend_position {
+        from: TokenValidator,
+        ref: params.outref,
+        datum_is: TokenDatum::LendTokenDatum(LendTokenDetails),
+        redeemer: TokenAction::BorrowTokenAction
+    }
+
+    input collateral {
+        from: Borrower,
+        min_amount: Asset(collateral_asset.policy_id, collateral_asset.asset_name, total_collateral)
+    }
+
+    output {
+        to: TokenValidator,
+        amount: Asset(lend_token_details.policy_id, lend_token_details.asset_name, collateral_amount), // AnyAsset placeholder
+        datum: TokenDatum::BorrowTokenDatum(BorrowTokenDetails {
+            ada_owner: lend_token_details.ada_owner,
+            asset_owner: PlutusAddress(Borrower), // PlutusAddress is just a placeholder
+            policy_id: lend_token_details.policy_id,
+            asset_name: lend_token_details.asset_name,
+            token_amount: collateral_amount,
+            loan_amount: params.loan_amount,
+            interest_amount: interest_amount,
+            loan_end_time: now() + lend_token_details.loan_duration, // now() is just a placeholder
+            output_reference: params.outref
+        }),
+    }
+
+    output {
+        to: Treasury,
+        amount: Ada(params.platform_fee),
+        datum: PaymentDatum {
+            output_reference: params.outref,
+        },
+    }
+
+    output {
+        to: Borrower,
+        amount: lend_position - fees
+    }
+
+    // Since this is a smart contract, we need a collateral
+    // collateral is just a placeholder syntax
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+
+    // This transaction needs validity interval to be set
+    // this is just a placeholder syntax
+    valid_from now()
+    valid_until now() + 1000
+}
+
+tx Repay(params: RedeemerParams) {
+    input borrow_position {
+        from: TokenValidator,
+        ref: params.outref,
+        datum_is: TokenDatum::BorrowTokenDatum(BorrowTokenDetails),
+        redeemer: TokenAction::RepayTokenAction,
+    }
+
+    input repay_input {
+        from: Borrower,
+        min_amount: borrow_position.loan_amount + borrow_position.interest_amount + params.platform_fee
+    }
+
+    output {
+        to: Treasury,
+        amount: Ada(params.platform_fee),
+        datum: PaymentDatum {
+            output_reference: outref,
+        }
+    }
+
+    output {
+        to: TokenValidator,
+        amount: Ada(borrow_position.loan_amount + borrow_position.interest_amount),
+        datum: TokenDatum::RepayTokenDatum(RepayTokenDetails {
+            ada_owner: PlutusAddress(Borrower), // PlutusAddress is just a placeholder
+            token_amount: borrow_position.token_amount,
+            loan_amount: borrow_position.loan_amount,
+            interest_amount: borrow_position.interest_amount,
+            output_reference: params.outref
+        }),
+    }
+
+    output {
+        to: Borrower,
+        amount: borrow_position - fees,
+    }
+
+    required_signers [Borrower] // placeholder syntax for required signers
+
+    // Could be implicitly included in the tx, just a placeholder for now
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+}
+
+tx Foreclose(params: RedeemerParams) {  
+    input borrow_position {
+        from: TokenValidator,
+        ref: params.outref,
+        datum_is: TokenDatum::BorrowTokenDatum(BorrowTokenDetails),
+        redeemer: TokenAction::ForecloseTokenAction,
+    }
+
+    input platform_fee_input {
+        from: Borrower,
+        min_amount: params.platform_fee
+    }
+
+    output {
+        to: Treasury,
+        amount: Ada(params.platform_fee),
+        datum: PaymentDatum {
+            output_reference: outref,
+        }
+    }
+
+    output {
+        to: Lender,
+        amount: borrow_position - fees
+    }
+
+    // The lender needs to sign the transaction because the contract requires it
+    required_signers [Lender] 
+
+    // Placeholder collateral
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+
+    // Placeholder validity interval
+    valid_from now()
+    valid_until now() + 1000
+}
+
+tx Claim(outrefs: RedeemerParams) {
+    input claim_position {
+        from: TokenValidator,
+        ref: outref,
+        datum_is: TokenDatum::RepayTokenDatum(RepayTokenDetails),
+        redeemer: TokenAction::ClaimTokenAction,
+    }
+
+    output {
+        to: Treasury,
+        amount: Ada(params.platform_fee),
+        datum: PaymentDatum {
+            output_reference: outref,
+        }
+    }
+
+    output {
+        to: Lender,
+        amount: claim_position - fees
+    }
+
+    // Placeholder for the required signers
+    required_signers [Lender]
+
+    // Placeholder for the collateral
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+}
+
+tx Cancel(outrefs: OutputReference[]) {
+    input lend_position {
+        from: TokenValidator,
+        ref: outref,
+        datum_is: TokenDatum::LendTokenDatum(LendTokenDetails),
+        redeemer: TokenAction::CancelTokenAction,
+    }
+
+   output {
+        to: Lender,
+        amount: lend_position - fees
+    }
+
+    // Placeholder for the required signers
+    required_signers [Lender]
+
+    // Placeholder for the collateral
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+}
