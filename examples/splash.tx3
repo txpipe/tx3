@@ -1,13 +1,6 @@
-using plutus_addresses.{Credential};
-
 party User;
-party Batcher;
-party Pool;
-party Swap;
-party Deposit;
-party Redeem;
 
-policy PoolValidatorRefScript = { 
+policy PoolValidator = { 
     script_hash: "5dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
     outref: OutputReference { 
         tx_hash: "dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
@@ -15,13 +8,6 @@ policy PoolValidatorRefScript = {
     }
 };
 
-policy SwapValidatorRefScript = { 
-    script_hash: "5dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
-    outref: OutputReference { 
-        tx_hash: "dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
-        index: 0 
-    }
-};
 
 // Support aliasing for readability
 // 1. Maybe we can add `alias` keyword to the language to make them more readable
@@ -90,70 +76,111 @@ type OrderRedeemer {
     action: Int
 }
 
-// We don't have constants in the language yet, but we might want to add them
-const ex_fee_per_token_den = 1_000_000_000; 
-
 tx Swap(
-    swap_order_outref: OutputReference, 
-    pool_nft: AssetClass,
+    pool_outref: OutputReference,
+    base_asset: AssetClass,
+    quote_asset: AssetClass,
+    base_amount: Int,
     quote_amount: Int,
-    batcher_fee: Int
+    new_reserve_x_amount: Int,
+    new_reserve_y_amount: Int,
 )
 {    
-    input swap_order_input {
-        from: Swap,
-        datum_is: SwapDatum,
-        filter: (in) => in.output_reference == swap_order_outref,
-        redeemer: OrderRedeemer {
-            // We need a way to get the index of this input
-            // I'm going to use some magic function for now
-            pool_input_index: InputIndex(pool_input),
-            order_input_index: InputIndex(swap_order_input),
-            // We need a way to get the index of this output
-            // I'm going to use some magic function for now
-            reward_output_index: OutputIndex(reward_output),
-            action: 0, // 0 = Swap, 1 = Refund
-        }
+    input source {
+        from: User,
+        min_amount: Asset(base_asset, base_amount),
     }
 
-    input pool_input {
-        from: Pool,
+    input pool {
+        from: PoolValidator,
+        ref: pool_outref,
         datum_is: PoolDatum,
-        filter: (in) => in.pool_nft == pool_nft,
-        redeemer: PoolRedeemer {
-            action: 2, // 2 = Swap
-            // We need a way to get the index of this input
-            // I'm going to use some magic function for now
-            self_index: InputIndex(pool_input)
-        },
     }
 
-    // Update the pool reserves
     output {
-        to: Pool,
-        // Assuming this is how we access the full datum from an input
-        datum: pool_input.datum,
-        amount: pool_input - Asset(pool_input.asset_y, quote_amount) + Ada(swap_order_input.base_amount),
+        to: PoolValidator,
+        amount: Asset(pool.asset_x, new_reserve_x_amount) +
+            Asset(pool.asset_y, new_reserve_y_amount) +
+            Asset(pool.asset_lq, pool),
+            Asset(pool.pool_nft, 1),
+        datum: pool.datum
     }
 
-    // Remaining ADA goes to the batcher
     output {
-        to: Batcher,
-        amount: Ada(swap_order_input) - base_amount - fees,
-    }
-
-    // We're just sending the swapped order to the user less fees
-    output reward_output {
         to: User,
-        amount: Asset(swap_order_input.quote, quote_amount),
+        amount: Asset(quote_asset, quote_amount) - fees,
+    }
+}
+
+tx Deposit(
+    pool_outref: OutputReference,
+    asset_x_deposit_amount: Int,
+    asset_y_deposit_amount: Int,
+    new_lq_amount: Int
+)
+{
+    input source {
+        from: User,
+        min_amount: 
+            Asset(pool.asset_x, asset_x_deposit_amount) + 
+            Asset(pool.asset_y, asset_y_deposit_amount)
     }
 
-    // We need 2 validators for this transaction
-    reference_input PoolValidatorRefScript;
-    reference_input SwapValidatorRefScript;
+    input pool {
+        from: PoolValidator,
+        ref: pool_outref,
+        datum_is: PoolDatum,
+    }
 
-    collateral {
-        from: Batcher,
-        amount: Ada(5)
+    output {
+        to: PoolValidator,
+        amount: 
+            pool +
+            Asset(pool.asset_x, asset_x_deposit_amount) +
+            Asset(pool.asset_y, asset_y_deposit_amount) - 
+            Asset(pool.asset_lq, Asset(pool.asset_lq, pool) - new_lq_amount)
+        datum: pool.datum
+    }
+
+    output {
+        to: User,
+        amount: source - fees + Asset(pool.asset_lq, Asset(pool.asset_lq, pool) - new_lq_amount)
+    }
+}
+
+tx Redeem(
+    pool_outref: OutputReference,
+    asset_x_redeem_amount: Int,
+    asset_y_redeem_amount: Int,
+    redeem_lq_amount: Int
+)
+{
+    input source {
+        from: User,
+        min_amount: 
+            Asset(pool.asset_lq, redeem_lq_amount) +
+            Asset(pool.asset_x, asset_x_redeem_amount) +
+            Asset(pool.asset_y, asset_y_redeem_amount)
+    }
+
+    input pool {
+        from: PoolValidator,
+        ref: pool_outref,
+        datum_is: PoolDatum,
+    }
+
+    output {
+        to: PoolValidator,
+        amount: 
+            pool +
+            Asset(pool.asset_lq, redeem_lq_amount) -
+            Asset(pool.asset_x, asset_x_redeem_amount) -
+            Asset(pool.asset_y, asset_y_redeem_amount)
+        datum: pool.datum
+    }
+
+    output {
+        to: User,
+        amount: source - fees + Asset(pool.asset_x, asset_x_redeem_amount) + Asset(pool.asset_y, asset_y_redeem_amount)
     }
 }
