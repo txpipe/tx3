@@ -624,6 +624,12 @@ impl Analyzable for Program {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         let mut scope = Scope::new(parent);
 
+        for import in self.imports.iter() {
+            for item in import.items.iter() {
+                scope.track_type_def(type_);
+            }
+        }
+
         for party in self.parties.iter() {
             scope.track_party_def(party);
         }

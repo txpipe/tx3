@@ -27,6 +27,7 @@
 pub mod analyzing;
 pub mod applying;
 pub mod ast;
+pub mod cip57;
 pub mod ir;
 pub mod loading;
 pub mod lowering;

@@ -79,6 +79,7 @@ impl AstNode for Program {
         let inner = pair.into_inner();
 
         let mut program = Self {
+            imports: Vec::new(),
             txs: Vec::new(),
             assets: Vec::new(),
             types: Vec::new(),
@@ -96,6 +97,7 @@ impl AstNode for Program {
                 Rule::variant_def => program.types.push(TypeDef::parse(pair)?),
                 Rule::party_def => program.parties.push(PartyDef::parse(pair)?),
                 Rule::policy_def => program.policies.push(PolicyDef::parse(pair)?),
+                Rule::import_block => program.imports.push(ImportBlock::parse(pair)?),
                 Rule::EOI => break,
                 x => unreachable!("Unexpected rule in program: {:?}", x),
             }
@@ -1043,6 +1045,29 @@ impl AstNode for AssetDef {
     }
 }
 
+impl AstNode for ImportBlock {
+    const RULE: Rule = Rule::import_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let mut inner = pair.into_inner();
+
+        let module = Identifier::parse(inner.next().unwrap()).unwrap();
+
+        let items = inner.map(Identifier::parse).map(Result::unwrap).collect();
+
+        Ok(ImportBlock {
+            module,
+            items,
+            span,
+        })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
 impl AstNode for ChainSpecificBlock {
     const RULE: Rule = Rule::chain_specific_block;
 
@@ -1497,6 +1522,31 @@ mod tests {
                 span: Span::DUMMY,
             },
         ))
+    );
+
+    input_to_ast_check!(
+        ImportBlock,
+        "import_block_empty",
+        "from cip57 {}",
+        ImportBlock {
+            module: Identifier::new("cip57"),
+            items: vec![],
+            span: Span::DUMMY
+        }
+    );
+
+    input_to_ast_check!(
+        ImportBlock,
+        "import_block_identifiers",
+        "from cip57 {
+            Datum,
+            Redeemer,
+        }",
+        ImportBlock {
+            module: Identifier::new("cip57"),
+            items: vec![Identifier::new("Datum"), Identifier::new("Redeemer")],
+            span: Span::DUMMY
+        }
     );
 
     #[test]

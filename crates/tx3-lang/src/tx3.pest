@@ -250,9 +250,17 @@ tx_def = {
     "}"
 }
 
+from_block_body = _{
+    "{" ~ (identifier ~ ",")* ~ "}"
+}
+
+import_block = {
+    "from" ~ identifier ~ from_block_body
+}
+
 // Program
 program = {
     SOI ~
-    (asset_def | party_def | policy_def | type_def | tx_def)* ~
+    (import_block | asset_def | party_def | policy_def | type_def | tx_def)* ~
     EOI
 }

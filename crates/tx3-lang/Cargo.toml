@@ -21,7 +21,11 @@ serde = { version = "1.0.217", features = ["derive"] }
 thiserror = "2.0.11"
 hex = "0.4.3"
 bincode = "1.3.3"
+serde_json = { version = "1.0.137", optional = true }
 
+[features]
+default = ["cip57"]
+cip57 = ["serde_json"]
 
 [dev-dependencies]
 assert-json-diff = "2.0.2"

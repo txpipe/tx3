@@ -1,0 +1,78 @@
+{
+  "preamble": {
+    "title": "txpipe/hello-world",
+    "description": "Aiken contracts for project 'txpipe/hello-world'",
+    "version": "0.0.0",
+    "plutusVersion": "v3",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.1.3+3d77b5c"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": [
+    {
+      "title": "vesting.hello_world.spend",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/vesting~1Datum"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/vesting~1Redeemer"
+        }
+      },
+      "compiledCode": "59010301010032323232323225333002323232323253330073370e900118041baa0011323232533300a3370e900018059baa00513232533300f30110021533300c3370e900018069baa003132533300d3371e6eb8c044c03cdd50042450d48656c6c6f2c20576f726c642100100114a06644646600200200644a66602600229404c94ccc044cdc79bae301500200414a2266006006002602a0026eb0c040c044c044c044c044c044c044c044c044c038dd50049bae3010300e37546020601c6ea800c5858dd7180780098061baa00516300d300e002300c001300937540022c6014601600460120026012004600e00260086ea8004526136565734aae7555cf2ab9f5742ae89",
+      "hash": "fdd6640d1c9a4392dd7e829f0cc4e26766539c48b2cf594959e33559"
+    },
+    {
+      "title": "vesting.hello_world.else",
+      "compiledCode": "59010301010032323232323225333002323232323253330073370e900118041baa0011323232533300a3370e900018059baa00513232533300f30110021533300c3370e900018069baa003132533300d3371e6eb8c044c03cdd50042450d48656c6c6f2c20576f726c642100100114a06644646600200200644a66602600229404c94ccc044cdc79bae301500200414a2266006006002602a0026eb0c040c044c044c044c044c044c044c044c044c038dd50049bae3010300e37546020601c6ea800c5858dd7180780098061baa00516300d300e002300c001300937540022c6014601600460120026012004600e00260086ea8004526136565734aae7555cf2ab9f5742ae89",
+      "hash": "fdd6640d1c9a4392dd7e829f0cc4e26766539c48b2cf594959e33559"
+    }
+  ],
+  "definitions": {
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "VerificationKeyHash": {
+      "title": "VerificationKeyHash",
+      "dataType": "bytes"
+    },
+    "vesting/Datum": {
+      "title": "Datum",
+      "anyOf": [
+        {
+          "title": "Datum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "owner",
+              "$ref": "#/definitions/VerificationKeyHash"
+            }
+          ]
+        }
+      ]
+    },
+    "vesting/Redeemer": {
+      "title": "Redeemer",
+      "anyOf": [
+        {
+          "title": "Redeemer",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "msg",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

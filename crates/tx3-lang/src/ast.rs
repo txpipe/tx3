@@ -149,6 +149,7 @@ impl AsRef<str> for Identifier {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Program {
+    pub imports: Vec<ImportBlock>,
     pub txs: Vec<TxDef>,
     pub types: Vec<TypeDef>,
     pub assets: Vec<AssetDef>,
@@ -628,4 +629,11 @@ pub struct AssetDef {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ChainSpecificBlock {
     Cardano(crate::cardano::CardanoBlock),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ImportBlock {
+    pub module: Identifier,
+    pub items: Vec<Identifier>,
+    pub span: Span,
 }
