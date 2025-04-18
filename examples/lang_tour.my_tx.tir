@@ -27,7 +27,29 @@
         "ref": null
       },
       "refs": [],
-      "redeemer": null,
+      "redeemer": {
+        "Struct": {
+          "constructor": 0,
+          "fields": [
+            {
+              "Number": 10
+            },
+            {
+              "Bytes": [
+                175,
+                175,
+                175
+              ]
+            },
+            {
+              "EvalParameter": [
+                "quantity",
+                "Int"
+              ]
+            }
+          ]
+        }
+      },
       "policy": null
     }
   ],

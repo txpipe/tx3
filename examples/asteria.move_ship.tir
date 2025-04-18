@@ -122,7 +122,25 @@
         "ref": null
       },
       "refs": [],
-      "redeemer": null,
+      "redeemer": {
+        "Struct": {
+          "constructor": 0,
+          "fields": [
+            {
+              "EvalParameter": [
+                "p_delta_x",
+                "Int"
+              ]
+            },
+            {
+              "EvalParameter": [
+                "p_delta_y",
+                "Int"
+              ]
+            }
+          ]
+        }
+      },
       "policy": null
     },
     {
@@ -236,7 +254,7 @@
                 },
                 "right": {
                   "EvalParameter": [
-                    "delta_x",
+                    "p_delta_x",
                     "Int"
                   ]
                 },
@@ -255,7 +273,7 @@
                 },
                 "right": {
                   "EvalParameter": [
-                    "delta_y",
+                    "p_delta_y",
                     "Int"
                   ]
                 },

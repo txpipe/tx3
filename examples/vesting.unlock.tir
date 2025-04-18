@@ -61,7 +61,12 @@
         }
       },
       "refs": [],
-      "redeemer": null,
+      "redeemer": {
+        "Struct": {
+          "constructor": 0,
+          "fields": []
+        }
+      },
       "policy": {
         "name": "TimeLock",
         "hash": {

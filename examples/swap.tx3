@@ -4,8 +4,8 @@ type PoolState {
 }
 
 type SwapParams {
-    amount: AnyAsset,
-    ratio: AnyAsset,
+    ask_value: AnyAsset,
+    bid_value: AnyAsset,
 }
 
 party Buyer;
@@ -21,13 +21,13 @@ tx swap(
         datum_is: PoolState,
 
         redeemer: SwapParams {
-            ask: ask,
-            bid: ask,
+            ask_value: ask,
+            bid_value: bid,
         },
     }
     
     input payment {
-        from: Buyer,
+        from: Buyer,    
         min_amount: fees + bid,
     }
     

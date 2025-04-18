@@ -9,11 +9,11 @@
             "type": "Bytes"
           },
           {
-            "name": "delta_x",
+            "name": "p_delta_x",
             "type": "Int"
           },
           {
-            "name": "delta_y",
+            "name": "p_delta_y",
             "type": "Int"
           },
           {
@@ -24,7 +24,7 @@
         "span": {
           "dummy": false,
           "start": 581,
-          "end": 665
+          "end": 669
         }
       },
       "inputs": [
@@ -38,8 +38,8 @@
                   "value": "Game",
                   "span": {
                     "dummy": false,
-                    "start": 699,
-                    "end": 703
+                    "start": 703,
+                    "end": 707
                   }
                 }
               }
@@ -65,8 +65,8 @@
                         "value": "Ship",
                         "span": {
                           "dummy": false,
-                          "start": 754,
-                          "end": 758
+                          "start": 758,
+                          "end": 762
                         }
                       },
                       "amount": {
@@ -74,15 +74,15 @@
                           "value": "ship_name",
                           "span": {
                             "dummy": false,
-                            "start": 759,
-                            "end": 768
+                            "start": 763,
+                            "end": 772
                           }
                         }
                       },
                       "span": {
                         "dummy": false,
-                        "start": 754,
-                        "end": 772
+                        "start": 758,
+                        "end": 776
                       }
                     }
                   },
@@ -93,8 +93,8 @@
                         "value": "Fuel",
                         "span": {
                           "dummy": false,
-                          "start": 775,
-                          "end": 779
+                          "start": 779,
+                          "end": 783
                         }
                       },
                       "amount": {
@@ -102,22 +102,22 @@
                           "value": "required_fuel",
                           "span": {
                             "dummy": false,
-                            "start": 780,
-                            "end": 793
+                            "start": 784,
+                            "end": 797
                           }
                         }
                       },
                       "span": {
                         "dummy": false,
-                        "start": 775,
-                        "end": 794
+                        "start": 779,
+                        "end": 798
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 773,
-                    "end": 774
+                    "start": 777,
+                    "end": 778
                   }
                 }
               }
@@ -129,8 +129,8 @@
                     "value": "ShipCommand",
                     "span": {
                       "dummy": false,
-                      "start": 815,
-                      "end": 826
+                      "start": 819,
+                      "end": 830
                     }
                   },
                   "case": {
@@ -138,8 +138,8 @@
                       "value": "MoveShip",
                       "span": {
                         "dummy": false,
-                        "start": 828,
-                        "end": 836
+                        "start": 832,
+                        "end": 840
                       }
                     },
                     "fields": [
@@ -148,24 +148,24 @@
                           "value": "delta_x",
                           "span": {
                             "dummy": false,
-                            "start": 851,
-                            "end": 858
+                            "start": 855,
+                            "end": 862
                           }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "delta_x",
+                            "value": "p_delta_x",
                             "span": {
                               "dummy": false,
-                              "start": 860,
-                              "end": 867
+                              "start": 864,
+                              "end": 873
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 851,
-                          "end": 867
+                          "start": 855,
+                          "end": 873
                         }
                       },
                       {
@@ -173,38 +173,38 @@
                           "value": "delta_y",
                           "span": {
                             "dummy": false,
-                            "start": 881,
-                            "end": 888
+                            "start": 887,
+                            "end": 894
                           }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "delta_y",
+                            "value": "p_delta_y",
                             "span": {
                               "dummy": false,
-                              "start": 890,
-                              "end": 897
+                              "start": 896,
+                              "end": 905
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 881,
-                          "end": 897
+                          "start": 887,
+                          "end": 905
                         }
                       }
                     ],
                     "spread": null,
                     "span": {
                       "dummy": false,
-                      "start": 826,
-                      "end": 908
+                      "start": 830,
+                      "end": 916
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 815,
-                    "end": 908
+                    "start": 819,
+                    "end": 916
                   }
                 }
               }
@@ -212,8 +212,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 672,
-            "end": 915
+            "start": 676,
+            "end": 923
           }
         },
         {
@@ -226,8 +226,8 @@
                   "value": "Player",
                   "span": {
                     "dummy": false,
-                    "start": 949,
-                    "end": 955
+                    "start": 957,
+                    "end": 963
                   }
                 }
               }
@@ -239,8 +239,8 @@
                     "value": "Pilot",
                     "span": {
                       "dummy": false,
-                      "start": 977,
-                      "end": 982
+                      "start": 985,
+                      "end": 990
                     }
                   },
                   "amount": {
@@ -248,15 +248,15 @@
                       "value": "ship_name",
                       "span": {
                         "dummy": false,
-                        "start": 983,
-                        "end": 992
+                        "start": 991,
+                        "end": 1000
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 977,
-                    "end": 996
+                    "start": 985,
+                    "end": 1004
                   }
                 }
               }
@@ -264,8 +264,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 921,
-            "end": 1003
+            "start": 929,
+            "end": 1011
           }
         },
         {
@@ -278,8 +278,8 @@
                   "value": "Player",
                   "span": {
                     "dummy": false,
-                    "start": 1040,
-                    "end": 1046
+                    "start": 1048,
+                    "end": 1054
                   }
                 }
               }
@@ -290,8 +290,8 @@
                   "value": "fees",
                   "span": {
                     "dummy": false,
-                    "start": 1068,
-                    "end": 1072
+                    "start": 1076,
+                    "end": 1080
                   }
                 }
               }
@@ -299,8 +299,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 1013,
-            "end": 1079
+            "start": 1021,
+            "end": 1087
           }
         }
       ],
@@ -314,8 +314,8 @@
                   "value": "Game",
                   "span": {
                     "dummy": false,
-                    "start": 1165,
-                    "end": 1169
+                    "start": 1173,
+                    "end": 1177
                   }
                 }
               }
@@ -328,8 +328,8 @@
                       "value": "ship",
                       "span": {
                         "dummy": false,
-                        "start": 1187,
-                        "end": 1191
+                        "start": 1195,
+                        "end": 1199
                       }
                     }
                   },
@@ -340,8 +340,8 @@
                         "value": "Fuel",
                         "span": {
                           "dummy": false,
-                          "start": 1194,
-                          "end": 1198
+                          "start": 1202,
+                          "end": 1206
                         }
                       },
                       "amount": {
@@ -349,22 +349,22 @@
                           "value": "required_fuel",
                           "span": {
                             "dummy": false,
-                            "start": 1199,
-                            "end": 1212
+                            "start": 1207,
+                            "end": 1220
                           }
                         }
                       },
                       "span": {
                         "dummy": false,
-                        "start": 1194,
-                        "end": 1213
+                        "start": 1202,
+                        "end": 1221
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 1192,
-                    "end": 1193
+                    "start": 1200,
+                    "end": 1201
                   }
                 }
               }
@@ -376,8 +376,8 @@
                     "value": "ShipState",
                     "span": {
                       "dummy": false,
-                      "start": 1231,
-                      "end": 1240
+                      "start": 1239,
+                      "end": 1248
                     }
                   },
                   "case": {
@@ -395,8 +395,8 @@
                           "value": "pos_x",
                           "span": {
                             "dummy": false,
-                            "start": 1255,
-                            "end": 1260
+                            "start": 1263,
+                            "end": 1268
                           }
                         },
                         "value": {
@@ -407,8 +407,8 @@
                                   "value": "ship",
                                   "span": {
                                     "dummy": false,
-                                    "start": 1262,
-                                    "end": 1266
+                                    "start": 1270,
+                                    "end": 1274
                                   }
                                 },
                                 "path": [
@@ -416,40 +416,40 @@
                                     "value": "pos_x",
                                     "span": {
                                       "dummy": false,
-                                      "start": 1267,
-                                      "end": 1272
+                                      "start": 1275,
+                                      "end": 1280
                                     }
                                   }
                                 ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 1262,
-                                  "end": 1273
+                                  "start": 1270,
+                                  "end": 1281
                                 }
                               }
                             },
                             "operator": "Add",
                             "right": {
                               "Identifier": {
-                                "value": "delta_x",
+                                "value": "p_delta_x",
                                 "span": {
                                   "dummy": false,
-                                  "start": 1275,
-                                  "end": 1282
+                                  "start": 1283,
+                                  "end": 1292
                                 }
                               }
                             },
                             "span": {
                               "dummy": false,
-                              "start": 1273,
-                              "end": 1274
+                              "start": 1281,
+                              "end": 1282
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 1255,
-                          "end": 1282
+                          "start": 1263,
+                          "end": 1292
                         }
                       },
                       {
@@ -457,8 +457,8 @@
                           "value": "pos_y",
                           "span": {
                             "dummy": false,
-                            "start": 1296,
-                            "end": 1301
+                            "start": 1306,
+                            "end": 1311
                           }
                         },
                         "value": {
@@ -469,8 +469,8 @@
                                   "value": "ship",
                                   "span": {
                                     "dummy": false,
-                                    "start": 1303,
-                                    "end": 1307
+                                    "start": 1313,
+                                    "end": 1317
                                   }
                                 },
                                 "path": [
@@ -478,40 +478,40 @@
                                     "value": "pos_y",
                                     "span": {
                                       "dummy": false,
-                                      "start": 1308,
-                                      "end": 1313
+                                      "start": 1318,
+                                      "end": 1323
                                     }
                                   }
                                 ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 1303,
-                                  "end": 1314
+                                  "start": 1313,
+                                  "end": 1324
                                 }
                               }
                             },
                             "operator": "Add",
                             "right": {
                               "Identifier": {
-                                "value": "delta_y",
+                                "value": "p_delta_y",
                                 "span": {
                                   "dummy": false,
-                                  "start": 1316,
-                                  "end": 1323
+                                  "start": 1326,
+                                  "end": 1335
                                 }
                               }
                             },
                             "span": {
                               "dummy": false,
-                              "start": 1314,
-                              "end": 1315
+                              "start": 1324,
+                              "end": 1325
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 1296,
-                          "end": 1323
+                          "start": 1306,
+                          "end": 1335
                         }
                       }
                     ],
@@ -520,21 +520,21 @@
                         "value": "ship",
                         "span": {
                           "dummy": false,
-                          "start": 1340,
-                          "end": 1344
+                          "start": 1352,
+                          "end": 1356
                         }
                       }
                     },
                     "span": {
                       "dummy": false,
-                      "start": 1241,
-                      "end": 1354
+                      "start": 1249,
+                      "end": 1366
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 1231,
-                    "end": 1354
+                    "start": 1239,
+                    "end": 1366
                   }
                 }
               }
@@ -542,8 +542,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 1144,
-            "end": 1361
+            "start": 1152,
+            "end": 1373
           }
         },
         {
@@ -555,8 +555,8 @@
                   "value": "Player",
                   "span": {
                     "dummy": false,
-                    "start": 1388,
-                    "end": 1394
+                    "start": 1400,
+                    "end": 1406
                   }
                 }
               }
@@ -569,8 +569,8 @@
                       "value": "pilot",
                       "span": {
                         "dummy": false,
-                        "start": 1412,
-                        "end": 1417
+                        "start": 1424,
+                        "end": 1429
                       }
                     }
                   },
@@ -580,15 +580,15 @@
                       "value": "fees",
                       "span": {
                         "dummy": false,
-                        "start": 1420,
-                        "end": 1424
+                        "start": 1432,
+                        "end": 1436
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 1418,
-                    "end": 1419
+                    "start": 1430,
+                    "end": 1431
                   }
                 }
               }
@@ -596,8 +596,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 1367,
-            "end": 1431
+            "start": 1379,
+            "end": 1443
           }
         }
       ],
@@ -610,8 +610,8 @@
                   "value": "Fuel",
                   "span": {
                     "dummy": false,
-                    "start": 1108,
-                    "end": 1112
+                    "start": 1116,
+                    "end": 1120
                   }
                 },
                 "amount": {
@@ -619,15 +619,15 @@
                     "value": "required_fuel",
                     "span": {
                       "dummy": false,
-                      "start": 1113,
-                      "end": 1126
+                      "start": 1121,
+                      "end": 1134
                     }
                   }
                 },
                 "span": {
                   "dummy": false,
-                  "start": 1108,
-                  "end": 1127
+                  "start": 1116,
+                  "end": 1135
                 }
               }
             }
@@ -635,8 +635,8 @@
         ],
         "span": {
           "dummy": false,
-          "start": 1085,
-          "end": 1134
+          "start": 1093,
+          "end": 1142
         }
       },
       "mint": null,
@@ -644,7 +644,7 @@
       "span": {
         "dummy": false,
         "start": 569,
-        "end": 1433
+        "end": 1445
       }
     }
   ],
@@ -865,6 +865,6 @@
   "span": {
     "dummy": false,
     "start": 0,
-    "end": 1433
+    "end": 1445
   }
 }

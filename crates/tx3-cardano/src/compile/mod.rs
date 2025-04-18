@@ -455,7 +455,7 @@ fn utxo_ref_matches(ref1: &tx3_lang::UtxoRef, ref2: &primitives::TransactionInpu
 
 fn compile_single_spend_redeemer(
     input_id: &tx3_lang::UtxoRef,
-    input_ir: &ir::Input,
+    redeemer: &ir::Expression,
     sorted_inputs: &[&primitives::TransactionInput],
 ) -> Result<primitives::Redeemer, Error> {
     let index = sorted_inputs
@@ -467,7 +467,7 @@ fn compile_single_spend_redeemer(
         tag: primitives::RedeemerTag::Spend,
         index: index as u32,
         ex_units: primitives::ExUnits { mem: 0, steps: 0 },
-        data: input_ir.redeemer.try_into_data()?,
+        data: redeemer.try_into_data()?,
     };
 
     Ok(redeemer)
@@ -484,8 +484,11 @@ fn compile_spend_redeemers(
 
     for input in tx.inputs.iter() {
         for ref_ in input.refs.iter() {
-            let redeemer = compile_single_spend_redeemer(ref_, input, compiled_inputs.as_slice())?;
-            redeemers.push(redeemer);
+            if let Some(redeemer) = &input.redeemer {
+                let redeemer =
+                    compile_single_spend_redeemer(ref_, redeemer, compiled_inputs.as_slice())?;
+                redeemers.push(redeemer);
+            }
         }
     }
 

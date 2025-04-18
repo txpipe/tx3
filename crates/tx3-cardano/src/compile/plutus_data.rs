@@ -112,18 +112,6 @@ where
     }
 }
 
-impl<T> TryIntoData for Option<T>
-where
-    T: TryIntoData,
-{
-    fn try_into_data(&self) -> Result<PlutusData, super::Error> {
-        match self {
-            Some(value) => value.try_into_data(),
-            None => Ok(().into_data()),
-        }
-    }
-}
-
 impl TryIntoData for ir::Expression {
     fn try_into_data(&self) -> Result<PlutusData, super::Error> {
         match self {
