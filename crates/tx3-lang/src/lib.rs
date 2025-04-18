@@ -283,7 +283,7 @@ mod tests {
                 address: b"abababa".to_vec(),
                 datum: None,
                 assets: vec![ir::AssetExpr {
-                    policy: b"abababa".to_vec(),
+                    policy: ir::Expression::Bytes(b"abababa".to_vec()),
                     asset_name: ir::Expression::Bytes(b"asset".to_vec()),
                     amount: ir::Expression::Number(100),
                 }],

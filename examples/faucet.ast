@@ -107,7 +107,7 @@
                   },
                   "operator": "Add",
                   "right": {
-                    "Constructor": {
+                    "StaticConstructor": {
                       "type": {
                         "value": "MyToken",
                         "span": {
@@ -154,7 +154,7 @@
         "fields": [
           {
             "Amount": {
-              "Constructor": {
+              "StaticConstructor": {
                 "type": {
                   "value": "MyToken",
                   "span": {

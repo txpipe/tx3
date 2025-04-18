@@ -221,17 +221,17 @@ impl Scope {
         );
     }
 
-    pub fn track_param_var(&mut self, param: &str, r#type: Type) {
+    pub fn track_param_var(&mut self, param: &str, ty: Type) {
         self.symbols.insert(
             param.to_string(),
-            Symbol::ParamVar(param.to_string(), Box::new(r#type)),
+            Symbol::ParamVar(param.to_string(), Box::new(ty)),
         );
     }
 
-    pub fn track_input(&mut self, input: &InputBlock) {
+    pub fn track_input(&mut self, name: &str, ty: Type) {
         self.symbols.insert(
-            input.name.clone(),
-            Symbol::Input(input.name.clone(), Box::new(input.datum_is())),
+            name.to_string(),
+            Symbol::Input(name.to_string(), Box::new(ty)),
         );
     }
 
@@ -302,6 +302,9 @@ pub trait Analyzable {
     /// # Returns
     /// * `AnalyzeReport` of the analysis. Empty if no errors are found.
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport;
+
+    /// Returns true if all of the symbols have been resolved .
+    fn is_resolved(&self) -> bool;
 }
 
 impl<T: Analyzable> Analyzable for Option<T> {
@@ -312,11 +315,19 @@ impl<T: Analyzable> Analyzable for Option<T> {
             AnalyzeReport::default()
         }
     }
+
+    fn is_resolved(&self) -> bool {
+        self.as_ref().map_or(true, |x| x.is_resolved())
+    }
 }
 
 impl<T: Analyzable> Analyzable for Box<T> {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         self.as_mut().analyze(parent)
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.as_ref().is_resolved()
     }
 }
 
@@ -325,6 +336,10 @@ impl<T: Analyzable> Analyzable for Vec<T> {
         self.iter_mut()
             .map(|item| item.analyze(parent.clone()))
             .collect()
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.iter().all(|x| x.is_resolved())
     }
 }
 
@@ -336,10 +351,22 @@ impl Analyzable for PolicyField {
             PolicyField::Ref(x) => x.analyze(parent),
         }
     }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            PolicyField::Hash(x) => x.is_resolved(),
+            PolicyField::Script(x) => x.is_resolved(),
+            PolicyField::Ref(x) => x.is_resolved(),
+        }
+    }
 }
 impl Analyzable for PolicyConstructor {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         self.fields.analyze(parent)
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.fields.is_resolved()
     }
 }
 
@@ -348,6 +375,13 @@ impl Analyzable for PolicyDef {
         match &mut self.value {
             PolicyValue::Constructor(x) => x.analyze(parent),
             PolicyValue::Assign(_) => AnalyzeReport::default(),
+        }
+    }
+
+    fn is_resolved(&self) -> bool {
+        match &self.value {
+            PolicyValue::Constructor(x) => x.is_resolved(),
+            PolicyValue::Assign(_) => true,
         }
     }
 }
@@ -359,6 +393,10 @@ impl Analyzable for DataBinaryOp {
 
         left + right
     }
+
+    fn is_resolved(&self) -> bool {
+        self.left.is_resolved() && self.right.is_resolved()
+    }
 }
 
 impl Analyzable for RecordConstructorField {
@@ -367,6 +405,10 @@ impl Analyzable for RecordConstructorField {
         let value = self.value.analyze(parent.clone());
 
         name + value
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.name.is_resolved() && self.value.is_resolved()
     }
 }
 
@@ -394,6 +436,10 @@ impl Analyzable for VariantCaseConstructor {
 
         name + fields + spread
     }
+
+    fn is_resolved(&self) -> bool {
+        self.name.is_resolved() && self.fields.is_resolved() && self.spread.is_resolved()
+    }
 }
 
 impl Analyzable for DatumConstructor {
@@ -418,6 +464,10 @@ impl Analyzable for DatumConstructor {
 
         r#type + case
     }
+
+    fn is_resolved(&self) -> bool {
+        self.r#type.is_resolved() && self.case.is_resolved()
+    }
 }
 
 impl Analyzable for DataExpr {
@@ -430,6 +480,16 @@ impl Analyzable for DataExpr {
             _ => AnalyzeReport::default(),
         }
     }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            DataExpr::Constructor(x) => x.is_resolved(),
+            DataExpr::Identifier(x) => x.is_resolved(),
+            DataExpr::PropertyAccess(x) => x.is_resolved(),
+            DataExpr::BinaryOp(x) => x.is_resolved(),
+            _ => true,
+        }
+    }
 }
 
 impl Analyzable for AssetBinaryOp {
@@ -439,14 +499,36 @@ impl Analyzable for AssetBinaryOp {
 
         left + right
     }
+
+    fn is_resolved(&self) -> bool {
+        self.left.is_resolved() && self.right.is_resolved()
+    }
 }
 
-impl Analyzable for AssetConstructor {
+impl Analyzable for StaticAssetConstructor {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         let amount = self.amount.analyze(parent.clone());
         let r#type = self.r#type.analyze(parent.clone());
 
         amount + r#type
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.amount.is_resolved() && self.r#type.is_resolved()
+    }
+}
+
+impl Analyzable for AnyAssetConstructor {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let policy = self.policy.analyze(parent.clone());
+        let asset_name = self.asset_name.analyze(parent.clone());
+        let amount = self.amount.analyze(parent.clone());
+
+        policy + asset_name + amount
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.policy.is_resolved() && self.asset_name.is_resolved() && self.amount.is_resolved()
     }
 }
 
@@ -466,15 +548,30 @@ impl Analyzable for PropertyAccess {
 
         object + path
     }
+
+    fn is_resolved(&self) -> bool {
+        self.object.is_resolved() && self.path.is_resolved()
+    }
 }
 
 impl Analyzable for AssetExpr {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
             AssetExpr::Identifier(x) => x.analyze(parent),
-            AssetExpr::Constructor(x) => x.analyze(parent),
+            AssetExpr::StaticConstructor(x) => x.analyze(parent),
+            AssetExpr::AnyConstructor(x) => x.analyze(parent),
             AssetExpr::BinaryOp(x) => x.analyze(parent),
             AssetExpr::PropertyAccess(x) => x.analyze(parent),
+        }
+    }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            AssetExpr::Identifier(x) => x.is_resolved(),
+            AssetExpr::StaticConstructor(x) => x.is_resolved(),
+            AssetExpr::AnyConstructor(x) => x.is_resolved(),
+            AssetExpr::BinaryOp(x) => x.is_resolved(),
+            AssetExpr::PropertyAccess(x) => x.is_resolved(),
         }
     }
 }
@@ -484,6 +581,13 @@ impl Analyzable for AddressExpr {
         match self {
             AddressExpr::Identifier(x) => x.analyze(parent),
             _ => AnalyzeReport::default(),
+        }
+    }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            AddressExpr::Identifier(x) => x.is_resolved(),
+            _ => true,
         }
     }
 }
@@ -499,6 +603,10 @@ impl Analyzable for Identifier {
 
         AnalyzeReport::default()
     }
+
+    fn is_resolved(&self) -> bool {
+        self.symbol.is_some()
+    }
 }
 
 impl Analyzable for Type {
@@ -506,6 +614,13 @@ impl Analyzable for Type {
         match self {
             Type::Custom(x) => x.analyze(parent),
             _ => AnalyzeReport::default(),
+        }
+    }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            Type::Custom(x) => x.is_resolved(),
+            _ => true,
         }
     }
 }
@@ -520,11 +635,25 @@ impl Analyzable for InputBlockField {
             InputBlockField::Ref(x) => x.analyze(parent),
         }
     }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            InputBlockField::From(x) => x.is_resolved(),
+            InputBlockField::DatumIs(x) => x.is_resolved(),
+            InputBlockField::MinAmount(x) => x.is_resolved(),
+            InputBlockField::Redeemer(x) => x.is_resolved(),
+            InputBlockField::Ref(x) => x.is_resolved(),
+        }
+    }
 }
 
 impl Analyzable for InputBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         self.fields.analyze(parent)
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.fields.is_resolved()
     }
 }
 
@@ -536,11 +665,23 @@ impl Analyzable for OutputBlockField {
             OutputBlockField::Datum(x) => x.analyze(parent),
         }
     }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            OutputBlockField::To(x) => x.is_resolved(),
+            OutputBlockField::Amount(x) => x.is_resolved(),
+            OutputBlockField::Datum(x) => x.is_resolved(),
+        }
+    }
 }
 
 impl Analyzable for OutputBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         self.fields.analyze(parent)
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.fields.is_resolved()
     }
 }
 
@@ -548,17 +689,29 @@ impl Analyzable for RecordField {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         self.r#type.analyze(parent)
     }
+
+    fn is_resolved(&self) -> bool {
+        self.r#type.is_resolved()
+    }
 }
 
 impl Analyzable for VariantCase {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         self.fields.analyze(parent)
     }
+
+    fn is_resolved(&self) -> bool {
+        self.fields.is_resolved()
+    }
 }
 
 impl Analyzable for TypeDef {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         self.cases.analyze(parent)
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.cases.is_resolved()
     }
 }
 
@@ -569,11 +722,22 @@ impl Analyzable for MintBlockField {
             MintBlockField::Redeemer(x) => x.analyze(parent),
         }
     }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            MintBlockField::Amount(x) => x.is_resolved(),
+            MintBlockField::Redeemer(x) => x.is_resolved(),
+        }
+    }
 }
 
 impl Analyzable for MintBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         self.fields.analyze(parent)
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.fields.is_resolved()
     }
 }
 
@@ -583,11 +747,38 @@ impl Analyzable for ChainSpecificBlock {
             ChainSpecificBlock::Cardano(x) => x.analyze(parent),
         }
     }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            ChainSpecificBlock::Cardano(x) => x.is_resolved(),
+        }
+    }
 }
 
 impl Analyzable for TxDef {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
-        let mut scope = Scope::new(parent);
+        // analyze static types before anything else
+
+        let params = self
+            .parameters
+            .parameters
+            .iter_mut()
+            .map(|param| param.r#type.analyze(parent.clone()))
+            .collect::<AnalyzeReport>();
+
+        let input_types = self
+            .inputs
+            .iter_mut()
+            .flat_map(|input| input.fields.iter_mut())
+            .map(|field| match field {
+                InputBlockField::DatumIs(x) => x.analyze(parent.clone()),
+                _ => AnalyzeReport::default(),
+            })
+            .collect::<AnalyzeReport>();
+
+        // create the new scope and populate its symbols
+
+        let mut scope = Scope::new(parent.clone());
 
         scope.symbols.insert("fees".to_string(), Symbol::Fees);
 
@@ -596,8 +787,13 @@ impl Analyzable for TxDef {
         }
 
         for input in self.inputs.iter() {
-            scope.track_input(input);
+            scope.track_input(
+                &input.name,
+                input.datum_is().cloned().unwrap_or(Type::Undefined),
+            );
         }
+
+        // enter the new scope and analyze the rest of the program
 
         self.scope = Some(Rc::new(scope));
 
@@ -609,14 +805,21 @@ impl Analyzable for TxDef {
 
         let adhoc = self.adhoc.analyze(self.scope.clone());
 
-        inputs + outputs + mint + adhoc
+        params + input_types + inputs + outputs + mint + adhoc
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.inputs.is_resolved()
+            && self.outputs.is_resolved()
+            && self.mint.is_resolved()
+            && self.adhoc.is_resolved()
     }
 }
 
 static ADA: std::sync::LazyLock<AssetDef> = std::sync::LazyLock::new(|| AssetDef {
     name: "Ada".to_string(),
-    policy: HexStringLiteral::new("".to_string()),
-    asset_name: "".to_string(),
+    policy: None,
+    asset_name: None,
     span: Span::DUMMY,
 });
 
@@ -657,6 +860,10 @@ impl Analyzable for Program {
         let txs = self.txs.analyze(self.scope.clone());
 
         policies + types + txs
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.policies.is_resolved() && self.types.is_resolved() && self.txs.is_resolved()
     }
 }
 

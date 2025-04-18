@@ -13,10 +13,8 @@
         "min_amount": {
           "Assets": [
             {
-              "policy": [],
-              "asset_name": {
-                "Bytes": []
-              },
+              "policy": "None",
+              "asset_name": "None",
               "amount": {
                 "EvalParameter": [
                   "quantity",
@@ -53,11 +51,64 @@
             },
             {
               "Number": 54
+            },
+            {
+              "EvalProperty": {
+                "object": {
+                  "EvalInputDatum": "source"
+                },
+                "field": "field3"
+              }
             }
           ]
         }
       },
-      "amount": null
+      "amount": {
+        "EvalCustom": {
+          "left": {
+            "Assets": [
+              {
+                "policy": {
+                  "EvalProperty": {
+                    "object": {
+                      "EvalInputDatum": "source"
+                    },
+                    "field": "field3"
+                  }
+                },
+                "asset_name": {
+                  "EvalProperty": {
+                    "object": {
+                      "EvalInputDatum": "source"
+                    },
+                    "field": "field2"
+                  }
+                },
+                "amount": {
+                  "EvalProperty": {
+                    "object": {
+                      "EvalInputDatum": "source"
+                    },
+                    "field": "field1"
+                  }
+                }
+              }
+            ]
+          },
+          "right": {
+            "Assets": [
+              {
+                "policy": "None",
+                "asset_name": "None",
+                "amount": {
+                  "Number": 40
+                }
+              }
+            ]
+          },
+          "op": "Add"
+        }
+      }
     }
   ],
   "mint": null,

@@ -219,7 +219,8 @@ fn compile_data_expr(ir: &ir::Expression) -> Result<primitives::PlutusData, Erro
 fn compile_native_asset_for_output(
     ir: &ir::AssetExpr,
 ) -> Result<primitives::Multiasset<primitives::PositiveCoin>, Error> {
-    let policy = primitives::Hash::from(ir.policy.as_slice());
+    let policy = coerce_expr_into_bytes(&ir.policy)?;
+    let policy = primitives::Hash::from(policy.as_slice());
     let asset_name = coerce_expr_into_bytes(&ir.asset_name)?;
     let amount = coerce_expr_into_number(&ir.amount)?;
     let amount = primitives::PositiveCoin::try_from(amount as u64).unwrap();
@@ -232,7 +233,8 @@ fn compile_native_asset_for_output(
 fn compile_native_asset_for_mint(
     ir: &ir::AssetExpr,
 ) -> Result<primitives::Multiasset<primitives::NonZeroInt>, Error> {
-    let policy = primitives::Hash::from(ir.policy.as_slice());
+    let policy = coerce_expr_into_bytes(&ir.policy)?;
+    let policy = primitives::Hash::from(policy.as_slice());
     let asset_name = coerce_expr_into_bytes(&ir.asset_name)?;
     let amount = coerce_expr_into_number(&ir.amount)?;
     let amount = primitives::NonZeroInt::try_from(amount as i64).unwrap();
@@ -249,7 +251,7 @@ fn compile_ada_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
 }
 
 fn compile_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
-    if ir.policy.is_empty() {
+    if ir.policy.is_none() {
         compile_ada_value(ir)
     } else {
         let asset = compile_native_asset_for_output(ir)?;

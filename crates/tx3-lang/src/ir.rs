@@ -44,7 +44,7 @@ pub struct BinaryOp {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct AssetExpr {
-    pub policy: Vec<u8>,
+    pub policy: Expression,
     pub asset_name: Expression,
     pub amount: Expression,
 }
@@ -88,6 +88,7 @@ pub struct PolicyExpr {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Type {
+    Undefined,
     Unit,
     Int,
     Bool,
@@ -129,6 +130,12 @@ pub enum Expression {
 
     // pass-through
     AdHocDirective(Box<AdHocDirective>),
+}
+
+impl Expression {
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
