@@ -11,8 +11,8 @@
         ],
         "span": {
           "dummy": false,
-          "start": 337,
-          "end": 358
+          "start": 399,
+          "end": 420
         }
       },
       "inputs": [
@@ -26,8 +26,8 @@
                   "value": "MyParty",
                   "span": {
                     "dummy": false,
-                    "start": 394,
-                    "end": 401
+                    "start": 456,
+                    "end": 463
                   }
                 }
               }
@@ -46,13 +46,13 @@
             },
             {
               "MinAmount": {
-                "Constructor": {
+                "StaticConstructor": {
                   "type": {
                     "value": "Ada",
                     "span": {
                       "dummy": false,
-                      "start": 451,
-                      "end": 454
+                      "start": 513,
+                      "end": 516
                     }
                   },
                   "amount": {
@@ -60,15 +60,15 @@
                       "value": "quantity",
                       "span": {
                         "dummy": false,
-                        "start": 455,
-                        "end": 463
+                        "start": 517,
+                        "end": 525
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 451,
-                    "end": 464
+                    "start": 513,
+                    "end": 526
                   }
                 }
               }
@@ -80,8 +80,8 @@
                     "value": "MyVariant",
                     "span": {
                       "dummy": false,
-                      "start": 484,
-                      "end": 493
+                      "start": 546,
+                      "end": 555
                     }
                   },
                   "case": {
@@ -89,8 +89,8 @@
                       "value": "Case1",
                       "span": {
                         "dummy": false,
-                        "start": 495,
-                        "end": 500
+                        "start": 557,
+                        "end": 562
                       }
                     },
                     "fields": [
@@ -99,8 +99,8 @@
                           "value": "field1",
                           "span": {
                             "dummy": false,
-                            "start": 515,
-                            "end": 521
+                            "start": 577,
+                            "end": 583
                           }
                         },
                         "value": {
@@ -108,8 +108,8 @@
                         },
                         "span": {
                           "dummy": false,
-                          "start": 515,
-                          "end": 525
+                          "start": 577,
+                          "end": 587
                         }
                       },
                       {
@@ -117,8 +117,8 @@
                           "value": "field2",
                           "span": {
                             "dummy": false,
-                            "start": 539,
-                            "end": 545
+                            "start": 601,
+                            "end": 607
                           }
                         },
                         "value": {
@@ -126,15 +126,15 @@
                             "value": "AFAFAF",
                             "span": {
                               "dummy": false,
-                              "start": 547,
-                              "end": 555
+                              "start": 609,
+                              "end": 617
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 539,
-                          "end": 555
+                          "start": 601,
+                          "end": 617
                         }
                       },
                       {
@@ -142,8 +142,8 @@
                           "value": "field3",
                           "span": {
                             "dummy": false,
-                            "start": 569,
-                            "end": 575
+                            "start": 631,
+                            "end": 637
                           }
                         },
                         "value": {
@@ -151,29 +151,29 @@
                             "value": "quantity",
                             "span": {
                               "dummy": false,
-                              "start": 577,
-                              "end": 585
+                              "start": 639,
+                              "end": 647
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 569,
-                          "end": 585
+                          "start": 631,
+                          "end": 647
                         }
                       }
                     ],
                     "spread": null,
                     "span": {
                       "dummy": false,
-                      "start": 493,
-                      "end": 596
+                      "start": 555,
+                      "end": 658
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 484,
-                    "end": 596
+                    "start": 546,
+                    "end": 658
                   }
                 }
               }
@@ -181,8 +181,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 365,
-            "end": 603
+            "start": 427,
+            "end": 665
           }
         }
       ],
@@ -196,8 +196,8 @@
                   "value": "MyParty",
                   "span": {
                     "dummy": false,
-                    "start": 630,
-                    "end": 637
+                    "start": 692,
+                    "end": 699
                   }
                 }
               }
@@ -209,8 +209,8 @@
                     "value": "MyRecord",
                     "span": {
                       "dummy": false,
-                      "start": 654,
-                      "end": 662
+                      "start": 716,
+                      "end": 724
                     }
                   },
                   "case": {
@@ -228,8 +228,8 @@
                           "value": "field1",
                           "span": {
                             "dummy": false,
-                            "start": 677,
-                            "end": 683
+                            "start": 739,
+                            "end": 745
                           }
                         },
                         "value": {
@@ -237,15 +237,15 @@
                             "value": "quantity",
                             "span": {
                               "dummy": false,
-                              "start": 685,
-                              "end": 693
+                              "start": 747,
+                              "end": 755
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 677,
-                          "end": 693
+                          "start": 739,
+                          "end": 755
                         }
                       },
                       {
@@ -253,8 +253,8 @@
                           "value": "field2",
                           "span": {
                             "dummy": false,
-                            "start": 707,
-                            "end": 713
+                            "start": 769,
+                            "end": 775
                           }
                         },
                         "value": {
@@ -262,22 +262,153 @@
                         },
                         "span": {
                           "dummy": false,
-                          "start": 707,
-                          "end": 717
+                          "start": 769,
+                          "end": 779
                         }
                       }
                     ],
-                    "spread": null,
+                    "spread": {
+                      "Identifier": {
+                        "value": "source",
+                        "span": {
+                          "dummy": false,
+                          "start": 796,
+                          "end": 802
+                        }
+                      }
+                    },
                     "span": {
                       "dummy": false,
-                      "start": 663,
-                      "end": 728
+                      "start": 725,
+                      "end": 812
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 654,
-                    "end": 728
+                    "start": 716,
+                    "end": 812
+                  }
+                }
+              }
+            },
+            {
+              "Amount": {
+                "BinaryOp": {
+                  "left": {
+                    "AnyConstructor": {
+                      "policy": {
+                        "PropertyAccess": {
+                          "object": {
+                            "value": "source",
+                            "span": {
+                              "dummy": false,
+                              "start": 839,
+                              "end": 845
+                            }
+                          },
+                          "path": [
+                            {
+                              "value": "field3",
+                              "span": {
+                                "dummy": false,
+                                "start": 846,
+                                "end": 852
+                              }
+                            }
+                          ],
+                          "span": {
+                            "dummy": false,
+                            "start": 839,
+                            "end": 852
+                          }
+                        }
+                      },
+                      "asset_name": {
+                        "PropertyAccess": {
+                          "object": {
+                            "value": "source",
+                            "span": {
+                              "dummy": false,
+                              "start": 854,
+                              "end": 860
+                            }
+                          },
+                          "path": [
+                            {
+                              "value": "field2",
+                              "span": {
+                                "dummy": false,
+                                "start": 861,
+                                "end": 867
+                              }
+                            }
+                          ],
+                          "span": {
+                            "dummy": false,
+                            "start": 854,
+                            "end": 867
+                          }
+                        }
+                      },
+                      "amount": {
+                        "PropertyAccess": {
+                          "object": {
+                            "value": "source",
+                            "span": {
+                              "dummy": false,
+                              "start": 869,
+                              "end": 875
+                            }
+                          },
+                          "path": [
+                            {
+                              "value": "field1",
+                              "span": {
+                                "dummy": false,
+                                "start": 876,
+                                "end": 882
+                              }
+                            }
+                          ],
+                          "span": {
+                            "dummy": false,
+                            "start": 869,
+                            "end": 882
+                          }
+                        }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 830,
+                        "end": 883
+                      }
+                    }
+                  },
+                  "operator": "Add",
+                  "right": {
+                    "StaticConstructor": {
+                      "type": {
+                        "value": "Ada",
+                        "span": {
+                          "dummy": false,
+                          "start": 886,
+                          "end": 889
+                        }
+                      },
+                      "amount": {
+                        "Number": 40
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 886,
+                        "end": 893
+                      }
+                    }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 884,
+                    "end": 885
                   }
                 }
               }
@@ -285,8 +416,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 609,
-            "end": 735
+            "start": 671,
+            "end": 900
           }
         }
       ],
@@ -295,8 +426,8 @@
       "adhoc": [],
       "span": {
         "dummy": false,
-        "start": 329,
-        "end": 737
+        "start": 391,
+        "end": 903
       }
     }
   ],
@@ -324,19 +455,28 @@
                 "start": 53,
                 "end": 66
               }
+            },
+            {
+              "name": "field3",
+              "type": "Bytes",
+              "span": {
+                "dummy": false,
+                "start": 72,
+                "end": 85
+              }
             }
           ],
           "span": {
             "dummy": false,
             "start": 16,
-            "end": 69
+            "end": 88
           }
         }
       ],
       "span": {
         "dummy": false,
         "start": 16,
-        "end": 69
+        "end": 88
       }
     },
     {
@@ -350,8 +490,8 @@
               "type": "Int",
               "span": {
                 "dummy": false,
-                "start": 108,
-                "end": 119
+                "start": 127,
+                "end": 138
               }
             },
             {
@@ -359,8 +499,8 @@
               "type": "Bytes",
               "span": {
                 "dummy": false,
-                "start": 129,
-                "end": 142
+                "start": 148,
+                "end": 161
               }
             },
             {
@@ -368,15 +508,15 @@
               "type": "Int",
               "span": {
                 "dummy": false,
-                "start": 152,
-                "end": 163
+                "start": 171,
+                "end": 182
               }
             }
           ],
           "span": {
             "dummy": false,
-            "start": 92,
-            "end": 170
+            "start": 111,
+            "end": 189
           }
         },
         {
@@ -384,19 +524,37 @@
           "fields": [],
           "span": {
             "dummy": false,
-            "start": 176,
-            "end": 181
+            "start": 195,
+            "end": 200
           }
         }
       ],
       "span": {
         "dummy": false,
-        "start": 71,
-        "end": 184
+        "start": 90,
+        "end": 203
       }
     }
   ],
-  "assets": [],
+  "assets": [
+    {
+      "name": "StaticAsset",
+      "policy": {
+        "value": "ABCDEF1234",
+        "span": {
+          "dummy": false,
+          "start": 264,
+          "end": 276
+        }
+      },
+      "asset_name": "MYTOKEN",
+      "span": {
+        "dummy": false,
+        "start": 244,
+        "end": 285
+      }
+    }
+  ],
   "parties": [
     {
       "name": "MyParty",
@@ -415,15 +573,15 @@
           "value": "ABCDEF1234",
           "span": {
             "dummy": false,
-            "start": 210,
-            "end": 222
+            "start": 229,
+            "end": 241
           }
         }
       },
       "span": {
         "dummy": false,
-        "start": 186,
-        "end": 223
+        "start": 205,
+        "end": 242
       }
     },
     {
@@ -437,8 +595,8 @@
                   "value": "ABCDEF1234",
                   "span": {
                     "dummy": false,
-                    "start": 263,
-                    "end": 275
+                    "start": 325,
+                    "end": 337
                   }
                 }
               }
@@ -449,8 +607,8 @@
                   "value": "ABCDEF1234",
                   "span": {
                     "dummy": false,
-                    "start": 289,
-                    "end": 301
+                    "start": 351,
+                    "end": 363
                   }
                 }
               }
@@ -461,8 +619,8 @@
                   "value": "ABCDEF1234",
                   "span": {
                     "dummy": false,
-                    "start": 312,
-                    "end": 324
+                    "start": 374,
+                    "end": 386
                   }
                 }
               }
@@ -470,21 +628,21 @@
           ],
           "span": {
             "dummy": false,
-            "start": 251,
-            "end": 327
+            "start": 313,
+            "end": 389
           }
         }
       },
       "span": {
         "dummy": false,
-        "start": 225,
-        "end": 327
+        "start": 287,
+        "end": 389
       }
     }
   ],
   "span": {
     "dummy": false,
     "start": 0,
-    "end": 738
+    "end": 904
   }
 }

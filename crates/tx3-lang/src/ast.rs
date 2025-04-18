@@ -276,11 +276,12 @@ impl InputBlock {
         self.fields.iter().find(|x| x.key() == key)
     }
 
-    pub(crate) fn datum_is(&self) -> Type {
-        self.find("datum_is")
-            .and_then(|x| x.as_datum_type())
-            .cloned()
-            .unwrap_or(Type::Unit)
+    pub(crate) fn find_mut(&mut self, key: &str) -> Option<&mut InputBlockField> {
+        self.fields.iter_mut().find(|x| x.key() == key)
+    }
+
+    pub(crate) fn datum_is(&self) -> Option<&Type> {
+        self.find("datum_is").and_then(|x| x.as_datum_type())
     }
 }
 
@@ -413,8 +414,16 @@ pub enum PolicyValue {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct AssetConstructor {
+pub struct StaticAssetConstructor {
     pub r#type: Identifier,
+    pub amount: Box<DataExpr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct AnyAssetConstructor {
+    pub policy: Box<DataExpr>,
+    pub asset_name: Box<DataExpr>,
     pub amount: Box<DataExpr>,
     pub span: Span,
 }
@@ -429,7 +438,8 @@ pub struct AssetBinaryOp {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AssetExpr {
-    Constructor(AssetConstructor),
+    StaticConstructor(StaticAssetConstructor),
+    AnyConstructor(AnyAssetConstructor),
     BinaryOp(AssetBinaryOp),
     PropertyAccess(PropertyAccess),
     Identifier(Identifier),
@@ -564,6 +574,7 @@ pub enum BinaryOperator {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Type {
+    Undefined,
     Unit,
     Int,
     Bool,
@@ -620,8 +631,8 @@ impl VariantCase {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct AssetDef {
     pub name: String,
-    pub policy: HexStringLiteral,
-    pub asset_name: String,
+    pub policy: Option<HexStringLiteral>,
+    pub asset_name: Option<String>,
     pub span: Span,
 }
 

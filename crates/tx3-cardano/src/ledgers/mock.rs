@@ -14,10 +14,7 @@ impl Ledger for MockLedger {
         })
     }
 
-    async fn resolve_input(
-        &self,
-        _input: &InputQuery,
-    ) -> Result<UtxoSet, Error> {
+    async fn resolve_input(&self, _input: &InputQuery) -> Result<UtxoSet, Error> {
         let utxo = tx3_lang::Utxo {
         r#ref: tx3_lang::UtxoRef {
             txid: hex::decode(
@@ -29,13 +26,12 @@ impl Ledger for MockLedger {
         address: pallas::ledger::addresses::Address::from_bech32("addr1qx0rs5qrvx9qkndwu0w88t0xghgy3f53ha76kpx8uf496m9rn2ursdm3r0fgf5pmm4lpufshl8lquk5yykg4pd00hp6quf2hh2").unwrap().to_vec(),
         datum: None,
         assets: vec![tx3_lang::ir::AssetExpr {
-            policy: vec![],
-            asset_name: tx3_lang::ir::Expression::Bytes(vec![]),
+            policy: tx3_lang::ir::Expression::None,
+            asset_name: tx3_lang::ir::Expression::None,
             amount: tx3_lang::ir::Expression::Number(500_000_000_i128),
         }],
         script: None
     };
-
 
         Ok(UtxoSet::from([utxo]))
     }

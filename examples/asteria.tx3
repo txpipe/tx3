@@ -29,7 +29,7 @@ type ShipCommand {
 }
 
 tx move_ship(
-    ship_name: AssetName,
+    ship_name: Bytes,
     delta_x: Int,
     delta_y: Int,
     required_fuel: Int

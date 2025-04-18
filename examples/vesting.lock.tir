@@ -13,10 +13,8 @@
         "min_amount": {
           "Assets": [
             {
-              "policy": [],
-              "asset_name": {
-                "Bytes": []
-              },
+              "policy": "None",
+              "asset_name": "None",
               "amount": {
                 "EvalParameter": [
                   "quantity",
@@ -95,10 +93,8 @@
       "amount": {
         "Assets": [
           {
-            "policy": [],
-            "asset_name": {
-              "Bytes": []
-            },
+            "policy": "None",
+            "asset_name": "None",
             "amount": {
               "EvalParameter": [
                 "quantity",
@@ -127,10 +123,8 @@
               "right": {
                 "Assets": [
                   {
-                    "policy": [],
-                    "asset_name": {
-                      "Bytes": []
-                    },
+                    "policy": "None",
+                    "asset_name": "None",
                     "amount": {
                       "EvalParameter": [
                         "quantity",

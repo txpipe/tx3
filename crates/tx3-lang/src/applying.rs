@@ -529,7 +529,7 @@ impl Apply for ir::StructExpr {
 impl Apply for ir::AssetExpr {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         Ok(Self {
-            policy: self.policy,
+            policy: self.policy.apply_args(args)?,
             asset_name: self.asset_name.apply_args(args)?,
             amount: self.amount.apply_args(args)?,
         })
@@ -537,7 +537,7 @@ impl Apply for ir::AssetExpr {
 
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
         Ok(Self {
-            policy: self.policy,
+            policy: self.policy.apply_inputs(args)?,
             asset_name: self.asset_name.apply_inputs(args)?,
             amount: self.amount.apply_inputs(args)?,
         })
@@ -545,18 +545,19 @@ impl Apply for ir::AssetExpr {
 
     fn apply_fees(self, fees: u64) -> Result<Self, Error> {
         Ok(Self {
-            policy: self.policy,
+            policy: self.policy.apply_fees(fees)?,
             asset_name: self.asset_name.apply_fees(fees)?,
             amount: self.amount.apply_fees(fees)?,
         })
     }
 
     fn is_constant(&self) -> bool {
-        self.asset_name.is_constant() && self.amount.is_constant()
+        self.policy.is_constant() && self.asset_name.is_constant() && self.amount.is_constant()
     }
 
     fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
+        params.extend(self.policy.params());
         params.extend(self.asset_name.params());
         params.extend(self.amount.params());
         params
@@ -573,7 +574,7 @@ impl Apply for ir::AssetExpr {
 
     fn reduce_nested(self) -> Result<Self, Error> {
         Ok(Self {
-            policy: self.policy,
+            policy: self.policy.reduce()?,
             asset_name: self.asset_name.reduce()?,
             amount: self.amount.reduce()?,
         })
@@ -649,20 +650,35 @@ fn build_assets(aggregated: HashMap<AssetClass, i128>) -> Vec<ir::AssetExpr> {
     aggregated
         .into_iter()
         .map(|((policy, asset_name), amount)| ir::AssetExpr {
-            policy: policy.to_vec(),
-            asset_name: ir::Expression::Bytes(asset_name.to_vec()),
+            policy: match policy {
+                Some(policy) => ir::Expression::Bytes(policy.to_vec()),
+                None => ir::Expression::None,
+            },
+            asset_name: match asset_name {
+                Some(asset_name) => ir::Expression::Bytes(asset_name.to_vec()),
+                None => ir::Expression::None,
+            },
             amount: ir::Expression::Number(amount),
         })
         .collect()
 }
 
-type AssetClass<'a> = (&'a [u8], &'a [u8]);
+type AssetClass<'a> = (Option<&'a [u8]>, Option<&'a [u8]>);
 
 impl ir::AssetExpr {
-    fn expect_constant_name(&self) -> &[u8] {
+    fn expect_constant_policy(&self) -> Option<&[u8]> {
+        match &self.policy {
+            ir::Expression::None => None,
+            ir::Expression::Bytes(x) => Some(x.as_slice()),
+            _ => None,
+        }
+    }
+
+    fn expect_constant_name(&self) -> Option<&[u8]> {
         match &self.asset_name {
-            ir::Expression::Bytes(x) => x.as_slice(),
-            _ => unreachable!("asset_name expected to be Bytes"),
+            ir::Expression::None => None,
+            ir::Expression::Bytes(x) => Some(x.as_slice()),
+            _ => None,
         }
     }
 
@@ -678,10 +694,11 @@ impl ir::AssetExpr {
 
         // Group assets by policy and asset_name, summing their amounts
         for asset in items.iter() {
+            let policy = asset.expect_constant_policy();
             let asset_name = asset.expect_constant_name();
             let amount = asset.expect_constant_amount();
 
-            let key = (asset.policy.as_slice(), asset_name);
+            let key = (policy, asset_name);
             *aggregated.entry(key).or_default() += amount;
         }
 
@@ -897,8 +914,8 @@ impl Apply for ir::Expression {
     fn apply_fees(self, fees: u64) -> Result<Self, Error> {
         match self {
             ir::Expression::FeeQuery => Ok(ir::Expression::Assets(vec![ir::AssetExpr {
-                policy: vec![],
-                asset_name: ir::Expression::Bytes(b"".to_vec()),
+                policy: ir::Expression::None,
+                asset_name: ir::Expression::None,
                 amount: ir::Expression::Number(fees as i128),
             }])),
             ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.apply_fees(fees)?)),
@@ -910,6 +927,7 @@ impl Apply for ir::Expression {
 
     fn is_constant(&self) -> bool {
         match self {
+            Self::None => true,
             Self::Bytes(_) => true,
             Self::Number(_) => true,
             Self::Bool(_) => true,
@@ -1301,17 +1319,17 @@ mod tests {
     }
 
     #[test]
-    fn test_reduce_assets_binary_op() {
+    fn test_reduce_single_custom_asset_binary_op() {
         let op = ir::Expression::EvalCustom(
             ir::BinaryOp {
                 op: ir::BinaryOpKind::Add,
                 left: ir::Expression::Assets(vec![ir::AssetExpr {
-                    policy: b"abc".to_vec(),
+                    policy: ir::Expression::Bytes(b"abc".to_vec()),
                     asset_name: ir::Expression::Bytes(b"111".to_vec()),
                     amount: ir::Expression::Number(100),
                 }]),
                 right: ir::Expression::Assets(vec![ir::AssetExpr {
-                    policy: b"abc".to_vec(),
+                    policy: ir::Expression::Bytes(b"abc".to_vec()),
                     asset_name: ir::Expression::Bytes(b"111".to_vec()),
                     amount: ir::Expression::Number(200),
                 }]),
@@ -1324,9 +1342,76 @@ mod tests {
         match reduced {
             ir::Expression::Assets(assets) => {
                 assert_eq!(assets.len(), 1);
-                assert_eq!(assets[0].policy, b"abc".to_vec());
+                assert_eq!(assets[0].policy, ir::Expression::Bytes(b"abc".to_vec()));
                 assert_eq!(assets[0].asset_name, ir::Expression::Bytes(b"111".to_vec()));
                 assert_eq!(assets[0].amount, ir::Expression::Number(300));
+            }
+            _ => panic!("Expected assets"),
+        };
+    }
+
+    #[test]
+    fn test_reduce_native_asset_binary_op() {
+        let op = ir::Expression::EvalCustom(
+            ir::BinaryOp {
+                op: ir::BinaryOpKind::Add,
+                left: ir::Expression::Assets(vec![ir::AssetExpr {
+                    policy: ir::Expression::None,
+                    asset_name: ir::Expression::None,
+                    amount: ir::Expression::Number(100),
+                }]),
+                right: ir::Expression::Assets(vec![ir::AssetExpr {
+                    policy: ir::Expression::None,
+                    asset_name: ir::Expression::None,
+                    amount: ir::Expression::Number(200),
+                }]),
+            }
+            .into(),
+        );
+
+        let reduced = op.reduce().unwrap();
+
+        match reduced {
+            ir::Expression::Assets(assets) => {
+                assert_eq!(assets.len(), 1);
+                assert_eq!(assets[0].policy, ir::Expression::None);
+                assert_eq!(assets[0].asset_name, ir::Expression::None);
+                assert_eq!(assets[0].amount, ir::Expression::Number(300));
+            }
+            _ => panic!("Expected assets"),
+        };
+    }
+
+    #[test]
+    fn test_reduce_mixed_asset_binary_op() {
+        let op = ir::Expression::EvalCustom(
+            ir::BinaryOp {
+                op: ir::BinaryOpKind::Add,
+                left: ir::Expression::Assets(vec![ir::AssetExpr {
+                    policy: ir::Expression::None,
+                    asset_name: ir::Expression::None,
+                    amount: ir::Expression::Number(100),
+                }]),
+                right: ir::Expression::Assets(vec![ir::AssetExpr {
+                    policy: ir::Expression::Bytes(b"abc".to_vec()),
+                    asset_name: ir::Expression::Bytes(b"111".to_vec()),
+                    amount: ir::Expression::Number(200),
+                }]),
+            }
+            .into(),
+        );
+
+        let reduced = op.reduce().unwrap();
+
+        match reduced {
+            ir::Expression::Assets(assets) => {
+                assert_eq!(assets.len(), 2);
+                assert_eq!(assets[0].policy, ir::Expression::None);
+                assert_eq!(assets[0].asset_name, ir::Expression::None);
+                assert_eq!(assets[0].amount, ir::Expression::Number(100));
+                assert_eq!(assets[1].policy, ir::Expression::Bytes(b"abc".to_vec()));
+                assert_eq!(assets[1].asset_name, ir::Expression::Bytes(b"111".to_vec()));
+                assert_eq!(assets[1].amount, ir::Expression::Number(200));
             }
             _ => panic!("Expected assets"),
         };

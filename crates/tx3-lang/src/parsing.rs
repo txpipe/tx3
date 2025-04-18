@@ -571,8 +571,8 @@ impl AstNode for AddressExpr {
     }
 }
 
-impl AstNode for AssetConstructor {
-    const RULE: Rule = Rule::asset_constructor;
+impl AstNode for StaticAssetConstructor {
+    const RULE: Rule = Rule::static_asset_constructor;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         let span = pair.as_span().into();
@@ -581,8 +581,32 @@ impl AstNode for AssetConstructor {
         let r#type = Identifier::parse(inner.next().unwrap())?;
         let amount = DataExpr::parse(inner.next().unwrap())?;
 
-        Ok(AssetConstructor {
+        Ok(StaticAssetConstructor {
             r#type,
+            amount: Box::new(amount),
+            span,
+        })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
+impl AstNode for AnyAssetConstructor {
+    const RULE: Rule = Rule::any_asset_constructor;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let mut inner = pair.into_inner();
+
+        let policy = DataExpr::parse(inner.next().unwrap())?;
+        let asset_name = DataExpr::parse(inner.next().unwrap())?;
+        let amount = DataExpr::parse(inner.next().unwrap())?;
+
+        Ok(AnyAssetConstructor {
+            policy: Box::new(policy),
+            asset_name: Box::new(asset_name),
             amount: Box::new(amount),
             span,
         })
@@ -598,8 +622,14 @@ impl AssetExpr {
         Ok(AssetExpr::Identifier(Identifier::parse(pair)?))
     }
 
-    fn constructor_parse(pair: Pair<Rule>) -> Result<Self, Error> {
-        Ok(AssetExpr::Constructor(AssetConstructor::parse(pair)?))
+    fn static_constructor_parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        Ok(AssetExpr::StaticConstructor(StaticAssetConstructor::parse(
+            pair,
+        )?))
+    }
+
+    fn any_constructor_parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        Ok(AssetExpr::AnyConstructor(AnyAssetConstructor::parse(pair)?))
     }
 
     fn property_access_parse(pair: Pair<Rule>) -> Result<Self, Error> {
@@ -608,7 +638,8 @@ impl AssetExpr {
 
     fn term_parse(pair: Pair<Rule>) -> Result<Self, Error> {
         match pair.as_rule() {
-            Rule::asset_constructor => AssetExpr::constructor_parse(pair),
+            Rule::static_asset_constructor => AssetExpr::static_constructor_parse(pair),
+            Rule::any_asset_constructor => AssetExpr::any_constructor_parse(pair),
             Rule::property_access => AssetExpr::property_access_parse(pair),
             Rule::identifier => AssetExpr::identifier_parse(pair),
             x => unreachable!("Unexpected rule in asset_expr: {:?}", x),
@@ -642,7 +673,8 @@ impl AstNode for AssetExpr {
 
     fn span(&self) -> &Span {
         match self {
-            AssetExpr::Constructor(x) => x.span(),
+            AssetExpr::StaticConstructor(x) => x.span(),
+            AssetExpr::AnyConstructor(x) => x.span(),
             AssetExpr::BinaryOp(x) => &x.span,
             AssetExpr::PropertyAccess(x) => x.span(),
             AssetExpr::Identifier(x) => x.span(),
@@ -1032,8 +1064,8 @@ impl AstNode for AssetDef {
 
         Ok(AssetDef {
             name: identifier,
-            policy,
-            asset_name,
+            policy: Some(policy),
+            asset_name: Some(asset_name),
             span,
         })
     }
@@ -1293,10 +1325,10 @@ mod tests {
         "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.0xef7a1ceb;",
         AssetDef {
             name: "MyToken".to_string(),
-            policy: HexStringLiteral::new(
+            policy: Some(HexStringLiteral::new(
                 "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
-            ),
-            asset_name: "0xef7a1ceb".to_string(),
+            )),
+            asset_name: Some("0xef7a1ceb".to_string()),
             span: Span::DUMMY,
         }
     );
@@ -1307,21 +1339,68 @@ mod tests {
         "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.MYTOKEN;",
         AssetDef {
             name: "MyToken".to_string(),
-            policy: HexStringLiteral::new(
+            policy: Some(HexStringLiteral::new(
                 "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
-            ),
-            asset_name: "MYTOKEN".to_string(),
+            )),
+            asset_name: Some("MYTOKEN".to_string()),
             span: Span::DUMMY,
         }
     );
 
     input_to_ast_check!(
-        AssetConstructor,
+        StaticAssetConstructor,
         "type_and_literal",
         "MyToken(15)",
-        AssetConstructor {
+        StaticAssetConstructor {
             r#type: Identifier::new("MyToken"),
             amount: Box::new(DataExpr::Number(15)),
+            span: Span::DUMMY,
+        }
+    );
+
+    input_to_ast_check!(
+        AnyAssetConstructor,
+        "any_asset_constructor",
+        "AnyAsset(0x1234567890, \"MyToken\", 15)",
+        AnyAssetConstructor {
+            policy: Box::new(DataExpr::HexString(HexStringLiteral::new(
+                "1234567890".to_string()
+            ))),
+            asset_name: Box::new(DataExpr::String(StringLiteral::new("MyToken".to_string()))),
+            amount: Box::new(DataExpr::Number(15)),
+            span: Span::DUMMY,
+        }
+    );
+
+    input_to_ast_check!(
+        AnyAssetConstructor,
+        "any_asset_identifiers",
+        "AnyAsset(my_policy, my_token, my_amount)",
+        AnyAssetConstructor {
+            policy: Box::new(DataExpr::Identifier(Identifier::new("my_policy"))),
+            asset_name: Box::new(DataExpr::Identifier(Identifier::new("my_token"))),
+            amount: Box::new(DataExpr::Identifier(Identifier::new("my_amount"))),
+            span: Span::DUMMY,
+        }
+    );
+
+    input_to_ast_check!(
+        AnyAssetConstructor,
+        "any_asset_property_access",
+        "AnyAsset(input1.policy, input1.asset_name, input1.amount)",
+        AnyAssetConstructor {
+            policy: Box::new(DataExpr::PropertyAccess(PropertyAccess::new(
+                "input1",
+                &["policy"],
+            ))),
+            asset_name: Box::new(DataExpr::PropertyAccess(PropertyAccess::new(
+                "input1",
+                &["asset_name"],
+            ))),
+            amount: Box::new(DataExpr::PropertyAccess(PropertyAccess::new(
+                "input1",
+                &["amount"],
+            ))),
             span: Span::DUMMY,
         }
     );
@@ -1473,11 +1552,13 @@ mod tests {
                 OutputBlockField::To(Box::new(AddressExpr::Identifier(Identifier::new(
                     "my_party".to_string(),
                 )))),
-                OutputBlockField::Amount(Box::new(AssetExpr::Constructor(AssetConstructor {
-                    r#type: Identifier::new("Ada"),
-                    amount: Box::new(DataExpr::Number(100)),
-                    span: Span::DUMMY,
-                }))),
+                OutputBlockField::Amount(Box::new(AssetExpr::StaticConstructor(
+                    StaticAssetConstructor {
+                        r#type: Identifier::new("Ada"),
+                        amount: Box::new(DataExpr::Number(100)),
+                        span: Span::DUMMY,
+                    },
+                ))),
             ],
             span: Span::DUMMY,
         }
@@ -1502,11 +1583,11 @@ mod tests {
     #[test]
     fn test_spans_are_respected() {
         let program = parse_well_known_example("lang_tour");
-        assert_eq!(program.span, Span::new(0, 738));
+        assert_eq!(program.span, Span::new(0, 904));
 
         assert_eq!(program.parties[0].span, Span::new(0, 14));
 
-        assert_eq!(program.types[0].span, Span::new(16, 69));
+        assert_eq!(program.types[0].span, Span::new(16, 88));
     }
 
     fn make_snapshot_if_missing(example: &str, program: &Program) {

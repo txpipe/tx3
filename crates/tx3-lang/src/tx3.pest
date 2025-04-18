@@ -12,7 +12,7 @@ wildcard = @{ "*" }
 unit = { "()" }
 
 // Type definitions
-type = { "Int" | "Bool" | "Bytes" | identifier }
+type = { "Int" | "Bool" | "Bytes" | "AnyAsset" | identifier }
 
 // Parameters
 parameter = { identifier ~ ":" ~ type }
@@ -98,12 +98,16 @@ type_def = _{
 // Expressions
 property_access = { identifier ~ "." ~ identifier ~ ("." ~ identifier)* }
 
-asset_expr = { asset_term ~ (binary_operator ~ asset_term)* }
-asset_term = _{ asset_constructor | property_access | identifier }
-
-asset_constructor = {
+static_asset_constructor = {
     identifier ~ "(" ~ data_expr ~ ("," ~ data_expr)? ~ ")"
 }
+
+any_asset_constructor = {
+    "AnyAsset" ~ "(" ~ data_expr ~ "," ~ data_expr ~ "," ~ data_expr ~ ")"
+}
+
+asset_expr = { asset_term ~ (binary_operator ~ asset_term)* }
+asset_term = _{ any_asset_constructor | static_asset_constructor | property_access | identifier }
 
 binary_operator = { "+" | "-" }
 
