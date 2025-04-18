@@ -13,3 +13,9 @@ keywords = ["blockchain", "cardano", "utxo", "dsl"]
 documentation = "https://docs.rs/tx3-lang"
 homepage = "https://github.com/tx3-lang/tx3"
 readme = "README.md"
+
+[workspace.metadata.release]
+push = false
+publish = false
+tag-name = "v{{version}}"
+pre-release-commit-message = "release: v{{version}}"
