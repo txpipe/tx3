@@ -423,6 +423,7 @@ impl IntoLower for ast::InputBlock {
         let from = self.find("from");
         let min_amount = self.find("min_amount");
         let r#ref = self.find("ref");
+        let redeemer = self.find("redeemer");
 
         let policy = from
             .and_then(ast::InputBlockField::as_address_expr)
@@ -441,7 +442,7 @@ impl IntoLower for ast::InputBlock {
             }
             .into(),
             refs: HashSet::new(),
-            redeemer: None,
+            redeemer: redeemer.into_lower()?,
             policy,
         };
 

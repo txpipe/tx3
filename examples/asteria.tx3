@@ -30,8 +30,8 @@ type ShipCommand {
 
 tx move_ship(
     ship_name: Bytes,
-    delta_x: Int,
-    delta_y: Int,
+    p_delta_x: Int,
+    p_delta_y: Int,
     required_fuel: Int
 ) {
     input ship {
@@ -40,8 +40,8 @@ tx move_ship(
         min_amount: Ship(ship_name, 1) + Fuel(required_fuel),
 
         redeemer: ShipCommand::MoveShip {
-            delta_x: delta_x,
-            delta_y: delta_y,
+            delta_x: p_delta_x,
+            delta_y: p_delta_y,
         },
     }
 
@@ -64,8 +64,8 @@ tx move_ship(
         amount: ship - Fuel(required_fuel),
 
         datum: ShipState {
-            pos_x: ship.pos_x + delta_x,
-            pos_y: ship.pos_y + delta_y,
+            pos_x: ship.pos_x + p_delta_x,
+            pos_y: ship.pos_y + p_delta_y,
             ...ship
         },
     }
