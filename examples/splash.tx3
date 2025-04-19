@@ -84,6 +84,10 @@ tx Swap(
         from: PoolValidator,
         ref: pool_outref,
         datum_is: PoolDatum,
+        redeemer: PoolRedeemer {
+            action: 2,
+            self_index: IndexOf(pool) // IndexOf is a placeholder for the actual index in the ordered input list
+        },
     }
 
     output {
@@ -119,6 +123,10 @@ tx Deposit(
         from: PoolValidator,
         ref: pool_outref,
         datum_is: PoolDatum,
+        redeemer: PoolRedeemer {
+            action: 0,
+            self_index: IndexOf(pool) // IndexOf is a placeholder for the actual index in the ordered input list
+        },
     }
 
     output {
@@ -156,6 +164,10 @@ tx Redeem(
         from: PoolValidator,
         ref: pool_outref,
         datum_is: PoolDatum,
+        redeemer: PoolRedeemer {
+            action: 1,
+            self_index: IndexOf(pool) // IndexOf is a placeholder for the actual index in the ordered input list
+        },
     }
 
     output {
