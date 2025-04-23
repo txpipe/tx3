@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use tx3_lang::ir::InputQuery;
 use std::sync::Arc;
+use tx3_lang::ir::InputQuery;
 
 use tokio::sync::Mutex;
 use utxorpc::CardanoQueryClient;
@@ -57,8 +57,8 @@ fn utxo_from_u5c_to_tx3(u: utxorpc::ChainUtxo<utxorpc::spec::cardano::TxOutput>)
         address: u.parsed.as_ref().unwrap().address.clone().into(),
         datum: None, //u.parsed.unwrap().datum.into(),
         assets: vec![tx3_lang::ir::AssetExpr {
-            policy: vec![],
-            asset_name: tx3_lang::ir::Expression::Bytes(vec![]),
+            policy: tx3_lang::ir::Expression::None,
+            asset_name: tx3_lang::ir::Expression::None,
             amount: tx3_lang::ir::Expression::Number(u.parsed.as_ref().unwrap().coin as i128),
         }], //u.parsed.unwrap().assets.into(),
         script: u
@@ -74,8 +74,6 @@ fn utxo_from_u5c_to_tx3(u: utxorpc::ChainUtxo<utxorpc::spec::cardano::TxOutput>)
             .map(tx3_lang::ir::Expression::Bytes),
     }
 }
-
-
 
 #[derive(Clone)]
 pub struct Ledger {
@@ -133,10 +131,7 @@ impl crate::resolve::Ledger for Ledger {
         }
     }
 
-    async fn resolve_input(
-        &self,
-        query: &InputQuery,
-    ) -> Result<tx3_lang::UtxoSet, crate::Error> {
+    async fn resolve_input(&self, query: &InputQuery) -> Result<tx3_lang::UtxoSet, crate::Error> {
         let utxos = self
             .queries
             .lock()

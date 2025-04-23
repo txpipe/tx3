@@ -1,4 +1,7 @@
-use pallas::{codec::utils::MaybeIndefArray, ledger::primitives::conway as primitives};
+use pallas::{
+    codec::utils::{KeepRaw, MaybeIndefArray},
+    ledger::primitives::conway::{self as primitives, Redeemers},
+};
 use std::{collections::BTreeMap, str::FromStr};
 use tx3_lang::ir;
 
@@ -216,7 +219,8 @@ fn compile_data_expr(ir: &ir::Expression) -> Result<primitives::PlutusData, Erro
 fn compile_native_asset_for_output(
     ir: &ir::AssetExpr,
 ) -> Result<primitives::Multiasset<primitives::PositiveCoin>, Error> {
-    let policy = primitives::Hash::from(ir.policy.as_slice());
+    let policy = coerce_expr_into_bytes(&ir.policy)?;
+    let policy = primitives::Hash::from(policy.as_slice());
     let asset_name = coerce_expr_into_bytes(&ir.asset_name)?;
     let amount = coerce_expr_into_number(&ir.amount)?;
     let amount = primitives::PositiveCoin::try_from(amount as u64).unwrap();
@@ -229,7 +233,8 @@ fn compile_native_asset_for_output(
 fn compile_native_asset_for_mint(
     ir: &ir::AssetExpr,
 ) -> Result<primitives::Multiasset<primitives::NonZeroInt>, Error> {
-    let policy = primitives::Hash::from(ir.policy.as_slice());
+    let policy = coerce_expr_into_bytes(&ir.policy)?;
+    let policy = primitives::Hash::from(policy.as_slice());
     let asset_name = coerce_expr_into_bytes(&ir.asset_name)?;
     let amount = coerce_expr_into_number(&ir.amount)?;
     let amount = primitives::NonZeroInt::try_from(amount as i64).unwrap();
@@ -246,7 +251,7 @@ fn compile_ada_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
 }
 
 fn compile_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
-    if ir.policy.is_empty() {
+    if ir.policy.is_none() {
         compile_ada_value(ir)
     } else {
         let asset = compile_native_asset_for_output(ir)?;
@@ -273,7 +278,7 @@ fn eval_minutxo_constructor(&self, ctr: &ir::AssetConstructor) -> Result<primiti
 fn compile_output_block(
     ir: &ir::Output,
     pparams: &PParams,
-) -> Result<primitives::TransactionOutput, Error> {
+) -> Result<primitives::TransactionOutput<'static>, Error> {
     let address = ir
         .address
         .as_ref()
@@ -297,14 +302,17 @@ fn compile_output_block(
 
     let datum_option = ir.datum.as_ref().map(compile_data_expr).transpose()?;
 
-    let output =
-        primitives::TransactionOutput::PostAlonzo(primitives::PostAlonzoTransactionOutput {
+    let output = primitives::TransactionOutput::PostAlonzo(
+        primitives::PostAlonzoTransactionOutput {
             address: address.to_vec().into(),
             value,
-            datum_option: datum_option
-                .map(|x| primitives::DatumOption::Data(pallas::codec::utils::CborWrap(x))),
+            datum_option: datum_option.map(|x| {
+                primitives::DatumOption::Data(pallas::codec::utils::CborWrap(x.into())).into()
+            }),
             script_ref: None, // TODO: add script ref
-        });
+        }
+        .into(),
+    );
 
     Ok(output)
 }
@@ -348,7 +356,7 @@ fn compile_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionInput>, Erro
 fn compile_outputs(
     tx: &ir::Tx,
     pparams: &PParams,
-) -> Result<Vec<primitives::TransactionOutput>, Error> {
+) -> Result<Vec<primitives::TransactionOutput<'static>>, Error> {
     let resolved = tx
         .outputs
         .iter()
@@ -399,7 +407,10 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
     Ok(refs)
 }
 
-fn compile_tx_body(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::TransactionBody, Error> {
+fn compile_tx_body(
+    tx: &ir::Tx,
+    pparams: &PParams,
+) -> Result<primitives::TransactionBody<'static>, Error> {
     let out = primitives::TransactionBody {
         inputs: compile_inputs(tx)?.into(),
         outputs: compile_outputs(tx, pparams)?,
@@ -444,7 +455,7 @@ fn utxo_ref_matches(ref1: &tx3_lang::UtxoRef, ref2: &primitives::TransactionInpu
 
 fn compile_single_spend_redeemer(
     input_id: &tx3_lang::UtxoRef,
-    input_ir: &ir::Input,
+    redeemer: &ir::Expression,
     sorted_inputs: &[&primitives::TransactionInput],
 ) -> Result<primitives::Redeemer, Error> {
     let index = sorted_inputs
@@ -456,7 +467,7 @@ fn compile_single_spend_redeemer(
         tag: primitives::RedeemerTag::Spend,
         index: index as u32,
         ex_units: primitives::ExUnits { mem: 0, steps: 0 },
-        data: input_ir.redeemer.try_into_data()?,
+        data: redeemer.try_into_data()?,
     };
 
     Ok(redeemer)
@@ -473,8 +484,11 @@ fn compile_spend_redeemers(
 
     for input in tx.inputs.iter() {
         for ref_ in input.refs.iter() {
-            let redeemer = compile_single_spend_redeemer(ref_, input, compiled_inputs.as_slice())?;
-            redeemers.push(redeemer);
+            if let Some(redeemer) = &input.redeemer {
+                let redeemer =
+                    compile_single_spend_redeemer(ref_, redeemer, compiled_inputs.as_slice())?;
+                redeemers.push(redeemer);
+            }
         }
     }
 
@@ -517,7 +531,7 @@ fn compile_mint_redeemers(_tx: &ir::Tx) -> Result<Vec<primitives::Redeemer>, Err
 fn compile_redeemers(
     tx: &ir::Tx,
     compiled_body: &primitives::TransactionBody,
-) -> Result<Option<primitives::Redeemers>, Error> {
+) -> Result<Option<Redeemers>, Error> {
     let spend_redeemers = compile_spend_redeemers(tx, compiled_body)?;
     let mint_redeemers = compile_mint_redeemers(tx)?;
 
@@ -536,9 +550,9 @@ fn compile_redeemers(
 fn compile_witness_set(
     tx: &ir::Tx,
     compiled_body: &primitives::TransactionBody,
-) -> Result<primitives::WitnessSet, Error> {
+) -> Result<primitives::WitnessSet<'static>, Error> {
     let out = primitives::WitnessSet {
-        redeemer: compile_redeemers(tx, compiled_body)?,
+        redeemer: compile_redeemers(tx, compiled_body)?.map(|x| x.into()),
         vkeywitness: None,
         native_script: None,
         bootstrap_witness: None,
@@ -551,15 +565,15 @@ fn compile_witness_set(
     Ok(out)
 }
 
-pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx, Error> {
+pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'static>, Error> {
     let transaction_body = compile_tx_body(tx, pparams)?;
     let transaction_witness_set = compile_witness_set(tx, &transaction_body)?;
     let auxiliary_data = compile_auxiliary_data(tx)?;
 
     let tx = primitives::Tx {
-        transaction_body,
-        transaction_witness_set,
-        auxiliary_data: auxiliary_data.into(),
+        transaction_body: transaction_body.into(),
+        transaction_witness_set: transaction_witness_set.into(),
+        auxiliary_data: primitives::Nullable::from(auxiliary_data.map(KeepRaw::from)),
         success: true,
     };
 

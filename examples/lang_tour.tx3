@@ -3,6 +3,7 @@ party MyParty;
 type MyRecord {
     field1: Int,
     field2: Bytes,
+    field3: Bytes,
 }
 
 type MyVariant {
@@ -15,6 +16,8 @@ type MyVariant {
 }
 
 policy OnlyHashPolicy = 0xABCDEF1234;
+
+asset StaticAsset = 0xABCDEF1234.MYTOKEN;
 
 policy FullyDefinedPolicy {
     hash: 0xABCDEF1234,
@@ -41,6 +44,9 @@ tx my_tx(
         datum: MyRecord {
             field1: quantity,
             field2: 54,
+            ...source
         },
+        amount: AnyAsset(source.field3, source.field2, source.field1) + Ada(40),
     }
+
 }

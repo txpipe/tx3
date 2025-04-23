@@ -44,6 +44,10 @@ impl Analyzable for VoteDelegationCertificate {
 
         drep + stake
     }
+
+    fn is_resolved(&self) -> bool {
+        self.drep.is_resolved() && self.stake.is_resolved()
+    }
 }
 
 impl IntoLower for VoteDelegationCertificate {
@@ -93,6 +97,10 @@ impl Analyzable for StakeDelegationCertificate {
 
         pool + stake
     }
+
+    fn is_resolved(&self) -> bool {
+        self.pool.is_resolved() && self.stake.is_resolved()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -125,6 +133,13 @@ impl Analyzable for CardanoBlock {
         match self {
             CardanoBlock::VoteDelegationCertificate(x) => x.analyze(parent),
             _ => todo!(),
+        }
+    }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            CardanoBlock::VoteDelegationCertificate(x) => x.is_resolved(),
+            _ => false,
         }
     }
 }

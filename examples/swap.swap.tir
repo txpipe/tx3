@@ -14,7 +14,25 @@
         "ref": null
       },
       "refs": [],
-      "redeemer": null,
+      "redeemer": {
+        "Struct": {
+          "constructor": 0,
+          "fields": [
+            {
+              "EvalParameter": [
+                "ask",
+                "AnyAsset"
+              ]
+            },
+            {
+              "EvalParameter": [
+                "bid",
+                "AnyAsset"
+              ]
+            }
+          ]
+        }
+      },
       "policy": null
     },
     {

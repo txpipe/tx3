@@ -245,6 +245,7 @@ impl IntoLower for ast::Type {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         match self {
+            ast::Type::Undefined => Ok(ir::Type::Undefined),
             ast::Type::Unit => Ok(ir::Type::Unit),
             ast::Type::Int => Ok(ir::Type::Int),
             ast::Type::Bool => Ok(ir::Type::Bool),
@@ -313,18 +314,42 @@ impl IntoLower for ast::DataExpr {
     }
 }
 
-impl IntoLower for ast::AssetConstructor {
+impl IntoLower for ast::StaticAssetConstructor {
     type Output = ir::Expression;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         let asset_def = coerce_identifier_into_asset_def(&self.r#type)?;
 
-        let asset_name = ir::Expression::Bytes(asset_def.asset_name.as_bytes().to_vec());
+        let policy = match asset_def.policy {
+            Some(x) => ir::Expression::Bytes(hex::decode(&x.value)?),
+            None => ir::Expression::None,
+        };
+
+        let asset_name = match asset_def.asset_name {
+            Some(x) => ir::Expression::Bytes(x.as_bytes().to_vec()),
+            None => ir::Expression::None,
+        };
 
         let amount = self.amount.into_lower()?;
 
         Ok(ir::Expression::Assets(vec![ir::AssetExpr {
-            policy: hex::decode(&asset_def.policy.value)?,
+            policy,
+            asset_name,
+            amount,
+        }]))
+    }
+}
+
+impl IntoLower for ast::AnyAssetConstructor {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let policy = self.policy.into_lower()?;
+        let asset_name = self.asset_name.into_lower()?;
+        let amount = self.amount.into_lower()?;
+
+        Ok(ir::Expression::Assets(vec![ir::AssetExpr {
+            policy,
             asset_name,
             amount,
         }]))
@@ -354,7 +379,8 @@ impl IntoLower for ast::AssetExpr {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         match self {
-            ast::AssetExpr::Constructor(x) => x.into_lower(),
+            ast::AssetExpr::StaticConstructor(x) => x.into_lower(),
+            ast::AssetExpr::AnyConstructor(x) => x.into_lower(),
             ast::AssetExpr::BinaryOp(x) => {
                 Ok(ir::Expression::EvalCustom(Box::new(x.into_lower()?)))
             }
@@ -397,6 +423,7 @@ impl IntoLower for ast::InputBlock {
         let from = self.find("from");
         let min_amount = self.find("min_amount");
         let r#ref = self.find("ref");
+        let redeemer = self.find("redeemer");
 
         let policy = from
             .and_then(ast::InputBlockField::as_address_expr)
@@ -415,7 +442,7 @@ impl IntoLower for ast::InputBlock {
             }
             .into(),
             refs: HashSet::new(),
-            redeemer: None,
+            redeemer: redeemer.into_lower()?,
             policy,
         };
 
@@ -531,7 +558,10 @@ mod tests {
     use paste::paste;
 
     use super::*;
-    use crate::parsing;
+    use crate::{
+        ast::Span,
+        parsing::{self, AstNode},
+    };
 
     fn make_snapshot_if_missing(example: &str, name: &str, tx: &ir::Tx) {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");

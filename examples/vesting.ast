@@ -38,7 +38,7 @@
             },
             {
               "MinAmount": {
-                "Constructor": {
+                "StaticConstructor": {
                   "type": {
                     "value": "Ada",
                     "span": {
@@ -91,7 +91,7 @@
             },
             {
               "Amount": {
-                "Constructor": {
+                "StaticConstructor": {
                   "type": {
                     "value": "Ada",
                     "span": {
@@ -269,7 +269,7 @@
                       },
                       "operator": "Subtract",
                       "right": {
-                        "Constructor": {
+                        "StaticConstructor": {
                           "type": {
                             "value": "Ada",
                             "span": {

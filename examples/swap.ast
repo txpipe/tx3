@@ -15,8 +15,8 @@
         ],
         "span": {
           "dummy": false,
-          "start": 161,
-          "end": 202
+          "start": 168,
+          "end": 209
         }
       },
       "inputs": [
@@ -30,8 +30,8 @@
                   "value": "Dex",
                   "span": {
                     "dummy": false,
-                    "start": 236,
-                    "end": 239
+                    "start": 243,
+                    "end": 246
                   }
                 }
               }
@@ -55,8 +55,8 @@
                     "value": "SwapParams",
                     "span": {
                       "dummy": false,
-                      "start": 289,
-                      "end": 299
+                      "start": 296,
+                      "end": 306
                     }
                   },
                   "case": {
@@ -71,11 +71,11 @@
                     "fields": [
                       {
                         "name": {
-                          "value": "ask",
+                          "value": "ask_value",
                           "span": {
                             "dummy": false,
-                            "start": 314,
-                            "end": 317
+                            "start": 321,
+                            "end": 330
                           }
                         },
                         "value": {
@@ -83,54 +83,54 @@
                             "value": "ask",
                             "span": {
                               "dummy": false,
-                              "start": 319,
-                              "end": 322
+                              "start": 332,
+                              "end": 335
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 314,
-                          "end": 322
+                          "start": 321,
+                          "end": 335
                         }
                       },
                       {
                         "name": {
-                          "value": "bid",
+                          "value": "bid_value",
                           "span": {
                             "dummy": false,
-                            "start": 336,
-                            "end": 339
+                            "start": 349,
+                            "end": 358
                           }
                         },
                         "value": {
                           "Identifier": {
-                            "value": "ask",
+                            "value": "bid",
                             "span": {
                               "dummy": false,
-                              "start": 341,
-                              "end": 344
+                              "start": 360,
+                              "end": 363
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 336,
-                          "end": 344
+                          "start": 349,
+                          "end": 363
                         }
                       }
                     ],
                     "spread": null,
                     "span": {
                       "dummy": false,
-                      "start": 300,
-                      "end": 355
+                      "start": 307,
+                      "end": 374
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 289,
-                    "end": 355
+                    "start": 296,
+                    "end": 374
                   }
                 }
               }
@@ -138,8 +138,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 209,
-            "end": 362
+            "start": 216,
+            "end": 381
           }
         },
         {
@@ -152,8 +152,8 @@
                   "value": "Buyer",
                   "span": {
                     "dummy": false,
-                    "start": 402,
-                    "end": 407
+                    "start": 421,
+                    "end": 426
                   }
                 }
               }
@@ -166,8 +166,8 @@
                       "value": "fees",
                       "span": {
                         "dummy": false,
-                        "start": 429,
-                        "end": 433
+                        "start": 452,
+                        "end": 456
                       }
                     }
                   },
@@ -177,15 +177,15 @@
                       "value": "bid",
                       "span": {
                         "dummy": false,
-                        "start": 436,
-                        "end": 439
+                        "start": 459,
+                        "end": 462
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 434,
-                    "end": 435
+                    "start": 457,
+                    "end": 458
                   }
                 }
               }
@@ -193,8 +193,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 372,
-            "end": 446
+            "start": 391,
+            "end": 469
           }
         }
       ],
@@ -208,8 +208,8 @@
                   "value": "Dex",
                   "span": {
                     "dummy": false,
-                    "start": 477,
-                    "end": 480
+                    "start": 500,
+                    "end": 503
                   }
                 }
               }
@@ -221,8 +221,8 @@
                     "value": "PoolState",
                     "span": {
                       "dummy": false,
-                      "start": 497,
-                      "end": 506
+                      "start": 520,
+                      "end": 529
                     }
                   },
                   "case": {
@@ -240,8 +240,8 @@
                           "value": "pair_a",
                           "span": {
                             "dummy": false,
-                            "start": 521,
-                            "end": 527
+                            "start": 544,
+                            "end": 550
                           }
                         },
                         "value": {
@@ -252,8 +252,8 @@
                                   "value": "pool",
                                   "span": {
                                     "dummy": false,
-                                    "start": 529,
-                                    "end": 533
+                                    "start": 552,
+                                    "end": 556
                                   }
                                 },
                                 "path": [
@@ -261,15 +261,15 @@
                                     "value": "pair_a",
                                     "span": {
                                       "dummy": false,
-                                      "start": 534,
-                                      "end": 540
+                                      "start": 557,
+                                      "end": 563
                                     }
                                   }
                                 ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 529,
-                                  "end": 541
+                                  "start": 552,
+                                  "end": 564
                                 }
                               }
                             },
@@ -280,8 +280,8 @@
                                   "value": "bid",
                                   "span": {
                                     "dummy": false,
-                                    "start": 543,
-                                    "end": 546
+                                    "start": 566,
+                                    "end": 569
                                   }
                                 },
                                 "path": [
@@ -289,29 +289,29 @@
                                     "value": "amount",
                                     "span": {
                                       "dummy": false,
-                                      "start": 547,
-                                      "end": 553
+                                      "start": 570,
+                                      "end": 576
                                     }
                                   }
                                 ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 543,
-                                  "end": 553
+                                  "start": 566,
+                                  "end": 576
                                 }
                               }
                             },
                             "span": {
                               "dummy": false,
-                              "start": 541,
-                              "end": 542
+                              "start": 564,
+                              "end": 565
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 521,
-                          "end": 553
+                          "start": 544,
+                          "end": 576
                         }
                       },
                       {
@@ -319,8 +319,8 @@
                           "value": "pair_b",
                           "span": {
                             "dummy": false,
-                            "start": 567,
-                            "end": 573
+                            "start": 590,
+                            "end": 596
                           }
                         },
                         "value": {
@@ -331,8 +331,8 @@
                                   "value": "pool",
                                   "span": {
                                     "dummy": false,
-                                    "start": 575,
-                                    "end": 579
+                                    "start": 598,
+                                    "end": 602
                                   }
                                 },
                                 "path": [
@@ -340,15 +340,15 @@
                                     "value": "pair_b",
                                     "span": {
                                       "dummy": false,
-                                      "start": 580,
-                                      "end": 586
+                                      "start": 603,
+                                      "end": 609
                                     }
                                   }
                                 ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 575,
-                                  "end": 587
+                                  "start": 598,
+                                  "end": 610
                                 }
                               }
                             },
@@ -359,8 +359,8 @@
                                   "value": "ask",
                                   "span": {
                                     "dummy": false,
-                                    "start": 589,
-                                    "end": 592
+                                    "start": 612,
+                                    "end": 615
                                   }
                                 },
                                 "path": [
@@ -368,29 +368,29 @@
                                     "value": "amount",
                                     "span": {
                                       "dummy": false,
-                                      "start": 593,
-                                      "end": 599
+                                      "start": 616,
+                                      "end": 622
                                     }
                                   }
                                 ],
                                 "span": {
                                   "dummy": false,
-                                  "start": 589,
-                                  "end": 599
+                                  "start": 612,
+                                  "end": 622
                                 }
                               }
                             },
                             "span": {
                               "dummy": false,
-                              "start": 587,
-                              "end": 588
+                              "start": 610,
+                              "end": 611
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 567,
-                          "end": 599
+                          "start": 590,
+                          "end": 622
                         }
                       }
                     ],
@@ -399,21 +399,21 @@
                         "value": "pool",
                         "span": {
                           "dummy": false,
-                          "start": 616,
-                          "end": 620
+                          "start": 639,
+                          "end": 643
                         }
                       }
                     },
                     "span": {
                       "dummy": false,
-                      "start": 507,
-                      "end": 630
+                      "start": 530,
+                      "end": 653
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 497,
-                    "end": 630
+                    "start": 520,
+                    "end": 653
                   }
                 }
               }
@@ -424,8 +424,8 @@
                   "value": "pool",
                   "span": {
                     "dummy": false,
-                    "start": 648,
-                    "end": 652
+                    "start": 671,
+                    "end": 675
                   }
                 }
               }
@@ -433,8 +433,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 456,
-            "end": 659
+            "start": 479,
+            "end": 682
           }
         },
         {
@@ -446,8 +446,8 @@
                   "value": "Buyer",
                   "span": {
                     "dummy": false,
-                    "start": 686,
-                    "end": 691
+                    "start": 709,
+                    "end": 714
                   }
                 }
               }
@@ -464,8 +464,8 @@
                               "value": "payment",
                               "span": {
                                 "dummy": false,
-                                "start": 709,
-                                "end": 716
+                                "start": 732,
+                                "end": 739
                               }
                             }
                           },
@@ -475,15 +475,15 @@
                               "value": "ask",
                               "span": {
                                 "dummy": false,
-                                "start": 719,
-                                "end": 722
+                                "start": 742,
+                                "end": 745
                               }
                             }
                           },
                           "span": {
                             "dummy": false,
-                            "start": 717,
-                            "end": 718
+                            "start": 740,
+                            "end": 741
                           }
                         }
                       },
@@ -493,15 +493,15 @@
                           "value": "bid",
                           "span": {
                             "dummy": false,
-                            "start": 725,
-                            "end": 728
+                            "start": 748,
+                            "end": 751
                           }
                         }
                       },
                       "span": {
                         "dummy": false,
-                        "start": 723,
-                        "end": 724
+                        "start": 746,
+                        "end": 747
                       }
                     }
                   },
@@ -511,15 +511,15 @@
                       "value": "fees",
                       "span": {
                         "dummy": false,
-                        "start": 731,
-                        "end": 735
+                        "start": 754,
+                        "end": 758
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 729,
-                    "end": 730
+                    "start": 752,
+                    "end": 753
                   }
                 }
               }
@@ -527,8 +527,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 665,
-            "end": 742
+            "start": 688,
+            "end": 765
           }
         }
       ],
@@ -537,8 +537,8 @@
       "adhoc": [],
       "span": {
         "dummy": false,
-        "start": 154,
-        "end": 744
+        "start": 161,
+        "end": 767
       }
     }
   ],
@@ -588,35 +588,35 @@
           "name": "Default",
           "fields": [
             {
-              "name": "amount",
+              "name": "ask_value",
               "type": "AnyAsset",
               "span": {
                 "dummy": false,
                 "start": 86,
-                "end": 102
+                "end": 105
               }
             },
             {
-              "name": "ratio",
+              "name": "bid_value",
               "type": "AnyAsset",
               "span": {
                 "dummy": false,
-                "start": 108,
-                "end": 123
+                "start": 111,
+                "end": 130
               }
             }
           ],
           "span": {
             "dummy": false,
             "start": 64,
-            "end": 126
+            "end": 133
           }
         }
       ],
       "span": {
         "dummy": false,
         "start": 64,
-        "end": 126
+        "end": 133
       }
     }
   ],
@@ -626,16 +626,16 @@
       "name": "Buyer",
       "span": {
         "dummy": false,
-        "start": 128,
-        "end": 140
+        "start": 135,
+        "end": 147
       }
     },
     {
       "name": "Dex",
       "span": {
         "dummy": false,
-        "start": 142,
-        "end": 152
+        "start": 149,
+        "end": 159
       }
     }
   ],
@@ -643,6 +643,6 @@
   "span": {
     "dummy": false,
     "start": 0,
-    "end": 744
+    "end": 767
   }
 }
