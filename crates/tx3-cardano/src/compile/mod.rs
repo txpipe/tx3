@@ -1,6 +1,7 @@
 use pallas::{
-    codec::minicbor::encode,
+    codec::minicbor::{encode, Encoder},
     codec::utils::{KeepRaw, MaybeIndefArray},
+    crypto::hash::Hasher,
     ledger::primitives::conway::{self as primitives, Redeemers},
 };
 use std::{collections::BTreeMap, str::FromStr};
@@ -412,19 +413,25 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
 }
 
 fn cost_model() -> Vec<u8> {
-    hex::decode("a0").expect("Wrong Cost Model")
+    hex::decode("a10198af1a0003236119032c01011903e819023b00011903e8195e7104011903e818201a0001ca761928eb041959d818641959d818641959d818641959d818641959d818641959d81864186418641959d81864194c5118201a0002acfa182019b551041a000363151901ff00011a00015c3518201a000797751936f404021a0002ff941a0006ea7818dc0001011903e8196ff604021a0003bd081a00034ec5183e011a00102e0f19312a011a00032e801901a5011a0002da781903e819cf06011a00013a34182019a8f118201903e818201a00013aac0119e143041903e80a1a00030219189c011a00030219189c011a0003207c1901d9011a000330001901ff0119ccf3182019fd40182019ffd5182019581e18201940b318201a00012adf18201a0002ff941a0006ea7818dc0001011a00010f92192da7000119eabb18201a0002ff941a0006ea7818dc0001011a0002ff941a0006ea7818dc0001011a0011b22c1a0005fdde00021a000c504e197712041a001d6af61a0001425b041a00040c660004001a00014fab18201a0003236119032c010119a0de18201a00033d7618201979f41820197fb8182019a95d1820197df718201995aa18201a0223accc0a1a0374f693194a1f0a1a02515e841980b30a").expect("Wrong Cost Model")
 }
 
-fn compute_script_integrity_hash(
+fn compile_script_data_hash(
     plutus_data: &[primitives::PlutusData],
     redeemer: &Redeemers,
-    network_magic: &u32,
-    network_id: &u8,
-    block_slot: &u64,
 ) -> primitives::Hash<32> {
     let mut value_to_hash_with_def: Vec<u8> = Vec::new();
     let _ = encode(redeemer, &mut value_to_hash_with_def);
-    todo!()
+    if !plutus_data.is_empty() {
+        let mut plutus_data_encoder_def: Encoder<Vec<u8>> = Encoder::new(Vec::new());
+        let _ = plutus_data_encoder_def.array(plutus_data.len() as u64);
+        for single_plutus_data in plutus_data.iter() {
+            let _ = plutus_data_encoder_def.encode(single_plutus_data);
+        }
+        value_to_hash_with_def.extend(plutus_data_encoder_def.writer().clone());
+    }
+    value_to_hash_with_def.extend(&cost_model());
+    Hasher::<256>::hash(&value_to_hash_with_def)
 }
 
 fn compile_tx_body(
@@ -603,9 +610,14 @@ fn compile_witness_set(
 }
 
 pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'static>, Error> {
-    let transaction_body = compile_tx_body(tx, pparams)?;
+    let mut transaction_body = compile_tx_body(tx, pparams)?;
     let transaction_witness_set = compile_witness_set(tx, &transaction_body)?;
     let auxiliary_data = compile_auxiliary_data(tx)?;
+
+    if let Some(ref reds) = transaction_witness_set.redeemer {
+        let script_data_hash = compile_script_data_hash(&[], &reds);
+        transaction_body.script_data_hash = Some(script_data_hash);
+    }
 
     let tx = primitives::Tx {
         transaction_body: transaction_body.into(),
