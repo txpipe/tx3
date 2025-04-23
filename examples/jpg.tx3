@@ -1,0 +1,245 @@
+party Seller;
+party Buyer;
+
+policy ListingValidator = { 
+    script_hash: "5dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+    outref: OutputReference { 
+        tx_hash: "dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+        index: 0 
+    }
+};
+
+policy OfferValidator = { 
+    script_hash: "5dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+    outref: OutputReference { 
+        tx_hash: "dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+        index: 0 
+    }
+};
+
+type ListingPayout {
+    address: Bytes,
+    amount: Int
+}
+
+type Listing {
+    payouts: ListingPayout[], // JPG uses a list of payouts
+    owner_pkh: Bytes
+}
+
+type Buy {
+    offset: Int
+}
+
+type ListingRedeemer {
+    Buy,
+    CancelOrUpdate
+}
+
+type Token {
+    type: Int,
+    amount: KeyValue<Bytes, Int> // JPG uses a map of tokens
+}
+
+type OfferPayoutValue {
+    type: Int,
+    amount: KeyValue<Bytes, Token>
+}
+
+type OfferPayout
+{
+    address: PlutusAddress,
+    amount: OfferPayoutValue
+} 
+
+type Offer {
+    owner_pkh: Bytes,
+    payouts: OfferPayout[],
+    listing_metadata: Bytes
+}
+
+type OfferRedeemer {
+    CancelOrUpdate,
+    AcceptOffer
+}
+
+tx CreateListing(
+    nft_policy: Bytes,
+    nft_name: Bytes,
+    payouts: ListingPayout[]
+) {
+    input source {
+        from: Seller,
+        min_amount: Asset(nft_policy, nft_name, 1)
+    }
+
+    output {
+        to: ListingValidator,
+        amount: listing,
+        datum: Listing {
+            payouts: payouts,
+            owner_pkh: VerificationKeyHash(Seller)
+        }
+    }
+
+    output {
+        to: Seller,
+        amount: listing - fees
+    }
+
+    // JPG attaches metadata to the transaction
+    // that has the listing utxo(s), they might be using it for indexing purposes
+    // I'm assuming in this example that the metadata is already in cbor,
+    // but it would be nice if we can pass a json
+    // or a tx3 object that can be serialized to cbor instead
+    metadata listing_metadata;
+}
+
+tx Buy(
+    nft_policy: Bytes,
+    nft_name: Bytes,
+    total_price: Int
+) {
+    input listing {
+        from: ListingValidator,
+        min_amount: Asset(nft_policy, nft_name, 1),
+        datum_is: Listing,
+        redeemer: ListingRedeemer::Buy {
+            offset: 0
+        }
+    }
+
+    input source {
+        from: Buyer,
+        min_amount: total_price
+    }
+
+    // Need to enumerate the payouts
+    outputs listing.payouts as payout {
+        to: payout.address,
+        amount: payout.amount
+    }
+
+    output {
+        to: Buyer,
+        amount: listing - fees
+    }
+}
+
+tx Cancel(
+    nft_policy: Bytes,
+    nft_name: Bytes
+) {
+    input listing {
+        from: ListingValidator,
+        min_amount: Asset(nft_policy, nft_name, 1),
+        datum_is: Listing,
+        redeemer: ListingRedeemer::CancelOrUpdate
+    }
+
+    output {
+        to: Seller,
+        amount: listing - fees
+    }
+
+    required_signers: [Seller]
+}
+
+tx Update(
+    nft_policy: Bytes,
+    nft_name: Bytes,
+    new_payouts: ListingPayout[]
+) {
+    input listing {
+        from: ListingValidator,
+        datum_is: Listing,
+        redeemer: ListingRedeemer::CancelOrUpdate
+    }
+
+    output {
+        to: ListingValidator,
+        amount: listing - fees,
+        datum: Listing {
+            payouts: new_payouts,
+            owner_pkh: listing.owner_pkh
+        }
+    }
+
+    required_signers: [Seller]
+}
+
+tx CreateOffer(
+    amount: Int, 
+    payouts: OfferPayout[],
+    metadata: Bytes
+) {
+    input source {
+        from: Buyer,
+        min_amount: amount
+    }
+
+    output {
+        to: OfferValidator,
+        amount: offer,
+        datum: Offer {
+            payouts: payouts,
+            owner_pkh: VerificationKeyHash(Buyer)
+        }
+    }
+
+    output {
+        to: Buyer,
+        amount: source - fees
+    }
+
+    metadata offer_metadata;
+}
+
+tx AcceptOffer(
+    listing_outref: OutputReference,
+    offer_outref: OutputReference,
+    nft_policy: Bytes,
+    nft_name: Bytes,
+) {
+    input offer {
+        from: OfferValidator,
+        ref: offer_outref,
+        datum_is: Listing,
+        redeemer: OfferRedeemer::AcceptOffer
+    }
+
+    input listing {
+        from: ListingValidator,
+        ref: listing_outref,
+        datum_is: Listing,
+        redeemer: ListingRedeemer::Buy {
+            offset: 0
+        }
+    }
+
+    output {
+        to: Seller,
+        amount: offer - fees
+    }
+
+    output {
+        to: Buyer,
+        amount: listing
+    }
+}
+
+tx CancelOffer(offer_outref: OutputReference) {
+    input offer {
+        from: OfferValidator,
+        ref: offer_outref,
+        datum_is: Listing,
+        redeemer: OfferRedeemer::CancelOrUpdate
+    }
+
+    output {
+        to: Buyer,
+        amount: offer - fees
+    }
+
+    required_signers: [Buyer]
+}

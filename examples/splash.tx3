@@ -1,0 +1,187 @@
+party User;
+
+policy PoolValidator = { 
+    script_hash: "5dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+    outref: OutputReference { 
+        tx_hash: "dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+        index: 0 
+    }
+};
+
+// Common types can be added to the language itself
+type AssetClass {
+    policy_id: PolicyId,
+    asset_name: AssetName,
+}
+
+type OutputReference {
+    tx_hash: Bytes,
+    index: Int,
+}
+
+type PoolDatum {
+    pool_nft: AssetClass,
+    asset_x: AssetClass,
+    asset_y: AssetClass,
+    asset_lq: AssetClass,
+    fee: Int,
+    stake_admin_policy: AssetClass[],
+    lq_bound: Bytes,
+}
+
+type SwapDatum {
+    base: AssetClass,
+    quote: AssetClass,
+    pool_nft: AssetClass,
+    fee: Int,
+    ex_fee_per_token_num: Int,
+    ex_fee_per_token_den: Int,
+    reward_pkh: Bytes,
+    stake_pkh: Option<Bytes>,
+    base_amount: Int,
+    min_quote_amount: Int
+}
+
+type DepositDatum {
+    pool_nft: AssetClass,
+    asset_x: AssetClass,
+    asset_y: AssetClass,
+    asset_lq: AssetClass,
+    fee: Int,
+    reward_pkh: Bytes,
+    stake_pkh: Option<Bytes>,
+    collateral_ada: Int,
+}
+
+type PoolRedeemer {
+    action: Int,
+    self_index: Int
+}
+
+type OrderRedeemer {
+    pool_input_index: Int,
+    order_input_index: Int,
+    reward_output_index: Int,
+    action: Int
+}
+
+tx Swap(
+    pool_outref: OutputReference,
+    base_asset: AssetClass,
+    quote_asset: AssetClass,
+    base_amount: Int,
+    quote_amount: Int,
+    new_reserve_x_amount: Int,
+    new_reserve_y_amount: Int,
+)
+{    
+    input source {
+        from: User,
+        min_amount: Asset(base_asset, base_amount),
+    }
+
+    input pool {
+        from: PoolValidator,
+        ref: pool_outref,
+        datum_is: PoolDatum,
+        redeemer: PoolRedeemer {
+            action: 2,
+            self_index: IndexOf(pool) // IndexOf is a placeholder for the actual index in the ordered input list
+        },
+    }
+
+    output {
+        to: PoolValidator,
+        amount: Asset(pool.asset_x, new_reserve_x_amount) +
+            Asset(pool.asset_y, new_reserve_y_amount) +
+            Asset(pool.asset_lq, pool),
+            Asset(pool.pool_nft, 1),
+        datum: pool.datum
+    }
+
+    output {
+        to: User,
+        amount: Asset(quote_asset, quote_amount) - fees,
+    }
+}
+
+tx Deposit(
+    pool_outref: OutputReference,
+    asset_x_deposit_amount: Int,
+    asset_y_deposit_amount: Int,
+    new_lq_amount: Int
+)
+{
+    input source {
+        from: User,
+        min_amount: 
+            Asset(pool.asset_x, asset_x_deposit_amount) + 
+            Asset(pool.asset_y, asset_y_deposit_amount)
+    }
+
+    input pool {
+        from: PoolValidator,
+        ref: pool_outref,
+        datum_is: PoolDatum,
+        redeemer: PoolRedeemer {
+            action: 0,
+            self_index: IndexOf(pool) // IndexOf is a placeholder for the actual index in the ordered input list
+        },
+    }
+
+    output {
+        to: PoolValidator,
+        amount: 
+            pool +
+            Asset(pool.asset_x, asset_x_deposit_amount) +
+            Asset(pool.asset_y, asset_y_deposit_amount) - 
+            Asset(pool.asset_lq, Asset(pool.asset_lq, pool) - new_lq_amount)
+        datum: pool.datum
+    }
+
+    output {
+        to: User,
+        amount: source - fees + Asset(pool.asset_lq, Asset(pool.asset_lq, pool) - new_lq_amount)
+    }
+}
+
+tx Redeem(
+    pool_outref: OutputReference,
+    asset_x_redeem_amount: Int,
+    asset_y_redeem_amount: Int,
+    redeem_lq_amount: Int
+)
+{
+    input source {
+        from: User,
+        min_amount: 
+            Asset(pool.asset_lq, redeem_lq_amount) +
+            Asset(pool.asset_x, asset_x_redeem_amount) +
+            Asset(pool.asset_y, asset_y_redeem_amount)
+    }
+
+    input pool {
+        from: PoolValidator,
+        ref: pool_outref,
+        datum_is: PoolDatum,
+        redeemer: PoolRedeemer {
+            action: 1,
+            self_index: IndexOf(pool) // IndexOf is a placeholder for the actual index in the ordered input list
+        },
+    }
+
+    output {
+        to: PoolValidator,
+        amount: 
+            pool +
+            Asset(pool.asset_lq, redeem_lq_amount) -
+            Asset(pool.asset_x, asset_x_redeem_amount) -
+            Asset(pool.asset_y, asset_y_redeem_amount)
+        datum: pool.datum
+    }
+
+    output {
+        to: User,
+        amount: source - fees + Asset(pool.asset_x, asset_x_redeem_amount) + Asset(pool.asset_y, asset_y_redeem_amount)
+    }
+}

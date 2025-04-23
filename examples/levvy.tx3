@@ -1,0 +1,588 @@
+party Lender;
+party Borrower;
+party Treasury;
+party TokenValidator;
+
+/**
+ * Suggestion:
+ * What: A way to define a validator together with the reference script UTxO
+ * Why: So tx3 can automatically add the UTxO to the rerefence inputs
+ */
+policy TokenValidator = { 
+    script_hash: "5dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+    outref: OutputReference { 
+        tx_hash: "dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
+        index: 0 
+    }
+};
+
+/**
+ * Suggestion:
+ * What: Support for type aliases
+ * Why: For better readability
+ */
+type PolicyId = Bytes;
+type AssetName = Bytes;
+type Lovelace = Int;
+type PosixTime = Int;
+
+/**
+ * Suggestion:
+ * What: Include common types to the standard library
+ * Why: To reduce boilerplate code
+ */
+type AssetClass {
+    policy_id: PolicyId,
+    asset_name: AssetName,
+}
+
+type OutputReference {
+    tx_hash: Bytes,
+    index: Int,
+}
+
+type LendTokenDetails {
+    ada_owner: PlutusAddress,
+    policy_id: PolicyId,
+    asset_name: AssetName,
+    token_amount: Int,
+    loan_amount: Lovelace,
+    interest_amount: Lovelace,
+    loan_duration: Int,
+    output_reference: OutputReference,
+}
+
+type BorrowTokenDetails {
+    ada_owner: PlutusAddress,
+    asset_owner: PlutusAddress,
+    policy_id: PolicyId,
+    asset_name: AssetName,
+    token_amount: Int,
+    loan_amount: Lovelace,
+    interest_amount: Lovelace,
+    loan_end_time: Int,
+    output_reference: OutputReference,
+}
+
+type RepayTokenDetails {
+    ada_owner: PlutusAddress,
+    token_amount: Int,
+    loan_amount: Lovelace,
+    interest_amount: Lovelace,
+    output_reference: OutputReference,
+}
+
+type TokenAction {
+    BorrowTokenAction,
+    RepayTokenAction,
+    ClaimTokenAction,
+    ForecloseTokenAction,
+    CancelTokenAction,
+}
+
+type PaymentDatum {
+  output_reference: OutputReference,
+}
+
+/**
+ * Suggestion:
+ * What: Enums and union types with variant constructors
+ * Why: This helps in mapping aiken types to tx3 types
+ */
+type TokenDatum {
+  LendTokenDatum(LendTokenDetails),
+  BorrowTokenDatum(BorrowTokenDetails),
+  RepayTokenDatum(RepayTokenDetails),
+}
+
+type TokenAction {
+  BorrowTokenAction
+  RepayTokenAction
+  ClaimTokenAction
+  ForecloseTokenAction
+  CancelTokenAction
+}
+
+type LendParams {
+    collateral_asset: AssetClass,
+    collateral_amount: Int,
+    principal_amount: Lovelace,
+    interest_amount: Lovelace,
+    loan_duration: Int,
+    output_reference: OutputReference,
+}
+
+type BorrowParams {
+    lend_position_outref: OutputReference,
+    loan_amount: Lovelace
+}
+
+// What: Support list of actions in a transaction
+// Why: In the case of Levvy, one can create multiple lend positions in a single transaction. 
+//      Without support for iterable list types, we would need to create multiple transactions
+tx Lend(lend_params_list: LendParams[]) {
+    input source {
+        from: Lender,
+        // There should be a way to aggregate values from a list
+        min_amount: Ada(lend_params_list.sum(lpl => lpl.principal_amount)),
+        // or min_amount: Ada(lend_params_list.sum(lpl => lpl.principal_amount).sum()),
+    }
+
+    // What: A way to iterate over lists and refer to outputs of a specific context
+    // Why: To allow referencing the list of outputs generated in an iteration (like `loan_position_outputs`)
+
+    // What: Batch loop with result assignment
+    // Why: For cleaner code that captures iteration results
+    batch lend_positions = foreach (params in lend_params_list) {
+        output {
+            // What: Support for address type 1 (script + stake key hash)
+            // Why: For real transactions we need to mix script hash with lender/borrower stake key
+            // Example: In this example, I am just using a placeholder `Address` constructor that accepts either a 
+            //       Script or VerificationKey of address
+            to: Address(TokenValidator, Lender), 
+            amount: Ada(param.loan_amount),
+            datum: TokenDatum::LendTokenDatum(LendTokenDetails {
+                ada_owner: plutus_addresses.to_plutus_address(Lender),
+                policy_id: params.collateral_asset.policy_id,
+                asset_name: params.collateral_asset.asset_name,
+                token_amount: params.collateral_amount,
+                loan_amount: params.principal_amount,
+                interest_amount: params.interest_amount,
+                loan_duration: params.loan_duration,
+                output_reference: params.output_reference
+            }),   
+        }
+    }
+
+    output {
+        to: Lender,
+        // What: Reference to batch outputs in calculations
+        // Why: To easily use batch results in subsequent calculations
+        amount: source - Ada(lend_positions.outputs.sum(lpl => Ada(lpl.amount))) - fees,
+    }
+}
+
+// Version 1: Introducing a way to filter inputs 
+tx BorrowVersion1(loan_amount: Lovelace, max_interest: Int) {
+    input lend_positions {
+        from: TokenValidator,
+        min_amount: Ada(loan_amount),
+        datum_is: TokenDatum::BorrowTokenDatum(BorrowTokenDetails),
+        // What: Filter function for inputs
+        // Why: To select specific inputs that meet criteria 
+        // Example: In the case of Levvy, there could be UTxOs that are not ideal to use for borrowing,
+        //      it could be that the interest or collateral is too high, or the datum itself is structurally
+        //      correct but is invalid in the context of Levvy
+        filter: (input) => {
+            let interest = (input.interest_amount * 10_000 /* Inflate value */) / input.loan_amount
+            interest <= max_interest 
+        },
+        redeemer: TokenAction::BorrowTokenAction,
+    }
+
+    // What: Mutable variables
+    // Why: To track states throughout the transaction, could be useful for complex logic
+    let unfilled_loan_amount = loan_amount;
+    let total_collateral = 0;
+    foreach(lend_position in lend_positions)
+    {
+        // What: Local variable declarations for computed values
+        // Why: To simplify complex validation logic without requiring additional parameters
+        let current_loan_amount = unfilled_loan_amount > lend_position.loan_amount ? lend_position.loan_amount : unfilled_loan_amount;
+        let loan_ratio = lend_position.loan_amount / params.loan_amount; // if float values are supported, otherwise we inflate
+        let collateral_amount = lend_position.token_amount * loan_ratio;
+        let interest_amount = lend_position.interest_amount * loan_ratio;
+
+        // Borrow output that holds the collateral
+        output {
+            to: TokenValidator,
+            // What: `Asset` constructor that accepts policy_id, asset_name and amount
+            // Why: To handle assets that are not known at compile time
+            amount: Asset(lend_position.policy_id, lend_position.asset_name, collateral_amount),
+            datum: TokenDatum::BorrowTokenDatum(BorrowTokenDetails {
+                ada_owner: lend_position.ada_owner,
+                asset_owner: plutus_addresses.to_plutus_address(Borrower),
+                policy_id: lend_position.policy_id,
+                asset_name: lend_position.asset_name,
+                token_amount: collateral_amount,
+                loan_amount: params.loan_amount,
+                interest_amount: interest_amount,
+                // What: `now()` function to get current unix timestamp
+                // Why: To support time-based logic in smart contracts
+                loan_end_time: now() + lend_position.loan_duration,
+                output_reference: params.lend_position_outref
+            }),
+        }
+
+        // Platorm fee sent to the treasury wallet
+        // Some arithmetic functions like `*` would be useful`
+        output {
+            to: Treasury,
+            amount: Ada(interest_amount) * 0.15,
+            datum: PaymentDatum {
+                output_reference: params.lend_position_outref,
+            },
+        }
+
+        // What: Conditional logic with if statements
+        // Why: To handle different transaction paths based on conditions
+        // Example: There are loan positions in Levvy that is partially filled
+        //      if it is a partial loan, we need to create an additional output 
+        if (current_loan_amount < lend_position.loan_amount) {
+            output {
+                to: TokenValidator,
+                amount: Ada(lend_position.loan_amount) - params.loan_amount,
+                datum: TokenDatum::LendTokenDatum(LendTokenDetails {
+                    ada_owner: lend_position.ada_owner,
+                    policy_id: lend_position.policy_id,
+                    asset_name: lend_position.asset_name,
+                    token_amount: lend_position.token_amount - collateral_amount,
+                    loan_amount: lend_position.loan_amount - params.loan_amount,
+                    interest_amount: lend_position.interest_amount - interest_amount,
+                    loan_duration: lend_position.loan_duration,
+                    output_reference: params.lend_position_outref
+                }),
+            }
+        }
+
+        // What: Accumulating collateral amounts
+        // Why: In Levvy, the lender can set different collateral amounts even if the principal loan amount is the same
+        //   for this reason, we do not know the exact amount of collateral at compile time, one way
+        //   to handle this is to use a mutable variable that we can update, or some aggregate function
+        total_collateral += collateral_amount;
+
+        unfilled_loan_amount -= current_loan_amount;
+    }
+
+    input borrower_collateral_input {
+        from: Borrower,
+        min_amount: Asset(collateral_asset.policy_id, collateral_asset.asset_name, total_collateral)
+    }
+
+    output {
+        to: Borrower,
+        amount: loan_amount + borrower_collateral_input - fees
+    }
+
+    // What: Special field for reference input
+    // Why: To clearly specify reference script inputs
+    reference_input TokenValidator
+
+    // What: Explicit collateral section
+    // Why: To specify collateral for smart contract transactions (unless handled automatically)
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+
+    // What: Transaction validity timeframe
+    // Why: To support time-based logic with defined validity range
+    valid_from now()
+    valid_until now() + 1000
+}
+
+// Version 2: Passing the UTxOs as params
+tx BorrowVersion2(
+    borrow_params_list: BorrowParams[], 
+    total_collateral: Int,
+    collateral_asset: AssetClass
+) {
+    // What: Direct UTxO reference passing
+    // Why: To specify exact UTxOs to use rather than filtering
+    batch borrow_positions = foreach (params in borrow_params_list) {
+        input lend_position {
+            from: TokenValidator,
+            ref: params.lend_position_outref,
+            datum_is: TokenDatum::LendTokenDatum(LendTokenDetails),
+            redeemer: TokenAction::BorrowTokenAction
+        }
+
+        // What: Local variable computation for complex validation
+        // Why: To simplify validation logic without additional parameters
+        
+        // What: Pattern matching or destructuring for datum types
+        // Why: To access the inner values of complex datum types
+        // For this example, I assume we use positional access like tuples (1st, 2nd):
+        let lend_token_details = lend_position.1st
+        let loan_ratio = lend_token_details.loan_amount / params.loan_amount
+        let collateral_amount = lend_token_details.token_amount * loan_ratio
+        let interest_amount = lend_token_details.interest_amount * loan_ratio
+
+        // Borrow output that holds the collateral
+        output {
+            to: TokenValidator,
+            // The use of `Asset` that accepts a policy_id, asset_name and amount
+            // this is useful for assets that are not known at compile time
+            amount: Asset(lend_token_details.policy_id, lend_token_details.asset_name, collateral_amount),
+            datum: TokenDatum::BorrowTokenDatum(BorrowTokenDetails {
+                ada_owner: lend_token_details.ada_owner,
+                asset_owner: plutus_addresses.to_plutus_address(Borrower),
+                policy_id: lend_token_details.policy_id,
+                asset_name: lend_token_details.asset_name,
+                token_amount: collateral_amount,
+                loan_amount: params.loan_amount,
+                interest_amount: interest_amount,
+                // We can introduce a `now()` function to get the current unix timestamp
+                // this is useful for a lot of use cases that require time-based logic
+                loan_end_time: now() + lend_token_details.loan_duration,
+                output_reference: params.lend_position_outref
+            }),
+        }
+
+        // Platorm fee sent to the treasury wallet
+        output {
+            to: Treasury,
+            amount: Ada(interest_amount) * 0.15,
+            datum: PaymentDatum {
+                output_reference: params.lend_position_outref,
+            },
+        }
+
+        if (params.loan_amount < lend_position.loan_amount) {
+            // There is an extra output in case of a partial loan
+            output {
+                to: TokenValidator,
+                amount: Ada(lend_position.loan_amount) - params.loan_amount,
+                datum: TokenDatum::LendTokenDatum(LendTokenDetails {
+                    ada_owner: lend_token_details.ada_owner,
+                    policy_id: lend_token_details.policy_id,
+                    asset_name: lend_token_details.asset_name,
+                    token_amount: lend_token_details.token_amount - collateral_amount,
+                    loan_amount: lend_position.loan_amount - params.loan_amount,
+                    interest_amount: lend_token_details.interest_amount - interest_amount,
+                    loan_duration: lend_token_details.loan_duration,
+                    output_reference: params.lend_position_outref
+                }),
+            }
+        }
+    }
+
+    // This section here aggregates the result of the previous batch transaction
+    // This is the total asset amount that the borrower needs to lock
+    input borrower_collateral_input {
+        from: Borrower,
+        min_amount: Asset(collateral_asset.policy_id, collateral_asset.asset_name, total_collateral)
+    }
+
+    output {
+        to: Borrower,
+        amount: Ada(borrow_params_list.sum(bpl => bpl.loan_amount)) + (borrower_collateral_input) - fees
+    }
+
+    reference_input TokenValidator
+
+    // Since this is a smart contract transaction, we may want a way to set collateral
+    // this can be ommitted if this will be handled automatically
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+
+    // Also, for time-based logic, we need to pass validity range
+    // somthing like this:
+    valid_from now()
+    valid_until now() + 1000
+}
+
+tx Repay(outrefs: OutputReference[]) {
+    // What: Evolving output type
+    // Why: To create outputs that can be updated throughout the transaction execution
+    output borrower_output {
+        to: Borrower,
+        amount: zero() // initially zero
+    }
+
+    // What: Evolving input type
+    // Why: To specify inputs that accumulate requirements throughout the transaction
+    input repay_input {
+        from: Borrower,
+        min_amount: zero() // initially zero
+    }
+
+    batch repay_positions = foreach (outref in outrefs) {
+        input borrow_position {
+            from: TokenValidator,
+            ref: outref,
+            datum_is: TokenDatum::BorrowTokenDatum(BorrowTokenDetails),
+            redeemer: TokenAction::RepayTokenAction,
+        }
+
+        // What: Accumulating assets into evolving output
+        // Why: To handle multiple positions with different collateral assets without additional logic
+        borrower_output.amount += Asset(borrow_position.policy_id, borrow_position.asset_name, borrow_position.token_amount)
+
+        // Now let's update the input, since the borrower needs to pay the loan amount + interest amount
+        repay_input.min_amount += Ada(borrow_position.loan_amount + borrow_position.interest_amount)
+
+        // What: Named outputs matching input names
+        // Why: For improved readability (e.g., `output repay_output`)
+        output {
+            to: TokenValidator,
+            amount: borrow_position.loan_amount + borrow_position.interest_amount,
+            datum: TokenDatum::RepayTokenDatum(RepayTokenDetails {
+                ada_owner: borrow_position.ada_owner,
+                token_amount: borrow_position.token_amount,
+                loan_amount: borrow_position.loan_amount,
+                interest_amount: borrow_position.interest_amount,
+                output_reference: outref,
+            }),
+        }
+
+        // Platform fee sent to the treasury wallet
+        output {
+            to: Treasury,
+            // What: Math utility functions (like Math.max)
+            // Why: To handle edge cases like ensuring minimum ADA values
+            amount: Ada(borrow_position.interest_amount) * 0.15,
+            datum: PaymentDatum {
+                output_reference: outref,
+            },
+        }
+    }
+
+    // What: Automatic fee deduction from evolving outputs
+    // Why: To simplify fee handling and make code cleaner
+    borrower_output.amount -= fees
+
+    // What: Required signers specification
+    // Why: To ensure borrower signs since the contract doesn't verify collateral destination
+    required_signers [Borrower] // just the pkh of borrower, but it can accept multiple signers
+
+    reference_input TokenValidator
+
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+}
+
+tx Foreclose(outrefs: OutputReference[]) {
+    // What: Evolving inputs for fee payment
+    // Why: To collect platform fees from lender during foreclosure
+    input foreclose_input {
+        from: Lender,
+        min_amount: zero() // initially zero
+    }
+
+    // What: Evolving outputs for unknown asset collection
+    // Why: To accumulate an unknown quantity of collateral assets for the lender
+    output lender_output {
+        to: Lender,
+        amount: zero() // initially zero
+    }
+
+    // What: Simple foreach without result assignment
+    // Why: For when we need iteration but don't need to capture the batch result
+    foreach (outref in outrefs) {
+        input borrow_position {
+            from: TokenValidator,
+            ref: outref,
+            datum_is: TokenDatum::BorrowTokenDatum(BorrowTokenDetails),
+            redeemer: TokenAction::ForecloseTokenAction,
+        }
+
+        // Update the evolving input since the lender needs to pay the platform fees
+        foreclose_input.min_amount += Ada(borrow_position.interest_amount) * 0.15 
+
+        // Update the evolving output because the lender will receive the collateral
+        lender_output.amount += Asset(borrow_position.policy_id, borrow_position.asset_name, borrow_position.token_amount)
+
+        // Platform fee sent to the treasury wallet
+        output {
+            to: Treasury,
+            amount: Ada(borrow_position.interest_amount) * 0.15,
+            datum: PaymentDatum {
+                output_reference: outref,
+            },
+        }
+    }
+
+    // Deduct the fees from the lender output
+    lender_output.amount -= fees
+
+    // The lender needs to sign the transaction because the contract requires it
+    required_signers [Lender] 
+
+    reference_input TokenValidator
+
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+
+    // Since foreclosing is a time-based action, we need to set the validity range
+    valid_from now()
+    valid_until now() + 1000
+}
+
+tx Claim(outrefs: OutputReference[]) {
+    output lender_output {
+        to: Lender,
+        amount: zero()
+    }
+
+    foreach(outref in outrefs) {
+        input claim_position {
+            from: TokenValidator,
+            ref: outref,
+            datum_is: TokenDatum::RepayTokenDatum(RepayTokenDetails),
+            redeemer: TokenAction::ClaimTokenAction,
+        }
+
+        // Platform fee sent to the treasury wallet
+        output {
+            to: Treasury,
+            amount: Ada(claim_position.interest_amount * 0.15),
+            datum: PaymentDatum {
+                output_reference: outref,
+            },
+        }
+
+        // Update the evolving output since the lender will receive the collateral
+        lender_output.amount += Ada(claim_position.loan_amount) - Ada(claim_position.interest_amount * 0.15)
+    }
+
+    // Deduct the fees from the lender output
+    lender_output.amount -= fees
+
+    // The lender needs to sign the transaction because the contract requires it
+    required_signers [Lender]
+
+    reference_input TokenValidator
+
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+}
+
+tx Cancel(outrefs: OutputReference[]) {
+    output lender_output {
+        to: Lender,
+        amount: zero()
+    }
+
+    foreach(outref in outrefs) {
+        input lend_position {
+            from: TokenValidator,
+            ref: outref,
+            datum_is: TokenDatum::LendTokenDatum(LendTokenDetails),
+            redeemer: TokenAction::CancelTokenAction,
+        }
+
+        lender_output.amount += lend_position.amount
+    }
+
+    // Deduct the fees from the lender output
+    lender_output.amount -= fees
+
+    // The lender needs to sign the transaction because the contract requires it
+    required_signers [Lender]
+
+    reference_input TokenValidator
+
+    collateral {
+        from: Borrower,
+        min_amount: Ada(5)
+    }
+}
