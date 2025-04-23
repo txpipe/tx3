@@ -1,4 +1,5 @@
 use pallas::{
+    codec::minicbor::encode,
     codec::utils::{KeepRaw, MaybeIndefArray},
     ledger::primitives::conway::{self as primitives, Redeemers},
 };
@@ -251,11 +252,14 @@ fn compile_ada_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
 }
 
 fn compile_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
+    let amount = coerce_expr_into_number(&ir.amount)?;
     if ir.policy.is_none() {
         compile_ada_value(ir)
-    } else {
+    } else if amount as i64 > 0 {
         let asset = compile_native_asset_for_output(ir)?;
         Ok(value!(0, asset))
+    } else {
+        Ok(value!(0))
     }
 }
 
@@ -407,6 +411,22 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
     Ok(refs)
 }
 
+fn cost_model() -> Vec<u8> {
+    hex::decode("a0").expect("Wrong Cost Model")
+}
+
+fn compute_script_integrity_hash(
+    plutus_data: &[primitives::PlutusData],
+    redeemer: &Redeemers,
+    network_magic: &u32,
+    network_id: &u8,
+    block_slot: &u64,
+) -> primitives::Hash<32> {
+    let mut value_to_hash_with_def: Vec<u8> = Vec::new();
+    let _ = encode(redeemer, &mut value_to_hash_with_def);
+    todo!()
+}
+
 fn compile_tx_body(
     tx: &ir::Tx,
     pparams: &PParams,
@@ -495,37 +515,54 @@ fn compile_spend_redeemers(
     Ok(redeemers)
 }
 
-fn compile_mint_redeemers(_tx: &ir::Tx) -> Result<Vec<primitives::Redeemer>, Error> {
-    // TODO
+pub fn mint_redeemer_index(
+    compiled_body: &primitives::TransactionBody,
+    policy: primitives::ScriptHash,
+) -> Result<u32, Error> {
+    let mut out: Vec<_> = compiled_body
+        .mint
+        .iter()
+        .flat_map(|x| x.iter())
+        .map(|(p, _)| *p)
+        .collect();
 
-    // pub fn mint_redeemer_index(&self, policy: primitives::ScriptHash) ->
-    // Result<u32, BuildError> {     if let Some(tx_body) = &self.tx_body {
-    //         let mut out: Vec<_> = tx_body
-    //             .mint
-    //             .iter()
-    //             .flat_map(|x| x.iter())
-    //             .map(|(p, _)| *p)
-    //             .collect();
+    out.sort();
+    out.dedup();
 
-    //         out.sort();
-    //         out.dedup();
+    if let Some(index) = out.iter().position(|p| *p == policy) {
+        return Ok(index as u32);
+    }
 
-    //         if let Some(index) = out.iter().position(|p| *p == policy) {
-    //             return Ok(index as u32);
-    //         }
-    //     }
+    Err(Error::MissingAddress)
+}
 
-    //     Err(BuildError::RedeemerTargetMissing)
-    // }
-    //
-    // let out = primitives::Redeemer {
-    //     tag: primitives::RedeemerTag::Mint,
-    //     index: ctx.mint_redeemer_index(*policy)?,
-    //     ex_units: ctx.eval_ex_units(*policy, &data),
-    //     data,
-    // };
+fn compile_mint_redeemers(
+    tx: &ir::Tx,
+    compiled_body: &primitives::TransactionBody,
+) -> Result<Vec<primitives::Redeemer>, Error> {
+    if let Some(r) = &tx.mint {
+        let red = r.redeemer.clone().ok_or(Error::MissingAddress)?;
+        let amount = r.amount.clone().ok_or(Error::MissingAddress)?;
+        let assets = coerce_expr_into_assets(&amount)?;
+        // TODO: This only works with the first redeemer.
+        // Are we allowed to include more than one?
+        let asset = assets.first().ok_or(Error::MissingAddress)?;
+        let policy = coerce_expr_into_bytes(&asset.policy)?;
+        let policy = primitives::Hash::from(policy.as_slice());
 
-    Ok(vec![])
+        let out = primitives::Redeemer {
+            tag: primitives::RedeemerTag::Mint,
+            index: mint_redeemer_index(compiled_body, policy)?,
+            ex_units: primitives::ExUnits {
+                mem: 2000,
+                steps: 200000,
+            },
+            data: red.try_into_data()?,
+        };
+        Ok(vec![out])
+    } else {
+        Ok(vec![])
+    }
 }
 
 fn compile_redeemers(
@@ -533,7 +570,7 @@ fn compile_redeemers(
     compiled_body: &primitives::TransactionBody,
 ) -> Result<Option<Redeemers>, Error> {
     let spend_redeemers = compile_spend_redeemers(tx, compiled_body)?;
-    let mint_redeemers = compile_mint_redeemers(tx)?;
+    let mint_redeemers = compile_mint_redeemers(tx, compiled_body)?;
 
     // TODO: chain other redeemers
     let redeemers: Vec<_> = spend_redeemers.into_iter().chain(mint_redeemers).collect();
