@@ -11,7 +11,7 @@ party TokenValidator;
 // A policy can contain a utxo with the reference script
 // but can also act as a party, in the case of Levvy though, since
 // we are mixing script hash as the payment part and user's delegator part
-// we will just use this token validator as reference input
+// we can't send to this address directly, so we could just use it as a reference script
 policy TokenValidatorRefScript = { 
     script_hash: "5dd6feba9bb5b3bfe0fc23da8519fed7ba8bc53bd838b7dec7c4226a", 
     outref: OutputReference { 
@@ -153,6 +153,9 @@ tx Lend(lend_params_list: LendParams[]) {
     // Or maybe something like this
     batch lend_positions = foreach (params in lend_params_list) {
         output {
+            // In a real transaction, this would be an address type 1 where
+            // we mix the script hash with the lender or borrower's stake key hash
+            // this applies to all the transactions going to the TokenValidator
             to: TokenValidator,
             amount: Ada(param.loan_amount),
             datum: TokenDatum::LendTokenDatum(LendTokenDetails {
