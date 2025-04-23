@@ -1,0 +1,55 @@
+// This file is auto-generated.
+
+import { TRPClient, TxEnvelope, ClientOptions } from 'tx3-trp';
+
+export const DEFAULT_TRP_ENDPOINT = '{{trpEndpoint}}';
+
+export const DEFAULT_HEADERS = {
+{{#each headers}}
+    '{{@key}}': '{{this}}',
+{{/each}}
+};
+
+export const DEFAULT_ENV_ARGS = {
+{{#each envArgs}}
+    '{{@key}}': '{{this}}',
+{{/each}}
+};
+
+{{#each transactions}}
+export type {{pascal_name}} = {
+{{#each parameters}}
+    {{name}}: {{type_name}};
+{{/each}}
+};
+
+export const {{constant_name}} = {
+    bytecode: "{{ir_bytes}}",
+    encoding: 'hex',
+    version: 'v1alpha1',
+};
+
+{{/each}}
+export class Client {
+    readonly #client: TRPClient;
+
+    constructor(options: ClientOptions) {
+        this.#client = new TRPClient(options);
+    }
+{{#each transactions}}
+
+    async {{camel_name}}(args: {{pascal_name}}): Promise<TxEnvelope> {
+        return await this.#client.resolve({
+            tir: {{constant_name}},
+            args,
+        });
+    }
+{{/each}}
+}
+
+// Create a default client instance
+export const protocol = new Client({
+    endpoint: DEFAULT_TRP_ENDPOINT,
+    headers: DEFAULT_HEADERS,
+    envArgs: DEFAULT_ENV_ARGS,
+});
