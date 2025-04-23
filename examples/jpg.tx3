@@ -36,18 +36,63 @@ type ListingRedeemer {
     CancelOrUpdate
 }
 
-type OfferPayout {
-    address: Bytes,
-    amount: Int
+type Token {
+    type: Int,
+    amount: KeyValue<Bytes, Int>
 }
 
-type Offer {
+type OfferPayoutValue {
+    type: Int,
+    amount: KeyValue<Bytes, Token>
+}
 
+type OfferPayout
+{
+    address: PlutusAddress,
+    amount: OfferPayoutValue
+} 
+
+type Offer {
+    owner_pkh: Bytes,
+    payouts: OfferPayout[],
+    listing_metadata: Bytes
 }
 
 type OfferRedeemer {
     CancelOrUpdate,
     AcceptOffer
+}
+
+tx CreateListing(
+    nft_policy: Bytes,
+    nft_name: Bytes,
+    payouts: ListingPayout[]
+) {
+    input source {
+        from: Seller,
+        min_amount: Asset(nft_policy, nft_name, 1)
+    }
+
+    output {
+        to: ListingValidator,
+        amount: listing,
+        datum: Listing {
+            payouts: payouts,
+            owner_pkh: VerificationKeyHash(Seller)
+        }
+    }
+
+    output {
+        to: Seller,
+        amount: listing - fees
+    }
+
+    // JPG attaches metadata to the transaction
+    // that has the listing utxo(s), they might be using it  for indexing purposes
+    // I'm assuming that the metadata is already in cbor,
+    // but it would be nice if we can pass a json
+    // or a tx3 object that can be serialized to cbor instead
+    metadata listing_metadata;
 }
 
 tx Buy(
@@ -121,6 +166,33 @@ tx Update(
     }
 
     required_signers: [Seller]
+}
+
+tx CreateOffer(
+    amount: Int, 
+    payouts: OfferPayout[],
+    metadata: Bytes
+) {
+    input source {
+        from: Buyer,
+        min_amount: amount
+    }
+
+    output {
+        to: OfferValidator,
+        amount: offer,
+        datum: Offer {
+            payouts: payouts,
+            owner_pkh: VerificationKeyHash(Buyer)
+        }
+    }
+
+    output {
+        to: Buyer,
+        amount: source - fees
+    }
+
+    metadata offer_metadata;
 }
 
 tx AcceptOffer(
