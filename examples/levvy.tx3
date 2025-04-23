@@ -193,7 +193,7 @@ tx BorrowVersion1(loan_amount: Lovelace, max_interest: Int) {
         redeemer: TokenAction::BorrowTokenAction,
     }
 
-    // In this version we need a way to interate over the inputs and also a wayt to have a variable
+    // In this version we need a way to interate over the inputs and also a way to have a variable
     // that can be updated
     let unfilled_loan_amount = loan_amount;
     let total_collateral = 0;

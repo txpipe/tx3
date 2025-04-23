@@ -38,6 +38,7 @@ type ListingRedeemer {
 
 type Token {
     type: Int,
+    // For JPG datum, we need a key-value pair type
     amount: KeyValue<Bytes, Int>
 }
 
@@ -88,8 +89,8 @@ tx CreateListing(
     }
 
     // JPG attaches metadata to the transaction
-    // that has the listing utxo(s), they might be using it  for indexing purposes
-    // I'm assuming that the metadata is already in cbor,
+    // that has the listing utxo(s), they might be using it for indexing purposes
+    // I'm assuming in this example that the metadata is already in cbor,
     // but it would be nice if we can pass a json
     // or a tx3 object that can be serialized to cbor instead
     metadata listing_metadata;
