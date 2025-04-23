@@ -23,7 +23,7 @@ type ListingPayout {
 }
 
 type Listing {
-    payouts: ListingPayout[], // List of payouts to be made
+    payouts: ListingPayout[], // JPG uses a list of payouts
     owner_pkh: Bytes
 }
 
@@ -38,8 +38,7 @@ type ListingRedeemer {
 
 type Token {
     type: Int,
-    // For JPG datum, we need a key-value pair type
-    amount: KeyValue<Bytes, Int>
+    amount: KeyValue<Bytes, Int> // JPG uses a map of tokens
 }
 
 type OfferPayoutValue {
