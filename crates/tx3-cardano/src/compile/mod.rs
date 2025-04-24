@@ -74,7 +74,7 @@ fn coerce_expr_into_number(expr: &ir::Expression) -> Result<i128, Error> {
     }
 }
 
-fn coerce_expr_into_utxo_refs(expr: &ir::Expression) -> Result<Vec<tx3_lang::UtxoRef>, Error> {
+fn coerce_expr_into_utxo_refs(expr: ir::Expression) -> Result<Vec<tx3_lang::UtxoRef>, Error> {
     match expr {
         ir::Expression::UtxoRefs(x) => Ok(x.clone()),
         _ => Err(Error::CoerceError(

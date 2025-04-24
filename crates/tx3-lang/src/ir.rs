@@ -71,9 +71,23 @@ pub enum ScriptSource {
 }
 
 impl ScriptSource {
-    pub fn as_utxo_ref(&self) -> Option<&Expression> {
+    pub fn as_utxo_ref(&self) -> Option<Expression> {
         match self {
-            Self::UtxoRef { r#ref, .. } => Some(r#ref),
+            Self::UtxoRef { r#ref, .. } => Some(r#ref.clone()),
+            Self::Embedded(Expression::Bytes(hola)) => {
+                let utxo_ref = std::str::from_utf8(hola).unwrap();
+                if let Some((txid, output_ix)) = utxo_ref.split_once("#") {
+                    let output_ix: u32 =
+                        output_ix.parse().expect("Expected a valid integer after #");
+                    let expr = Expression::UtxoRefs(vec![UtxoRef {
+                        txid: hex::decode(txid).expect("Expected a valid hex string"),
+                        index: output_ix,
+                    }]);
+                    Some(expr)
+                } else {
+                    None
+                }
+            }
             _ => None,
         }
     }
