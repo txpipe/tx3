@@ -1,12 +1,12 @@
 party Sender;
-party Receiver;
 
-// Always true plutus v2
-policy OrderBook = 0x39c520d0627aafa728f7e4dd10142b77c257813c36f57e2cb88f72a5;
-// Policy always true
-asset ControlToken = 0x13a0e59ca61ab277e909ffd20def27d296051fbc634cf623c02322a5.CONTROL;
-asset Ask = 0x13a0e59ca61ab277e909ffd20def27d296051fbc634cf623c02322a5.ASK;
-asset Bid = 0x13a0e59ca61ab277e909ffd20def27d296051fbc634cf623c02322a5.BID;
+policy OrderBook {
+  hash: 0x7039c520d0627aafa728f7e4dd10142b77c257813c36f57e2cb88f72a5,
+  script: "facd82a32c6692dd60b6b930a86569d4f7a5558684bebc7b2f34259f0dc20b07#0",
+}
+
+asset ControlToken = 0x39c520d0627aafa728f7e4dd10142b77c257813c36f57e2cb88f72a5.CONTROL;
+asset Bid = 0x39c520d0627aafa728f7e4dd10142b77c257813c36f57e2cb88f72a5.BID;
 
 type AssetClass {
   policy: Bytes,
@@ -23,18 +23,20 @@ type OrderInfo {
   token: DatumValue,
 }
 
-
 type OrderDatum {
   info: OrderInfo,
   control_asset_class: AssetClass,
 }
 
-
 tx new_order() {
-    input source {
+    // Little hack to include the order book
+    // script as reference input
+    input contract {
+        from: OrderBook,
+    }
+
+    input payment {
         from: Sender,
-        // haven't found a way to get the minAda necessary for the order utxo
-        // so I am using 2 ADA
         min_amount: fees + Bid(1) + Ada(2000000),
     }
 
@@ -45,28 +47,25 @@ tx new_order() {
 
     output change {
         to: Sender,
-        amount: source - Ada(2000000)- fees - Bid(1),
+        amount: payment - Ada(2000000) - fees - Bid(1),
     }
 
     output order {
         to: OrderBook,
-        amount: Ada(2000000) + Bid(1),
+        amount: Ada(2000000) + Bid(1) + ControlToken(1),
         datum: OrderDatum {
             info: OrderInfo {
-                // Problem: serialize address into datum
-                sender_address: 0x00eb5a3cf99aa1d77357864ed2d2fcbdb07a292363f0944122c510a30d58305b9bc8f9bea6e23d4e459d46aacc606eb20b29a27024175549e9,
+                sender_address: Sender,
                 token: DatumValue {
-                    // Problem: serialize the ASK token
                     asset_class: AssetClass {
-                        policy: 0x13a0e59ca61ab277e909ffd20def27d296051fbc634cf623c02322a5,
+                        policy: 0x39c520d0627aafa728f7e4dd10142b77c257813c36f57e2cb88f72a5,
                         name: "ASK",
                     },
                     amount: 1,
                 },
             },
-            // Problem: serialize the CONTROL token
             control_asset_class: AssetClass {
-                policy: 0x13a0e59ca61ab277e909ffd20def27d296051fbc634cf623c02322a5,
+                policy: 0x39c520d0627aafa728f7e4dd10142b77c257813c36f57e2cb88f72a5,
                 name: "CONTROL",
             },
         },
