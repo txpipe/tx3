@@ -74,8 +74,8 @@ impl ScriptSource {
     pub fn as_utxo_ref(&self) -> Option<Expression> {
         match self {
             Self::UtxoRef { r#ref, .. } => Some(r#ref.clone()),
-            Self::Embedded(Expression::Bytes(hola)) => {
-                let utxo_ref = std::str::from_utf8(hola).unwrap();
+            Self::Embedded(Expression::Bytes(x)) => {
+                let utxo_ref = std::str::from_utf8(x).unwrap();
                 if let Some((txid, output_ix)) = utxo_ref.split_once("#") {
                     let output_ix: u32 =
                         output_ix.parse().expect("Expected a valid integer after #");
