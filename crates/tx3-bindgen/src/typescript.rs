@@ -41,7 +41,7 @@ impl Serialize for BytesHex {
 struct Transaction {
     name: String,
     pascal_name: String,
-    camel_name: String,
+    function_name: String,
     constant_name: String,
     ir_bytes: BytesHex,
     parameters: Vec<TxParameter>,
@@ -62,7 +62,7 @@ pub fn generate(job: &Job) {
             
             // Generate names in different formats
             let pascal_name = format!("{}Params", tx_name.to_case(Case::Pascal));
-            let camel_name = format!("{}Tx", tx_name.to_case(Case::Camel));
+            let function_name = format!("{}Tx", tx_name.to_case(Case::Camel));
             let constant_name = format!("{}_IR", tx_name.to_case(Case::Constant));
             
             // Create the list of parameters
@@ -79,7 +79,7 @@ pub fn generate(job: &Job) {
             Transaction {
                 name: tx_name.to_string(),
                 pascal_name,
-                camel_name,
+                function_name,
                 constant_name,
                 ir_bytes: BytesHex(proto_tx.ir_bytes()),
                 parameters,

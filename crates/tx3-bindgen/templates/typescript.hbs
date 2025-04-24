@@ -38,7 +38,7 @@ export class Client {
     }
 {{#each transactions}}
 
-    async {{camel_name}}(args: {{pascal_name}}): Promise<TxEnvelope> {
+    async {{function_name}}(args: {{pascal_name}}): Promise<TxEnvelope> {
         return await this.#client.resolve({
             tir: {{constant_name}},
             args,

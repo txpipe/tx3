@@ -1,69 +1,125 @@
-use convert_case::Casing;
-use proc_macro2::Ident;
-use quote::{format_ident, quote};
+use convert_case::{Case, Casing};
+use handlebars::Handlebars;
+use serde::{Serialize, Serializer};
+use serde_json::{json, Value as JsonValue};
+use std::collections::HashMap;
 
-use crate::Job;
+use super::Job;
 
-fn to_syn_type(ty: &tx3_lang::ir::Type) -> syn::Type {
+const BASE_TEMPLATE: &str = include_str!("../templates/rust.hbs");
+
+fn rust_type_for_field(ty: &tx3_lang::ir::Type) -> String {
     match ty {
-        tx3_lang::ir::Type::Int => syn::parse_str("i64").unwrap(),
-        tx3_lang::ir::Type::Bool => syn::parse_str("bool").unwrap(),
-        tx3_lang::ir::Type::Bytes => syn::parse_str("Vec<u8>").unwrap(),
-        tx3_lang::ir::Type::Unit => syn::parse_str("()").unwrap(),
-        tx3_lang::ir::Type::Address => syn::parse_str("tx3_lang::ArgValue").unwrap(),
-        tx3_lang::ir::Type::UtxoRef => syn::parse_str("tx3_lang::ArgValue").unwrap(),
-        tx3_lang::ir::Type::Custom(name) => syn::parse_str(name).unwrap(),
-        tx3_lang::ir::Type::AnyAsset => syn::parse_str("tx3_lang::ArgValue").unwrap(),
+        tx3_lang::ir::Type::Int => "i64".to_string(),
+        tx3_lang::ir::Type::Bool => "bool".to_string(),
+        tx3_lang::ir::Type::Bytes => "Vec<u8>".to_string(),
+        tx3_lang::ir::Type::Unit => "()".to_string(),
+        tx3_lang::ir::Type::Address => "tx3_lang::ArgValue".to_string(),
+        tx3_lang::ir::Type::UtxoRef => "tx3_lang::ArgValue".to_string(),
+        tx3_lang::ir::Type::Custom(name) => name.clone(),
+        tx3_lang::ir::Type::AnyAsset => "tx3_lang::ArgValue".to_string(),
         tx3_lang::ir::Type::Undefined => unreachable!(),
     }
 }
 
-pub fn generate(job: &Job) {
-    let mut output = String::new();
+#[derive(Serialize)]
+struct TxParameter {
+    name: String,
+    type_name: String,
+}
 
-    for tx_def in job.protocol.txs() {
-        let proto_tx = job.protocol.new_tx(&tx_def.name).unwrap();
-        let proto_bytes: Vec<u8> = proto_tx.ir_bytes();
+struct BytesHex(Vec<u8>);
 
-        let bytes_name = format_ident!("PROTO_{}", tx_def.name.to_uppercase());
-
-        let struct_name =
-            format_ident!("{}Params", tx_def.name.to_case(convert_case::Case::Pascal));
-
-        // Convert bytes to a byte string literal
-        let proto_bytes_literal =
-            syn::LitByteStr::new(&proto_bytes, proc_macro2::Span::call_site());
-
-        let fn_name = format_ident!("new_{}_tx", tx_def.name.to_lowercase());
-
-        let param_names: Vec<Ident> = proto_tx
-            .find_params()
-            .keys()
-            .map(|name| format_ident!("{}", name.to_case(convert_case::Case::Snake)))
-            .collect();
-
-        let param_types: Vec<syn::Type> =
-            proto_tx.find_params().values().map(to_syn_type).collect();
-
-        let tokens = quote! {
-            pub const #bytes_name: &[u8] = #proto_bytes_literal;
-
-            pub struct #struct_name {
-                #(#param_names: #param_types),*
-            }
-
-            pub fn #fn_name(params: #struct_name) -> Result<tx3_lang::ProtoTx, tx3_lang::applying::Error> {
-                let mut proto_tx = tx3_lang::ProtoTx::from_ir_bytes(#bytes_name).unwrap();
-
-                #(proto_tx.set_arg(stringify!(#param_names), params.#param_names.into());)*
-
-                proto_tx.apply()
-            }
-        };
-
-        output.push_str(&tokens.to_string());
-        output.push_str("\n\n");
+impl Serialize for BytesHex {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&hex::encode(&self.0))
     }
+}
 
-    std::fs::write(job.dest_path.join(format!("{}.rs", job.name)), output).unwrap();
+#[derive(Serialize)]
+struct Transaction {
+    name: String,
+    pascal_name: String,
+    function_name: String,
+    constant_name: String,
+    ir_bytes: BytesHex,
+    parameters: Vec<TxParameter>,
+}
+
+pub fn generate(job: &Job) {
+    let mut handlebars = Handlebars::new();
+    
+    // Register the main template for the Rust file
+    handlebars.register_template_string("rust", BASE_TEMPLATE)
+        .expect("Failed to register rust template");
+    
+    // Get each transaction from the API
+    let transactions: Vec<Transaction> = job.protocol.txs()
+        .map(|tx_def| {
+            let tx_name = tx_def.name.as_str();
+            let proto_tx = job.protocol.new_tx(&tx_def.name).unwrap();
+            
+            // Generate names in different formats
+            let pascal_name = format!("{}Params", tx_name.to_case(Case::Pascal));
+            let function_name = format!("{}_tx", tx_name.to_case(Case::Camel));
+            let constant_name = format!("{}_IR", tx_name.to_case(Case::Constant));
+            
+            // Create the list of parameters
+            let parameters = proto_tx.find_params()
+                .iter()
+                .map(|(key, type_)| {
+                    TxParameter {
+                        name: key.as_str().to_case(Case::Snake),
+                        type_name: rust_type_for_field(type_),
+                    }
+                })
+                .collect();
+            
+            Transaction {
+                name: tx_name.to_string(),
+                pascal_name,
+                function_name,
+                constant_name,
+                ir_bytes: BytesHex(proto_tx.ir_bytes()),
+                parameters,
+            }
+        })
+        .collect();
+    
+    // Convert headers and env_args for the template
+    let headers: JsonValue = serde_json::to_value(
+        job.trp_headers.iter()
+            .map(|(k, v)| (k.clone(), JsonValue::String(v.clone())))
+            .collect::<HashMap<_, _>>()
+    ).expect("Failed to convert headers to JSON");
+    
+    let env_args: JsonValue = serde_json::to_value(
+        job.env_args.iter()
+            .map(|(k, v)| (k.clone(), JsonValue::String(v.clone())))
+            .collect::<HashMap<_, _>>()
+    ).expect("Failed to convert env_args to JSON");
+    
+    // Create the context for the template
+    let data = json!({
+        "trpEndpoint": job.trp_endpoint,
+        "headers": headers,
+        "envArgs": env_args,
+        "transactions": transactions,
+    });
+    
+    // Render the template with the context
+    let output = handlebars.render("rust", &data)
+        .expect("Failed to render rust template");
+    
+    // Check if destination directory exists, create it if it doesn't
+    if !job.dest_path.exists() {
+        std::fs::create_dir_all(&job.dest_path)
+            .expect("Failed to create destination directory");
+    }
+    
+    std::fs::write(job.dest_path.join(format!("{}.rs", job.name)), output)
+        .expect("Failed to write Rust output");
 }
