@@ -2,7 +2,7 @@ use pallas::{
     codec::minicbor::{encode, Encoder},
     codec::utils::{KeepRaw, MaybeIndefArray},
     crypto::hash::Hasher,
-    ledger::primitives::conway::{self as primitives, Redeemers},
+    ledger::primitives::conway::{self as primitives, NonEmptySet, Redeemers},
 };
 use std::{collections::BTreeMap, str::FromStr};
 use tx3_lang::ir;
@@ -610,12 +610,30 @@ fn compile_witness_set(
     Ok(out)
 }
 
-pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'static>, Error> {
+pub fn compile_tx(
+    tx: &ir::Tx,
+    ocoll: Option<tx3_lang::Utxo>,
+    pparams: &PParams,
+) -> Result<primitives::Tx<'static>, Error> {
     let mut transaction_body = compile_tx_body(tx, pparams)?;
     let transaction_witness_set = compile_witness_set(tx, &transaction_body)?;
     let auxiliary_data = compile_auxiliary_data(tx)?;
 
+    // TODO: All these probably needs to be inside the compile_witness.
+    // Is it ok to modify the body there?
     if let Some(ref reds) = transaction_witness_set.redeemer {
+        if let Some(coll) = ocoll {
+            transaction_body.collateral = Some(
+                NonEmptySet::from_vec(vec![primitives::TransactionInput {
+                    transaction_id: coll.r#ref.txid.as_slice().into(),
+                    index: coll.r#ref.index as u64,
+                }])
+                .expect("Impossible"),
+            );
+        } else {
+            drop(Error::MissingAddress);
+        }
+        // TODO: Include non-inline datums
         let script_data_hash = compile_script_data_hash(&[], &reds);
         transaction_body.script_data_hash = Some(script_data_hash);
     }

@@ -1,5 +1,5 @@
 use pallas::ledger::primitives::conway as primitives;
-use tx3_lang::ir::InputQuery;
+use tx3_lang::ir::{AssetExpr, Expression, InputQuery};
 
 use crate::{compile::compile_tx, Error, PParams};
 
@@ -14,10 +14,7 @@ pub struct TxEval {
 pub trait Ledger {
     async fn get_pparams(&self) -> Result<PParams, Error>;
 
-    async fn resolve_input(
-        &self,
-        query: &InputQuery,
-    ) -> Result<tx3_lang::UtxoSet, Error>;
+    async fn resolve_input(&self, query: &InputQuery) -> Result<tx3_lang::UtxoSet, Error>;
 }
 
 fn eval_size_fees(tx: &[u8], pparams: &PParams) -> Result<u64, Error> {
@@ -41,20 +38,44 @@ async fn eval_pass<L: Ledger>(
     attempt.set_fees(best_fees);
 
     attempt = attempt.apply()?;
+    let mut ocollateral: Option<tx3_lang::Utxo> = None;
 
     for (name, query) in tx.find_queries() {
-        let utxos = ledger
-            .resolve_input(&query)
-            .await?;
+        let mut utxos = ledger.resolve_input(&query).await?;
+
+        // TODO: Remove this and implement a more proper way to get
+        // a collateral. This peace of ***t removes the collateral
+        // from the inputs.
+        let outxo = utxos
+            .iter()
+            .cloned()
+            .find(|utxo| {
+                utxo.assets
+                    .iter()
+                    .find(|&asset| {
+                        *asset
+                            == AssetExpr {
+                                policy: Expression::None,
+                                asset_name: Expression::None,
+                                amount: Expression::Number(5000000),
+                            }
+                    })
+                    .is_some()
+            })
+            .clone();
+
+        if let Some(utxo) = outxo {
+            ocollateral = Some(utxo.clone());
+            utxos.remove(&utxo);
+        }
 
         // TODO: actually filter utxos
-
         attempt.set_input(&name, utxos);
     }
 
     let attempt = attempt.apply()?;
 
-    let tx = compile_tx(attempt.as_ref(), pparams)?;
+    let tx = compile_tx(&attempt.as_ref(), ocollateral, pparams)?;
 
     let payload = pallas::codec::minicbor::to_vec(&tx).unwrap();
 
