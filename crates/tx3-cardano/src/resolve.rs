@@ -44,23 +44,19 @@ async fn eval_pass<L: Ledger>(
         let mut utxos = ledger.resolve_input(&query).await?;
 
         // TODO: Remove this and implement a more proper way to get
-        // a collateral. This peace of ***t removes the collateral
+        // a collateral. This piece of ***t removes the collateral
         // from the inputs.
+        // A UTxO with exactly 5 ADAs.
         let outxo = utxos
             .iter()
             .cloned()
             .find(|utxo| {
                 utxo.assets
-                    .iter()
-                    .find(|&asset| {
-                        *asset
-                            == AssetExpr {
-                                policy: Expression::None,
-                                asset_name: Expression::None,
-                                amount: Expression::Number(5000000),
-                            }
-                    })
-                    .is_some()
+                    == vec![AssetExpr {
+                        policy: Expression::None,
+                        asset_name: Expression::None,
+                        amount: Expression::Number(5000000),
+                    }]
             })
             .clone();
 
