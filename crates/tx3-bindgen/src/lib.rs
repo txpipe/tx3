@@ -2,6 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 pub mod rust;
 pub mod typescript;
+pub mod python;
 pub mod gen;
 
 pub struct Job {

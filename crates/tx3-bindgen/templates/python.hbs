@@ -1,0 +1,52 @@
+# This file is auto-generated.
+
+from dataclasses import dataclass
+from typing import Dict, Any
+from tx3_trp import TRPClient, TxEnvelope
+
+DEFAULT_TRP_ENDPOINT = "{{trpEndpoint}}"
+
+DEFAULT_HEADERS = {
+{{#each headers}}
+    "{{@key}}": "{{this}}",
+{{/each}}
+}
+
+DEFAULT_ENV_ARGS = {
+{{#each envArgs}}
+    "{{@key}}": "{{this}}",
+{{/each}}
+}
+
+{{#each transactions}}
+@dataclass
+class {{params_name}}:
+{{#each parameters}}
+    {{name}}: {{type_name}}
+{{/each}}
+
+{{constant_name}} = {
+    "bytecode": "{{ir_bytes}}",
+    "encoding": "hex",
+    "version": "v1alpha1",
+}
+
+{{/each}}
+class Client:
+    def __init__(self, options: Dict[str, Any]):
+        self._client = TRPClient(options)
+{{#each transactions}}
+
+    async def {{function_name}}(self, args: {{params_name}}) -> TxEnvelope:
+        return await self._client.resolve({
+            "tir": {{constant_name}},
+            "args": vars(args),
+        })
+{{/each}}
+
+# Create a default client instance
+protocol = Client({
+    "endpoint": DEFAULT_TRP_ENDPOINT,
+    "headers": DEFAULT_HEADERS,
+    "env_args": DEFAULT_ENV_ARGS,
+})
