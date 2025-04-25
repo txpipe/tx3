@@ -171,6 +171,7 @@ pub struct ParameterList {
 pub struct TxDef {
     pub name: String,
     pub parameters: ParameterList,
+    pub ref_inputs: Vec<RefInputBlock>,
     pub inputs: Vec<InputBlock>,
     pub outputs: Vec<OutputBlock>,
     pub burn: Option<BurnBlock>,
@@ -261,6 +262,13 @@ impl InputBlockField {
             _ => None,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RefInputBlock {
+    pub name: String,
+    pub r#ref: UtxoRef,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -521,6 +529,13 @@ impl VariantCaseConstructor {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UtxoRef {
+    pub txid: Vec<u8>,
+    pub index: u64,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DataBinaryOp {
     pub left: Box<DataExpr>,
     pub operator: BinaryOperator,
@@ -540,6 +555,7 @@ pub enum DataExpr {
     Identifier(Identifier),
     PropertyAccess(PropertyAccess),
     BinaryOp(DataBinaryOp),
+    UtxoRef(UtxoRef),
 }
 
 impl DataExpr {

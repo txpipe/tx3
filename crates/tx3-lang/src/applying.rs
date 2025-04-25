@@ -1151,6 +1151,7 @@ impl Apply for ir::AdHocDirective {
 impl Apply for ir::Tx {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         let tx = ir::Tx {
+            ref_inputs: self.ref_inputs.apply_args(args)?,
             inputs: self.inputs.apply_args(args)?,
             outputs: self.outputs.apply_args(args)?,
             mint: self.mint.apply_args(args)?,
@@ -1163,6 +1164,7 @@ impl Apply for ir::Tx {
 
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
         Ok(Self {
+            ref_inputs: self.ref_inputs.apply_inputs(args)?,
             inputs: self.inputs.apply_inputs(args)?,
             outputs: self.outputs.apply_inputs(args)?,
             mint: self.mint.apply_inputs(args)?,
@@ -1173,6 +1175,7 @@ impl Apply for ir::Tx {
 
     fn apply_fees(self, fees: u64) -> Result<Self, Error> {
         Ok(Self {
+            ref_inputs: self.ref_inputs.apply_fees(fees)?,
             inputs: self.inputs.apply_fees(fees)?,
             outputs: self.outputs.apply_fees(fees)?,
             mint: self.mint.apply_fees(fees)?,
@@ -1190,6 +1193,7 @@ impl Apply for ir::Tx {
     }
 
     fn params(&self) -> BTreeMap<String, ir::Type> {
+        // TODO: analyze if necessary to add ref_inputs
         let mut params = BTreeMap::new();
         params.extend(self.inputs.params());
         params.extend(self.outputs.params());
@@ -1200,6 +1204,7 @@ impl Apply for ir::Tx {
     }
 
     fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        // TODO: analyze if necessary to add ref_inputs
         let mut queries = BTreeMap::new();
         queries.extend(self.inputs.queries());
         queries.extend(self.outputs.queries());
@@ -1215,6 +1220,7 @@ impl Apply for ir::Tx {
 
     fn reduce_nested(self) -> Result<Self, Error> {
         Ok(Self {
+            ref_inputs: self.ref_inputs.reduce()?,
             inputs: self.inputs.reduce()?,
             outputs: self.outputs.reduce()?,
             mint: self.mint.reduce()?,

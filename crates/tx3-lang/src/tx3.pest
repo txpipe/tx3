@@ -7,9 +7,10 @@ ascii_text = @{ ASCII_ALPHANUMERIC+ }
 number = @{ "-"? ~ ASCII_DIGIT+ }
 string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 bool = @{ "true" | "false" }
-hex_string = @{ "0x" ~ ASCII_HEX_DIGIT+ }
+hex_string = { "0x" ~ ASCII_HEX_DIGIT+ }
 wildcard = @{ "*" }
 unit = { "()" }
+utxo_ref = { "0x" ~ ASCII_HEX_DIGIT+ ~ "#" ~ ASCII_DIGIT+ }
 
 // Type definitions
 type = { "Int" | "Bool" | "Bytes" | "AnyAsset" | identifier }
@@ -37,7 +38,7 @@ policy_def_hash = { "hash" ~ ":" ~ data_expr }
 policy_def_script = { "script" ~ ":" ~ data_expr }
 policy_def_ref = { "ref" ~ ":" ~ data_expr }
 
-policy_def_field = _{ 
+policy_def_field = _{
     policy_def_hash |
     policy_def_ref |
     policy_def_script
@@ -115,6 +116,7 @@ data_expr = { data_term ~ (binary_operator ~ data_term)* }
 data_term = _{
     "none" |
     unit |
+    utxo_ref |
     hex_string |
     number |
     bool |
@@ -153,9 +155,9 @@ datum_constructor = {
     identifier ~ variant_case_constructor
 }
 
-address_expr = { 
-    identifier | 
-    hex_string | 
+address_expr = {
+    identifier |
+    hex_string |
     string
 }
 
@@ -165,9 +167,9 @@ input_block_from = { "from" ~ ":" ~ address_expr }
 input_block_datum_is = { "datum_is" ~ ":" ~ type }
 input_block_min_amount = { "min_amount" ~ ":" ~ asset_expr }
 input_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
-input_block_ref = { "ref" ~ ":" ~ data_expr }
+input_block_ref = { "ref" ~ ":" ~ utxo_ref }
 
-input_block_field = _{ 
+input_block_field = _{
     input_block_from |
     input_block_datum_is |
     input_block_min_amount |
@@ -181,11 +183,17 @@ input_block = {
     "}"
 }
 
+ref_input_block = {
+    "ref_input" ~ identifier ~ ("*")? ~ "{" ~
+    input_block_ref ~ "," ~
+    "}"
+}
+
 output_block_to = { "to" ~ ":" ~ address_expr }
 output_block_amount = { "amount" ~ ":" ~ asset_expr }
 output_block_datum = { "datum" ~ ":" ~ data_expr }
 
-output_block_field = _{ 
+output_block_field = _{
     output_block_to |
     output_block_amount |
     output_block_datum
@@ -200,7 +208,7 @@ output_block = {
 mint_block_amount = { "amount" ~ ":" ~ asset_expr }
 mint_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
 
-mint_block_field = _{ 
+mint_block_field = _{
     mint_block_amount |
     mint_block_redeemer
 }
@@ -246,6 +254,7 @@ chain_specific_block = {
 // Transaction definition
 tx_def = {
     "tx" ~ identifier ~ parameter_list ~ "{" ~
+    ref_input_block* ~
     input_block* ~
     burn_block? ~
     mint_block? ~

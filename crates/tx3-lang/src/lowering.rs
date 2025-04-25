@@ -8,6 +8,7 @@ use std::ops::Deref;
 
 use crate::ast;
 use crate::ir;
+use crate::UtxoRef;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -142,6 +143,18 @@ impl IntoLower for ast::Identifier {
                 todo!();
             }
         }
+    }
+}
+
+impl IntoLower for ast::UtxoRef {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let x = ir::Expression::UtxoRefs(vec![UtxoRef {
+            txid: self.txid.clone(),
+            index: self.index as u32,
+        }]);
+        Ok(x)
     }
 }
 
@@ -308,6 +321,7 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::Identifier(x) => x.into_lower()?,
             ast::DataExpr::BinaryOp(x) => ir::Expression::EvalCustom(Box::new(x.into_lower()?)),
             ast::DataExpr::PropertyAccess(x) => x.into_lower()?,
+            ast::DataExpr::UtxoRef(x) => x.into_lower()?,
         };
 
         Ok(out)
@@ -506,8 +520,21 @@ impl IntoLower for ast::ChainSpecificBlock {
     }
 }
 
+impl IntoLower for ast::RefInputBlock {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        self.r#ref.into_lower()
+    }
+}
+
 pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
     let ir = ir::Tx {
+        ref_inputs: ast
+            .ref_inputs
+            .iter()
+            .map(|x| x.into_lower())
+            .collect::<Result<Vec<_>, _>>()?,
         inputs: ast
             .inputs
             .iter()
@@ -558,10 +585,7 @@ mod tests {
     use paste::paste;
 
     use super::*;
-    use crate::{
-        ast::Span,
-        parsing::{self, AstNode},
-    };
+    use crate::parsing::{self};
 
     fn make_snapshot_if_missing(example: &str, name: &str, tx: &ir::Tx) {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");

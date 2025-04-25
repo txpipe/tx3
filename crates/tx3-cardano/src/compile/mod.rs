@@ -395,6 +395,16 @@ fn compile_certs(tx: &ir::Tx) -> Result<Vec<primitives::Certificate>, Error> {
 }
 
 fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionInput>, Error> {
+    let explicit_ref_inputs = tx
+        .ref_inputs
+        .iter()
+        .flat_map(|x| coerce_expr_into_utxo_refs(x.clone()))
+        .flatten()
+        .map(|x| primitives::TransactionInput {
+            transaction_id: x.txid.as_slice().into(),
+            index: x.index as u64,
+        });
+
     let refs = tx
         .inputs
         .iter()
@@ -407,6 +417,7 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
             transaction_id: x.txid.as_slice().into(),
             index: x.index as u64,
         })
+        .chain(explicit_ref_inputs)
         .collect();
 
     Ok(refs)
