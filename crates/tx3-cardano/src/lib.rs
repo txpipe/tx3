@@ -44,6 +44,18 @@ pub enum Error {
     #[error("missing asset name")]
     MissingAssetName,
 
+    #[error("missing asset")]
+    MissingAsset,
+
+    #[error("missing minting policy")]
+    MissingMintingPolicy,
+
+    #[error("missing redeemer")]
+    MissingRedeemer,
+
+    #[error("can't resolve collateral")]
+    CantResolveCollateral,
+
     #[error("asset value too high")]
     AssetValueTooHigh,
 
