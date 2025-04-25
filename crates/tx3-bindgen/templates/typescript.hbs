@@ -17,7 +17,7 @@ export const DEFAULT_ENV_ARGS = {
 };
 
 {{#each transactions}}
-export type {{pascal_name}} = {
+export type {{params_name}} = {
 {{#each parameters}}
     {{name}}: {{type_name}};
 {{/each}}
@@ -38,7 +38,7 @@ export class Client {
     }
 {{#each transactions}}
 
-    async {{function_name}}(args: {{pascal_name}}): Promise<TxEnvelope> {
+    async {{function_name}}(args: {{params_name}}): Promise<TxEnvelope> {
         return await this.#client.resolve({
             tir: {{constant_name}},
             args,

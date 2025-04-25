@@ -23,7 +23,7 @@ pub const DEFAULT_ENV_ARGS: &[(&str, &str)] = &[
 pub const {{constant_name}}: &str = "{{ir_bytes}}";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct {{pascal_name}} {
+pub struct {{params_name}} {
 {{#each parameters}}
     pub {{name}}: {{type_name}},
 {{/each}}
@@ -60,7 +60,7 @@ impl Client {
     }
 {{#each transactions}}
 
-    pub async fn {{function_name}}(&self, args: {{pascal_name}}) -> Result<TxEnvelope, tx3_trp::Error> {
+    pub async fn {{function_name}}(&self, args: {{params_name}}) -> Result<TxEnvelope, tx3_trp::Error> {
         let tir_info = TirInfo {
             bytecode: {{constant_name}}.to_string(),
             encoding: "hex".to_string(),
