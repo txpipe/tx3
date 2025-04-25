@@ -75,21 +75,6 @@ impl ScriptSource {
         match self {
             Self::UtxoRef { r#ref, .. } => Some(r#ref.clone()),
             Self::Embedded(Expression::UtxoRefs(x)) => Some(Expression::UtxoRefs(x.clone())),
-            // TODO: remove this piece of **it:
-            Self::Embedded(Expression::Bytes(x)) => {
-                let utxo_ref = std::str::from_utf8(x).unwrap();
-                if let Some((txid, output_ix)) = utxo_ref.split_once("#") {
-                    let output_ix: u32 =
-                        output_ix.parse().expect("Expected a valid integer after #");
-                    let expr = Expression::UtxoRefs(vec![UtxoRef {
-                        txid: hex::decode(txid).expect("Expected a valid hex string"),
-                        index: output_ix,
-                    }]);
-                    Some(expr)
-                } else {
-                    None
-                }
-            }
             _ => None,
         }
     }

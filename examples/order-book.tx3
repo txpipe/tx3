@@ -2,7 +2,7 @@ party Sender;
 
 policy OrderBook {
   hash: 0x7039c520d0627aafa728f7e4dd10142b77c257813c36f57e2cb88f72a5,
-  script: "facd82a32c6692dd60b6b930a86569d4f7a5558684bebc7b2f34259f0dc20b07#0",
+  script: 0xfacd82a32c6692dd60b6b930a86569d4f7a5558684bebc7b2f34259f0dc20b07#0,
 }
 
 asset ControlToken = 0x39c520d0627aafa728f7e4dd10142b77c257813c36f57e2cb88f72a5.CONTROL;
@@ -29,10 +29,8 @@ type OrderDatum {
 }
 
 tx new_order() {
-    // Little hack to include the order book
-    // script as reference input
-    input contract {
-        from: OrderBook,
+    ref_input contract {
+        ref: 0xfacd82a32c6692dd60b6b930a86569d4f7a5558684bebc7b2f34259f0dc20b07#0,
     }
 
     input payment {
