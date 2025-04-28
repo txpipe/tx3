@@ -4,6 +4,7 @@ pub mod rust;
 pub mod typescript;
 pub mod python;
 pub mod gen;
+pub mod golang;
 
 pub struct Job {
     pub name: String,

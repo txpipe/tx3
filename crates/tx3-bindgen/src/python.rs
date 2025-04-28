@@ -19,7 +19,7 @@ pub fn generate(job: &crate::Job) {
         job,
         ("python", BASE_TEMPLATE),
         Some(crate::gen::FormatOptions::new(
-            None, Some(convert_case::Case::Snake), None
+            None, Some(convert_case::Case::Snake), None, None
         )),
         |ty| python_type_for_field(ty),
         "py",

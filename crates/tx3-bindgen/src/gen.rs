@@ -38,11 +38,12 @@ pub struct FormatOptions<'a> {
     param_case: Case<'a>,
     function_case: Case<'a>,
     constant_case: Case<'a>,
+    parameters_case: Case<'a>,
 }
 
 impl<'a> Default for FormatOptions<'a> {
     fn default() -> Self {
-        Self::new(None, None, None)
+        Self::new(None, None, None, None)
     }
 }
 
@@ -51,11 +52,13 @@ impl<'a> FormatOptions<'a> {
         param_case: Option<Case<'a>>,
         function_case: Option<Case<'a>>,
         constant_case: Option<Case<'a>>,
+        parameters_case: Option<Case<'a>>,
     ) -> Self {
         Self {
             param_case: param_case.unwrap_or(Case::Pascal),
             function_case: function_case.unwrap_or(Case::Camel),
             constant_case: constant_case.unwrap_or(Case::Constant),
+            parameters_case: parameters_case.unwrap_or(Case::Camel),
         }
     }
 }
@@ -87,7 +90,7 @@ pub fn execute<'a>(
                 .iter()
                 .map(|(key, type_)| {
                     TxParameter {
-                        name: key.as_str().to_case(Case::Camel),
+                        name: key.as_str().to_case(_format.parameters_case),
                         type_name: get_type_for_field(type_),
                     }
                 })

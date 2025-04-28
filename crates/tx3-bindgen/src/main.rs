@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::collections::HashMap;
 use std::error::Error;
-use tx3_bindgen::{rust, typescript, python, Job};
+use tx3_bindgen::{rust, typescript, python, golang, Job};
 
 /// Parse a single key-value pair
 fn parse_key_val<T, U>(s: &str) -> Result<(T, U), Box<dyn Error + Send + Sync + 'static>>
@@ -29,8 +29,8 @@ struct Cli {
     #[arg(short, long, required = true, num_args = 1..)]
     input: Vec<String>,
 
-    /// Template to use for code generation (typescript, python, rust, balius)
-    #[arg(short, long, value_parser = ["typescript", "python", "rust", "balius"])]
+    /// Template to use for code generation (typescript, python, rust, golang, balius)
+    #[arg(short, long, value_parser = ["typescript", "python", "rust", "golang", "balius"])]
     template: String,
 
     /// TRP endpoint to use for code generation
@@ -80,6 +80,7 @@ fn main() {
             "typescript" => typescript::generate(&job),
             "rust" => rust::generate(&job),
             "python" => python::generate(&job),
+            "golang" => golang::generate(&job),
             "balius" => todo!(),
             _ => unreachable!(), // clap ensures we only get valid values
         }
