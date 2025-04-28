@@ -528,6 +528,39 @@ impl IntoLower for ast::RefInputBlock {
     }
 }
 
+impl IntoLower for ast::CollateralBlockField {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::CollateralBlockField::From(x) => x.into_lower(),
+            ast::CollateralBlockField::MinAmount(x) => x.into_lower(),
+            ast::CollateralBlockField::Ref(x) => x.into_lower(),
+        }
+    }
+}
+
+impl IntoLower for ast::CollateralBlock {
+    type Output = ir::Collateral;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let from = self.find("from");
+        let min_amount = self.find("min_amount");
+        let r#ref = self.find("ref");
+
+        let collateral = ir::Collateral {
+            query: ir::InputQuery {
+                address: from.into_lower()?,
+                min_amount: min_amount.into_lower()?,
+                r#ref: r#ref.into_lower()?,
+            }
+            .into(),
+        };
+
+        Ok(collateral)
+    }
+}
+
 pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
     let ir = ir::Tx {
         ref_inputs: ast
@@ -552,6 +585,11 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
         fees: ir::Expression::FeeQuery,
+        collateral: ast
+            .collateral
+            .iter()
+            .map(|x| x.into_lower())
+            .collect::<Result<Vec<_>, _>>()?,
     };
 
     Ok(ir)

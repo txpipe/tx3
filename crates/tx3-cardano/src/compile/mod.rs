@@ -446,6 +446,10 @@ fn compile_script_data_hash(
     Hasher::<256>::hash(&value_to_hash_with_def)
 }
 
+fn compile_collateral(tx: &ir::Tx) {
+    
+}
+
 fn compile_tx_body(
     tx: &ir::Tx,
     pparams: &PParams,
@@ -463,7 +467,7 @@ fn compile_tx_body(
         withdrawals: None,
         auxiliary_data_hash: None,
         script_data_hash: None,
-        collateral: None,
+        collateral: compile_collateral(tx)?,
         required_signers: None,
         collateral_return: None,
         total_collateral: None,

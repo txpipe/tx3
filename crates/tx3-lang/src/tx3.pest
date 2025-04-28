@@ -167,6 +167,7 @@ input_block_from = { "from" ~ ":" ~ address_expr }
 input_block_datum_is = { "datum_is" ~ ":" ~ type }
 input_block_min_amount = { "min_amount" ~ ":" ~ asset_expr }
 input_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
+// TODO
 input_block_ref = { "ref" ~ ":" ~ utxo_ref }
 
 input_block_field = _{
@@ -183,8 +184,20 @@ input_block = {
     "}"
 }
 
+collateral_block_field = {
+    input_block_from |
+    input_block_min_amount |
+    input_block_ref
+}
+
+collateral_block = {
+    "collateral" ~ "{" ~
+    (collateral_block_field ~ ",")* ~
+    "}"
+}
+
 ref_input_block = {
-    "ref_input" ~ identifier ~ ("*")? ~ "{" ~
+    "reference" ~ identifier ~ ("*")? ~ "{" ~
     input_block_ref ~ "," ~
     "}"
 }
@@ -256,6 +269,7 @@ tx_def = {
     "tx" ~ identifier ~ parameter_list ~ "{" ~
     ref_input_block* ~
     input_block* ~
+    collateral_block* ~
     burn_block? ~
     mint_block? ~
     output_block* ~

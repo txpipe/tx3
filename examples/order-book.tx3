@@ -29,15 +29,19 @@ type OrderDatum {
 }
 
 tx new_order() {
-    ref_input contract {
+    reference contract {
         ref: 0xfacd82a32c6692dd60b6b930a86569d4f7a5558684bebc7b2f34259f0dc20b07#0,
     }
-
+    
     input payment {
         from: Sender,
         min_amount: fees + Bid(1) + Ada(2000000),
     }
 
+    collateral {
+        from: Sender,
+        min_amount: Ada(5000000),
+    }
     mint {
         amount: ControlToken(1),
         redeemer: (),
