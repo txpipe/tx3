@@ -184,7 +184,7 @@ input_block = {
     "}"
 }
 
-collateral_block_field = {
+collateral_block_field = _{
     input_block_from |
     input_block_min_amount |
     input_block_ref

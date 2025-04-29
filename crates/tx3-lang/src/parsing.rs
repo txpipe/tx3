@@ -320,10 +320,7 @@ impl AstNode for CollateralBlock {
             .map(|x| CollateralBlockField::parse(x))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(CollateralBlock {
-            fields,
-            span,
-        })
+        Ok(CollateralBlock { fields, span })
     }
 
     fn span(&self) -> &Span {

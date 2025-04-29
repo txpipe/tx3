@@ -41,29 +41,7 @@ async fn eval_pass<L: Ledger>(
     let mut ocollateral: Option<tx3_lang::Utxo> = None;
 
     for (name, query) in tx.find_queries() {
-        let mut utxos = ledger.resolve_input(&query).await?;
-
-        // TODO: Remove this and implement a more proper way to get
-        // a collateral. This piece of ***t removes the collateral
-        // from the inputs.
-        // A UTxO with exactly 5 ADAs.
-        let outxo = utxos
-            .iter()
-            .cloned()
-            .find(|utxo| {
-                utxo.assets
-                    == vec![AssetExpr {
-                        policy: Expression::None,
-                        asset_name: Expression::None,
-                        amount: Expression::Number(5000000),
-                    }]
-            })
-            .clone();
-
-        if let Some(utxo) = outxo {
-            ocollateral = Some(utxo.clone());
-            utxos.remove(&utxo);
-        }
+        let utxos = ledger.resolve_input(&query).await?;
 
         // TODO: actually filter utxos
         attempt.set_input(&name, utxos);
@@ -71,7 +49,7 @@ async fn eval_pass<L: Ledger>(
 
     let attempt = attempt.apply()?;
 
-    let tx = compile_tx(&attempt.as_ref(), ocollateral, pparams)?;
+    let tx = compile_tx(&attempt.as_ref(), pparams)?;
 
     let payload = pallas::codec::minicbor::to_vec(&tx).unwrap();
 

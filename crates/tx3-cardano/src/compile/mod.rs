@@ -1,8 +1,13 @@
 use pallas::{
-    codec::minicbor::{encode, Encoder},
-    codec::utils::{KeepRaw, MaybeIndefArray},
+    codec::{
+        minicbor::{encode, Encoder},
+        utils::{KeepRaw, MaybeIndefArray},
+    },
     crypto::hash::Hasher,
-    ledger::primitives::conway::{self as primitives, NonEmptySet, Redeemers},
+    ledger::primitives::{
+        conway::{self as primitives, NonEmptySet, Redeemers},
+        TransactionInput,
+    },
 };
 use std::{collections::BTreeMap, str::FromStr};
 use tx3_lang::ir;
@@ -446,8 +451,23 @@ fn compile_script_data_hash(
     Hasher::<256>::hash(&value_to_hash_with_def)
 }
 
-fn compile_collateral(tx: &ir::Tx) {
-    
+fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
+    tx.collateral
+        .iter()
+        .filter_map(|collateral| collateral.query.r#ref.as_ref())
+        .find_map(|r#ref| match r#ref {
+            ir::Expression::UtxoRefs(refs) => refs.first().map(|utxo_ref| {
+                let index = utxo_ref.index;
+                let hash = primitives::Hash::from(utxo_ref.txid.as_slice());
+
+                NonEmptySet::from_vec(vec![TransactionInput {
+                    transaction_id: hash,
+                    index: index as u64,
+                }])
+            }),
+            _ => None,
+        })
+        .flatten()
 }
 
 fn compile_tx_body(
@@ -467,7 +487,7 @@ fn compile_tx_body(
         withdrawals: None,
         auxiliary_data_hash: None,
         script_data_hash: None,
-        collateral: compile_collateral(tx)?,
+        collateral: compile_collateral(tx),
         required_signers: None,
         collateral_return: None,
         total_collateral: None,
@@ -609,10 +629,10 @@ fn compile_redeemers(
 
 fn compile_witness_set(
     tx: &ir::Tx,
-    compiled_body: &primitives::TransactionBody,
+    compiled_body: &mut primitives::TransactionBody,
 ) -> Result<primitives::WitnessSet<'static>, Error> {
-    let out = primitives::WitnessSet {
-        redeemer: compile_redeemers(tx, compiled_body)?.map(|x| x.into()),
+    let witness_set = primitives::WitnessSet {
+        redeemer: compile_redeemers(tx, &compiled_body)?.map(|x| x.into()),
         vkeywitness: None,
         native_script: None,
         bootstrap_witness: None,
@@ -622,36 +642,18 @@ fn compile_witness_set(
         plutus_v3_script: None,
     };
 
-    Ok(out)
+    if let Some(ref reds) = witness_set.redeemer {
+        let script_data_hash = compile_script_data_hash(&[], &reds);
+        compiled_body.script_data_hash = Some(script_data_hash);
+    }
+
+    Ok(witness_set)
 }
 
-pub fn compile_tx(
-    tx: &ir::Tx,
-    ocoll: Option<tx3_lang::Utxo>,
-    pparams: &PParams,
-) -> Result<primitives::Tx<'static>, Error> {
+pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'static>, Error> {
     let mut transaction_body = compile_tx_body(tx, pparams)?;
-    let transaction_witness_set = compile_witness_set(tx, &transaction_body)?;
+    let transaction_witness_set = compile_witness_set(tx, &mut transaction_body)?;
     let auxiliary_data = compile_auxiliary_data(tx)?;
-
-    // TODO: All these probably needs to be inside the compile_witness.
-    // Is it ok to modify the body there?
-    if let Some(ref reds) = transaction_witness_set.redeemer {
-        if let Some(coll) = ocoll {
-            transaction_body.collateral = Some(
-                NonEmptySet::from_vec(vec![primitives::TransactionInput {
-                    transaction_id: coll.r#ref.txid.as_slice().into(),
-                    index: coll.r#ref.index as u64,
-                }])
-                .expect("Impossible"),
-            );
-        } else {
-            drop(Error::MissingAddress);
-        }
-        // TODO: Include non-inline datums
-        let script_data_hash = compile_script_data_hash(&[], &reds);
-        transaction_body.script_data_hash = Some(script_data_hash);
-    }
 
     let tx = primitives::Tx {
         transaction_body: transaction_body.into(),
