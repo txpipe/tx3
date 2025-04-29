@@ -3,7 +3,7 @@
 package main
 
 import (
-	trp "tx3-trp"
+	"tx3trp"
 )
 
 const DefaultTRPEndpoint = "{{trpEndpoint}}"
@@ -29,7 +29,7 @@ type {{params_name}} struct {
 }
 
 // {{constant_name}} contains the TIR bytecode for the {{name}} transaction
-var {{constant_name}} = trp.TirInfo{
+var {{constant_name}} = tx3trp.TirInfo{
 	Bytecode: "{{ir_bytes}}",
 	Encoding: "hex",
 	Version:  "v1alpha1",
@@ -38,19 +38,19 @@ var {{constant_name}} = trp.TirInfo{
 {{/each}}
 // Client provides methods to interact with the tx3 protocol
 type Client struct {
-	client *trp.TRPClient
+	client *tx3trp.TRPClient
 }
 
 // NewClient creates a new Client with the given options
-func NewClient(options trp.ClientOptions) *Client {
+func NewClient(options tx3trp.ClientOptions) *Client {
 	return &Client{
-		client: trp.NewTRPClient(options),
+		client: tx3trp.NewTRPClient(options),
 	}
 }
 
 // NewClientWithDefaults creates a new Client with default options
 func NewClientWithDefaults() *Client {
-	options := trp.ClientOptions{
+	options := tx3trp.ClientOptions{
 		Endpoint: DefaultTRPEndpoint,
 		Headers:  DefaultHeaders,
 		EnvArgs:  make(map[string]interface{}),
@@ -66,8 +66,8 @@ func NewClientWithDefaults() *Client {
 
 {{#each transactions}}
 // {{function_name}} resolves the {{name}} transaction with the given parameters
-func (c *Client) {{function_name}}(args {{params_name}}) (*trp.TxEnvelope, error) {
-	return c.client.Resolve(trp.ProtoTxRequest{
+func (c *Client) {{function_name}}(args {{params_name}}) (*tx3trp.TxEnvelope, error) {
+	return c.client.Resolve(tx3trp.ProtoTxRequest{
 		Tir:  {{constant_name}},
 		Args: args,
 	})
