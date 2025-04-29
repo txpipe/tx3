@@ -1,5 +1,5 @@
 use pallas::ledger::primitives::conway as primitives;
-use tx3_lang::ir::{AssetExpr, Expression, InputQuery};
+use tx3_lang::ir::InputQuery;
 
 use crate::{compile::compile_tx, Error, PParams};
 
@@ -38,7 +38,6 @@ async fn eval_pass<L: Ledger>(
     attempt.set_fees(best_fees);
 
     attempt = attempt.apply()?;
-    let mut ocollateral: Option<tx3_lang::Utxo> = None;
 
     for (name, query) in tx.find_queries() {
         let utxos = ledger.resolve_input(&query).await?;
