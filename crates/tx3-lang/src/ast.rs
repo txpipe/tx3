@@ -251,7 +251,7 @@ impl CollateralBlockField {
             _ => None,
         }
     }
-} 
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CollateralBlock {
@@ -315,11 +315,10 @@ impl InputBlockField {
     }
 }
 
-// TODO?
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RefInputBlock {
     pub name: String,
-    pub r#ref: UtxoRef,
+    pub r#ref: DataExpr,
     pub span: Span,
 }
 
@@ -334,10 +333,6 @@ pub struct InputBlock {
 impl InputBlock {
     pub(crate) fn find(&self, key: &str) -> Option<&InputBlockField> {
         self.fields.iter().find(|x| x.key() == key)
-    }
-
-    pub(crate) fn find_mut(&mut self, key: &str) -> Option<&mut InputBlockField> {
-        self.fields.iter_mut().find(|x| x.key() == key)
     }
 
     pub(crate) fn datum_is(&self) -> Option<&Type> {

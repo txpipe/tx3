@@ -262,9 +262,8 @@ impl AstNode for RefInputBlock {
         let pair = inner.next().unwrap();
         match pair.as_rule() {
             Rule::input_block_ref => {
-                // TODO: update
                 let pair = pair.into_inner().next().unwrap();
-                let r#ref = UtxoRef::parse(pair)?;
+                let r#ref = DataExpr::parse(pair)?;
                 Ok(RefInputBlock { name, r#ref, span })
             }
             x => unreachable!("Unexpected rule in ref_input_block: {:?}", x),

@@ -32,15 +32,14 @@ tx new_order() {
     reference contract {
         ref: 0xfacd82a32c6692dd60b6b930a86569d4f7a5558684bebc7b2f34259f0dc20b07#0,
     }
-    
+
     input payment {
         from: Sender,
         min_amount: fees + Bid(1) + Ada(2000000),
     }
 
     collateral {
-        from: Sender,
-        min_amount: Ada(5000000),
+        ref: 0x5f820f170b7a7322f51e51fe6ed871d35b312d5ebcd6ac37cd2f9cfdf50f8c85#9,
     }
     mint {
         amount: ControlToken(1),
