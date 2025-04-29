@@ -576,7 +576,7 @@ pub fn mint_redeemer_index(
         return Ok(index as u32);
     }
 
-    Err(Error::MissingAddress)
+    Err(Error::MissingMintingPolicy)
 }
 
 fn compile_mint_redeemers(
@@ -584,12 +584,12 @@ fn compile_mint_redeemers(
     compiled_body: &primitives::TransactionBody,
 ) -> Result<Vec<primitives::Redeemer>, Error> {
     if let Some(r) = &tx.mint {
-        let red = r.redeemer.clone().ok_or(Error::MissingAddress)?;
-        let amount = r.amount.clone().ok_or(Error::MissingAddress)?;
+        let red = r.redeemer.clone().ok_or(Error::MissingRedeemer)?;
+        let amount = r.amount.clone().ok_or(Error::MissingAmount)?;
         let assets = coerce_expr_into_assets(&amount)?;
         // TODO: This only works with the first redeemer.
         // Are we allowed to include more than one?
-        let asset = assets.first().ok_or(Error::MissingAddress)?;
+        let asset = assets.first().ok_or(Error::MissingAsset)?;
         let policy = coerce_expr_into_bytes(&asset.policy)?;
         let policy = primitives::Hash::from(policy.as_slice());
 
