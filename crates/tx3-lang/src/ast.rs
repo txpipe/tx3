@@ -178,6 +178,7 @@ pub struct TxDef {
     pub mint: Option<MintBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
     pub span: Span,
+    pub collateral: Vec<CollateralBlock>,
 
     // analysis
     #[serde(skip)]
@@ -211,6 +212,56 @@ impl HexStringLiteral {
             value: value.into(),
             span: Span::DUMMY,
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CollateralBlockField {
+    From(AddressExpr),
+    MinAmount(AssetExpr),
+    Ref(DataExpr),
+}
+
+impl CollateralBlockField {
+    fn key(&self) -> &str {
+        match self {
+            CollateralBlockField::From(_) => "from",
+            CollateralBlockField::MinAmount(_) => "min_amount",
+            CollateralBlockField::Ref(_) => "ref",
+        }
+    }
+
+    pub fn as_address_expr(&self) -> Option<&AddressExpr> {
+        match self {
+            CollateralBlockField::From(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_asset_expr(&self) -> Option<&AssetExpr> {
+        match self {
+            CollateralBlockField::MinAmount(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_data_expr(&self) -> Option<&DataExpr> {
+        match self {
+            CollateralBlockField::Ref(x) => Some(x),
+            _ => None,
+        }
+    }
+} 
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CollateralBlock {
+    pub fields: Vec<CollateralBlockField>,
+    pub span: Span,
+}
+
+impl CollateralBlock {
+    pub(crate) fn find(&self, key: &str) -> Option<&CollateralBlockField> {
+        self.fields.iter().find(|x| x.key() == key)
     }
 }
 
@@ -264,6 +315,7 @@ impl InputBlockField {
     }
 }
 
+// TODO?
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RefInputBlock {
     pub name: String,

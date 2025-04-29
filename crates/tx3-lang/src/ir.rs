@@ -169,6 +169,11 @@ pub struct Mint {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Collateral {
+    pub query: InputQuery,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
     pub fees: Expression,
     pub ref_inputs: Vec<Expression>,
@@ -176,4 +181,5 @@ pub struct Tx {
     pub outputs: Vec<Output>,
     pub mint: Option<Mint>,
     pub adhoc: Vec<AdHocDirective>,
+    pub collateral: Vec<Collateral>
 }

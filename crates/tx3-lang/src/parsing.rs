@@ -150,6 +150,7 @@ impl AstNode for TxDef {
         let mut burn = None;
         let mut mint = None;
         let mut adhoc = Vec::new();
+        let mut collateral = Vec::new();
 
         for item in inner {
             match item.as_rule() {
@@ -159,6 +160,7 @@ impl AstNode for TxDef {
                 Rule::burn_block => burn = Some(BurnBlock::parse(item)?),
                 Rule::mint_block => mint = Some(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
+                Rule::collateral_block => collateral.push(CollateralBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
         }
@@ -174,6 +176,7 @@ impl AstNode for TxDef {
             adhoc,
             scope: None,
             span,
+            collateral,
         })
     }
 
@@ -259,12 +262,65 @@ impl AstNode for RefInputBlock {
         let pair = inner.next().unwrap();
         match pair.as_rule() {
             Rule::input_block_ref => {
+                // TODO: update
                 let pair = pair.into_inner().next().unwrap();
                 let r#ref = UtxoRef::parse(pair)?;
                 Ok(RefInputBlock { name, r#ref, span })
             }
             x => unreachable!("Unexpected rule in ref_input_block: {:?}", x),
         }
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
+impl AstNode for CollateralBlockField {
+    const RULE: Rule = Rule::collateral_block_field;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        match pair.as_rule() {
+            Rule::input_block_from => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = CollateralBlockField::From(AddressExpr::parse(pair)?);
+                Ok(x)
+            }
+            Rule::input_block_min_amount => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = CollateralBlockField::MinAmount(AssetExpr::parse(pair)?);
+                Ok(x)
+            }
+            Rule::input_block_ref => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = CollateralBlockField::Ref(DataExpr::UtxoRef(UtxoRef::parse(pair)?));
+                Ok(x)
+            }
+            x => unreachable!("Unexpected rule in collateral_block: {:?}", x),
+        }
+    }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::From(x) => x.span(),
+            Self::MinAmount(x) => x.span(),
+            Self::Ref(x) => x.span(),
+        }
+    }
+}
+
+impl AstNode for CollateralBlock {
+    const RULE: Rule = Rule::collateral_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let inner = pair.into_inner();
+
+        let fields = inner
+            .map(|x| CollateralBlockField::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(CollateralBlock { fields, span })
     }
 
     fn span(&self) -> &Span {
