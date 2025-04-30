@@ -1,6 +1,13 @@
 use pallas::{
-    codec::utils::{KeepRaw, MaybeIndefArray},
-    ledger::primitives::conway::{self as primitives, Redeemers},
+    codec::{
+        minicbor::{encode, Encoder},
+        utils::{KeepRaw, MaybeIndefArray},
+    },
+    crypto::hash::Hasher,
+    ledger::primitives::{
+        conway::{self as primitives, NonEmptySet, Redeemers},
+        TransactionInput,
+    },
 };
 use std::{collections::BTreeMap, str::FromStr};
 use tx3_lang::ir;
@@ -72,7 +79,7 @@ fn coerce_expr_into_number(expr: &ir::Expression) -> Result<i128, Error> {
     }
 }
 
-fn coerce_expr_into_utxo_refs(expr: &ir::Expression) -> Result<Vec<tx3_lang::UtxoRef>, Error> {
+fn coerce_expr_into_utxo_refs(expr: ir::Expression) -> Result<Vec<tx3_lang::UtxoRef>, Error> {
     match expr {
         ir::Expression::UtxoRefs(x) => Ok(x.clone()),
         _ => Err(Error::CoerceError(
@@ -251,11 +258,14 @@ fn compile_ada_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
 }
 
 fn compile_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
+    let amount = coerce_expr_into_number(&ir.amount)?;
     if ir.policy.is_none() {
         compile_ada_value(ir)
-    } else {
+    } else if amount as i64 > 0 {
         let asset = compile_native_asset_for_output(ir)?;
         Ok(value!(0, asset))
+    } else {
+        Ok(value!(0))
     }
 }
 
@@ -390,6 +400,16 @@ fn compile_certs(tx: &ir::Tx) -> Result<Vec<primitives::Certificate>, Error> {
 }
 
 fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionInput>, Error> {
+    let explicit_ref_inputs = tx
+        .ref_inputs
+        .iter()
+        .flat_map(|x| coerce_expr_into_utxo_refs(x.clone()))
+        .flatten()
+        .map(|x| primitives::TransactionInput {
+            transaction_id: x.txid.as_slice().into(),
+            index: x.index as u64,
+        });
+
     let refs = tx
         .inputs
         .iter()
@@ -402,9 +422,52 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
             transaction_id: x.txid.as_slice().into(),
             index: x.index as u64,
         })
+        .chain(explicit_ref_inputs)
         .collect();
 
     Ok(refs)
+}
+
+fn cost_model() -> Vec<u8> {
+    hex::decode("A10198AF1A000189B41901A401011903E818AD00011903E819EA350401192BAF18201A000312591920A404193E801864193E801864193E801864193E801864193E801864193E80186418641864193E8018641A000170A718201A00020782182019F016041A0001194A18B2000119568718201A0001643519030104021A00014F581A00037C71187A0001011903E819A7A90402195FE419733A1826011A000DB464196A8F0119CA3F19022E011999101903E819ECB2011A00022A4718201A000144CE1820193BC318201A0001291101193371041956540A197147184A01197147184A0119A9151902280119AECD19021D0119843C18201A00010A9618201A00011AAA1820191C4B1820191CDF1820192D1A18201A00014F581A00037C71187A0001011A0001614219020700011A000122C118201A00014F581A00037C71187A0001011A00014F581A00037C71187A0001011A000E94721A0003414000021A0004213C19583C041A00163CAD19FC3604194FF30104001A00022AA818201A000189B41901A401011A00013EFF182019E86A1820194EAE182019600C1820195108182019654D182019602F18201A0290F1E70A1A032E93AF1937FD0A1A0298E40B1966C40A").expect("Wrong Cost Model")
+}
+
+fn compile_script_data_hash(
+    plutus_data: &[primitives::PlutusData],
+    redeemer: &Redeemers,
+) -> primitives::Hash<32> {
+    let mut value_to_hash_with_def: Vec<u8> = Vec::new();
+    let _ = encode(redeemer, &mut value_to_hash_with_def);
+    if !plutus_data.is_empty() {
+        let mut plutus_data_encoder_def: Encoder<Vec<u8>> = Encoder::new(Vec::new());
+        let _ = plutus_data_encoder_def.array(plutus_data.len() as u64);
+        for single_plutus_data in plutus_data.iter() {
+            let _ = plutus_data_encoder_def.encode(single_plutus_data);
+        }
+        value_to_hash_with_def.extend(plutus_data_encoder_def.writer().clone());
+    }
+    let cm: Vec<u8> = cost_model();
+    value_to_hash_with_def.extend(&cm);
+    Hasher::<256>::hash(&value_to_hash_with_def)
+}
+
+fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
+    tx.collateral
+        .iter()
+        .filter_map(|collateral| collateral.query.r#ref.as_ref())
+        .find_map(|r#ref| match r#ref {
+            ir::Expression::UtxoRefs(refs) => refs.first().map(|utxo_ref| {
+                let index = utxo_ref.index;
+                let hash = primitives::Hash::from(utxo_ref.txid.as_slice());
+
+                NonEmptySet::from_vec(vec![TransactionInput {
+                    transaction_id: hash,
+                    index: index as u64,
+                }])
+            }),
+            _ => None,
+        })
+        .flatten()
 }
 
 fn compile_tx_body(
@@ -424,7 +487,7 @@ fn compile_tx_body(
         withdrawals: None,
         auxiliary_data_hash: None,
         script_data_hash: None,
-        collateral: None,
+        collateral: compile_collateral(tx),
         required_signers: None,
         collateral_return: None,
         total_collateral: None,
@@ -495,37 +558,54 @@ fn compile_spend_redeemers(
     Ok(redeemers)
 }
 
-fn compile_mint_redeemers(_tx: &ir::Tx) -> Result<Vec<primitives::Redeemer>, Error> {
-    // TODO
+pub fn mint_redeemer_index(
+    compiled_body: &primitives::TransactionBody,
+    policy: primitives::ScriptHash,
+) -> Result<u32, Error> {
+    let mut out: Vec<_> = compiled_body
+        .mint
+        .iter()
+        .flat_map(|x| x.iter())
+        .map(|(p, _)| *p)
+        .collect();
 
-    // pub fn mint_redeemer_index(&self, policy: primitives::ScriptHash) ->
-    // Result<u32, BuildError> {     if let Some(tx_body) = &self.tx_body {
-    //         let mut out: Vec<_> = tx_body
-    //             .mint
-    //             .iter()
-    //             .flat_map(|x| x.iter())
-    //             .map(|(p, _)| *p)
-    //             .collect();
+    out.sort();
+    out.dedup();
 
-    //         out.sort();
-    //         out.dedup();
+    if let Some(index) = out.iter().position(|p| *p == policy) {
+        return Ok(index as u32);
+    }
 
-    //         if let Some(index) = out.iter().position(|p| *p == policy) {
-    //             return Ok(index as u32);
-    //         }
-    //     }
+    Err(Error::MissingMintingPolicy)
+}
 
-    //     Err(BuildError::RedeemerTargetMissing)
-    // }
-    //
-    // let out = primitives::Redeemer {
-    //     tag: primitives::RedeemerTag::Mint,
-    //     index: ctx.mint_redeemer_index(*policy)?,
-    //     ex_units: ctx.eval_ex_units(*policy, &data),
-    //     data,
-    // };
+fn compile_mint_redeemers(
+    tx: &ir::Tx,
+    compiled_body: &primitives::TransactionBody,
+) -> Result<Vec<primitives::Redeemer>, Error> {
+    if let Some(r) = &tx.mint {
+        let red = r.redeemer.clone().ok_or(Error::MissingRedeemer)?;
+        let amount = r.amount.clone().ok_or(Error::MissingAmount)?;
+        let assets = coerce_expr_into_assets(&amount)?;
+        // TODO: This only works with the first redeemer.
+        // Are we allowed to include more than one?
+        let asset = assets.first().ok_or(Error::MissingAsset)?;
+        let policy = coerce_expr_into_bytes(&asset.policy)?;
+        let policy = primitives::Hash::from(policy.as_slice());
 
-    Ok(vec![])
+        let out = primitives::Redeemer {
+            tag: primitives::RedeemerTag::Mint,
+            index: mint_redeemer_index(compiled_body, policy)?,
+            ex_units: primitives::ExUnits {
+                mem: 2000,
+                steps: 200000,
+            },
+            data: red.try_into_data()?,
+        };
+        Ok(vec![out])
+    } else {
+        Ok(vec![])
+    }
 }
 
 fn compile_redeemers(
@@ -533,7 +613,7 @@ fn compile_redeemers(
     compiled_body: &primitives::TransactionBody,
 ) -> Result<Option<Redeemers>, Error> {
     let spend_redeemers = compile_spend_redeemers(tx, compiled_body)?;
-    let mint_redeemers = compile_mint_redeemers(tx)?;
+    let mint_redeemers = compile_mint_redeemers(tx, compiled_body)?;
 
     // TODO: chain other redeemers
     let redeemers: Vec<_> = spend_redeemers.into_iter().chain(mint_redeemers).collect();
@@ -549,10 +629,10 @@ fn compile_redeemers(
 
 fn compile_witness_set(
     tx: &ir::Tx,
-    compiled_body: &primitives::TransactionBody,
+    compiled_body: &mut primitives::TransactionBody,
 ) -> Result<primitives::WitnessSet<'static>, Error> {
-    let out = primitives::WitnessSet {
-        redeemer: compile_redeemers(tx, compiled_body)?.map(|x| x.into()),
+    let witness_set = primitives::WitnessSet {
+        redeemer: compile_redeemers(tx, &compiled_body)?.map(|x| x.into()),
         vkeywitness: None,
         native_script: None,
         bootstrap_witness: None,
@@ -562,12 +642,17 @@ fn compile_witness_set(
         plutus_v3_script: None,
     };
 
-    Ok(out)
+    if let Some(ref reds) = witness_set.redeemer {
+        let script_data_hash = compile_script_data_hash(&[], &reds);
+        compiled_body.script_data_hash = Some(script_data_hash);
+    }
+
+    Ok(witness_set)
 }
 
 pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'static>, Error> {
-    let transaction_body = compile_tx_body(tx, pparams)?;
-    let transaction_witness_set = compile_witness_set(tx, &transaction_body)?;
+    let mut transaction_body = compile_tx_body(tx, pparams)?;
+    let transaction_witness_set = compile_witness_set(tx, &mut transaction_body)?;
     let auxiliary_data = compile_auxiliary_data(tx)?;
 
     let tx = primitives::Tx {

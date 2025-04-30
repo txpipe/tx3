@@ -1148,14 +1148,62 @@ impl Apply for ir::AdHocDirective {
     }
 }
 
+impl Apply for ir::Collateral {
+    fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            query: self.query.apply_args(args)?,
+        })
+    }
+
+    fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            query: self.query.apply_inputs(args)?,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            query: self.query.apply_fees(fees)?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.query.is_constant()
+    }
+
+    fn params(&self) -> BTreeMap<String, ir::Type> {
+        let mut params = BTreeMap::new();
+        params.extend(self.query.params());
+        params
+    }
+
+    fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        let mut b_tree = BTreeMap::new();
+        b_tree.insert("collateral".to_string(), self.query.clone());
+        b_tree
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            query: self.query.reduce()?,
+        })
+    }
+}
+
 impl Apply for ir::Tx {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         let tx = ir::Tx {
+            ref_inputs: self.ref_inputs.apply_args(args)?,
             inputs: self.inputs.apply_args(args)?,
             outputs: self.outputs.apply_args(args)?,
             mint: self.mint.apply_args(args)?,
             fees: self.fees.apply_args(args)?,
             adhoc: self.adhoc.apply_args(args)?,
+            collateral: self.collateral.apply_args(args)?,
         };
 
         Ok(tx)
@@ -1163,21 +1211,25 @@ impl Apply for ir::Tx {
 
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
         Ok(Self {
+            ref_inputs: self.ref_inputs.apply_inputs(args)?,
             inputs: self.inputs.apply_inputs(args)?,
             outputs: self.outputs.apply_inputs(args)?,
             mint: self.mint.apply_inputs(args)?,
             fees: self.fees.apply_inputs(args)?,
             adhoc: self.adhoc.apply_inputs(args)?,
+            collateral: self.collateral.apply_inputs(args)?,
         })
     }
 
     fn apply_fees(self, fees: u64) -> Result<Self, Error> {
         Ok(Self {
+            ref_inputs: self.ref_inputs.apply_fees(fees)?,
             inputs: self.inputs.apply_fees(fees)?,
             outputs: self.outputs.apply_fees(fees)?,
             mint: self.mint.apply_fees(fees)?,
             fees: self.fees.apply_fees(fees)?,
             adhoc: self.adhoc.apply_fees(fees)?,
+            collateral: self.collateral.apply_fees(fees)?,
         })
     }
 
@@ -1190,6 +1242,7 @@ impl Apply for ir::Tx {
     }
 
     fn params(&self) -> BTreeMap<String, ir::Type> {
+        // TODO: analyze if necessary to add ref_inputs
         let mut params = BTreeMap::new();
         params.extend(self.inputs.params());
         params.extend(self.outputs.params());
@@ -1200,6 +1253,7 @@ impl Apply for ir::Tx {
     }
 
     fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        // TODO: analyze if necessary to add ref_inputs
         let mut queries = BTreeMap::new();
         queries.extend(self.inputs.queries());
         queries.extend(self.outputs.queries());
@@ -1215,11 +1269,13 @@ impl Apply for ir::Tx {
 
     fn reduce_nested(self) -> Result<Self, Error> {
         Ok(Self {
+            ref_inputs: self.ref_inputs.reduce()?,
             inputs: self.inputs.reduce()?,
             outputs: self.outputs.reduce()?,
             mint: self.mint.reduce()?,
             fees: self.fees.reduce()?,
             adhoc: self.adhoc.reduce()?,
+            collateral: self.collateral.reduce()?,
         })
     }
 }

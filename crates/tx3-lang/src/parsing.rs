@@ -144,19 +144,23 @@ impl AstNode for TxDef {
         let name = inner.next().unwrap().as_str().to_string();
         let parameters = ParameterList::parse(inner.next().unwrap())?;
 
+        let mut ref_inputs = Vec::new();
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
         let mut burn = None;
         let mut mint = None;
         let mut adhoc = Vec::new();
+        let mut collateral = Vec::new();
 
         for item in inner {
             match item.as_rule() {
+                Rule::ref_input_block => ref_inputs.push(RefInputBlock::parse(item)?),
                 Rule::input_block => inputs.push(InputBlock::parse(item)?),
                 Rule::output_block => outputs.push(OutputBlock::parse(item)?),
                 Rule::burn_block => burn = Some(BurnBlock::parse(item)?),
                 Rule::mint_block => mint = Some(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
+                Rule::collateral_block => collateral.push(CollateralBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
         }
@@ -164,6 +168,7 @@ impl AstNode for TxDef {
         Ok(TxDef {
             name,
             parameters,
+            ref_inputs,
             inputs,
             outputs,
             burn,
@@ -171,6 +176,7 @@ impl AstNode for TxDef {
             adhoc,
             scope: None,
             span,
+            collateral,
         })
     }
 
@@ -244,6 +250,83 @@ impl AstNode for PartyDef {
     }
 }
 
+impl AstNode for RefInputBlock {
+    const RULE: Rule = Rule::ref_input_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let mut inner = pair.into_inner();
+
+        let name = inner.next().unwrap().as_str().to_string();
+
+        let pair = inner.next().unwrap();
+        match pair.as_rule() {
+            Rule::input_block_ref => {
+                let pair = pair.into_inner().next().unwrap();
+                let r#ref = DataExpr::parse(pair)?;
+                Ok(RefInputBlock { name, r#ref, span })
+            }
+            x => unreachable!("Unexpected rule in ref_input_block: {:?}", x),
+        }
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
+impl AstNode for CollateralBlockField {
+    const RULE: Rule = Rule::collateral_block_field;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        match pair.as_rule() {
+            Rule::input_block_from => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = CollateralBlockField::From(AddressExpr::parse(pair)?);
+                Ok(x)
+            }
+            Rule::input_block_min_amount => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = CollateralBlockField::MinAmount(AssetExpr::parse(pair)?);
+                Ok(x)
+            }
+            Rule::input_block_ref => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = CollateralBlockField::Ref(DataExpr::UtxoRef(UtxoRef::parse(pair)?));
+                Ok(x)
+            }
+            x => unreachable!("Unexpected rule in collateral_block: {:?}", x),
+        }
+    }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::From(x) => x.span(),
+            Self::MinAmount(x) => x.span(),
+            Self::Ref(x) => x.span(),
+        }
+    }
+}
+
+impl AstNode for CollateralBlock {
+    const RULE: Rule = Rule::collateral_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let inner = pair.into_inner();
+
+        let fields = inner
+            .map(|x| CollateralBlockField::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(CollateralBlock { fields, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
 impl AstNode for InputBlockField {
     const RULE: Rule = Rule::input_block_field;
 
@@ -271,7 +354,7 @@ impl AstNode for InputBlockField {
             }
             Rule::input_block_ref => {
                 let pair = pair.into_inner().next().unwrap();
-                let x = InputBlockField::Ref(DataExpr::parse(pair)?);
+                let x = InputBlockField::Ref(DataExpr::UtxoRef(UtxoRef::parse(pair)?));
                 Ok(x)
             }
             x => unreachable!("Unexpected rule in input_block: {:?}", x),
@@ -733,6 +816,26 @@ impl AstNode for RecordConstructorField {
     }
 }
 
+impl AstNode for UtxoRef {
+    const RULE: Rule = Rule::utxo_ref;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let raw_ref = pair.as_span().as_str()[2..].to_string();
+        let (raw_txid, raw_output_ix) = raw_ref.split_once("#").expect("Invalid utxo ref");
+
+        Ok(UtxoRef {
+            txid: hex::decode(raw_txid).expect("Invalid hex txid"),
+            index: raw_output_ix.parse().expect("Invalid output index"),
+            span,
+        })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
 impl AstNode for DatumConstructor {
     const RULE: Rule = Rule::datum_constructor;
 
@@ -853,6 +956,10 @@ impl DataExpr {
         Ok(DataExpr::Constructor(DatumConstructor::parse(pair)?))
     }
 
+    fn utxo_ref_parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        Ok(DataExpr::UtxoRef(UtxoRef::parse(pair)?))
+    }
+
     fn term_parse(pair: Pair<Rule>) -> Result<Self, Error> {
         match pair.as_rule() {
             Rule::number => DataExpr::number_parse(pair),
@@ -863,6 +970,7 @@ impl DataExpr {
             Rule::unit => Ok(DataExpr::Unit),
             Rule::identifier => DataExpr::identifier_parse(pair),
             Rule::property_access => DataExpr::property_access_parse(pair),
+            Rule::utxo_ref => DataExpr::utxo_ref_parse(pair),
             x => unreachable!("Unexpected rule in data_expr: {:?}", x),
         }
     }
@@ -904,6 +1012,7 @@ impl AstNode for DataExpr {
             DataExpr::Identifier(x) => x.span(),
             DataExpr::PropertyAccess(x) => x.span(),
             DataExpr::BinaryOp(x) => &x.span,
+            DataExpr::UtxoRef(x) => &x.span,
         }
     }
 }

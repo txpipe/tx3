@@ -14,10 +14,7 @@ pub struct TxEval {
 pub trait Ledger {
     async fn get_pparams(&self) -> Result<PParams, Error>;
 
-    async fn resolve_input(
-        &self,
-        query: &InputQuery,
-    ) -> Result<tx3_lang::UtxoSet, Error>;
+    async fn resolve_input(&self, query: &InputQuery) -> Result<tx3_lang::UtxoSet, Error>;
 }
 
 fn eval_size_fees(tx: &[u8], pparams: &PParams) -> Result<u64, Error> {
@@ -43,18 +40,15 @@ async fn eval_pass<L: Ledger>(
     attempt = attempt.apply()?;
 
     for (name, query) in tx.find_queries() {
-        let utxos = ledger
-            .resolve_input(&query)
-            .await?;
+        let utxos = ledger.resolve_input(&query).await?;
 
         // TODO: actually filter utxos
-
         attempt.set_input(&name, utxos);
     }
 
     let attempt = attempt.apply()?;
 
-    let tx = compile_tx(attempt.as_ref(), pparams)?;
+    let tx = compile_tx(&attempt.as_ref(), pparams)?;
 
     let payload = pallas::codec::minicbor::to_vec(&tx).unwrap();
 

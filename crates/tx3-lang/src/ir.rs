@@ -71,9 +71,10 @@ pub enum ScriptSource {
 }
 
 impl ScriptSource {
-    pub fn as_utxo_ref(&self) -> Option<&Expression> {
+    pub fn as_utxo_ref(&self) -> Option<Expression> {
         match self {
-            Self::UtxoRef { r#ref, .. } => Some(r#ref),
+            Self::UtxoRef { r#ref, .. } => Some(r#ref.clone()),
+            Self::Embedded(Expression::UtxoRefs(x)) => Some(Expression::UtxoRefs(x.clone())),
             _ => None,
         }
     }
@@ -168,10 +169,17 @@ pub struct Mint {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Collateral {
+    pub query: InputQuery,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
     pub fees: Expression,
+    pub ref_inputs: Vec<Expression>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub mint: Option<Mint>,
     pub adhoc: Vec<AdHocDirective>,
+    pub collateral: Vec<Collateral>
 }

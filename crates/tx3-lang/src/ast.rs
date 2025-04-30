@@ -171,12 +171,14 @@ pub struct ParameterList {
 pub struct TxDef {
     pub name: String,
     pub parameters: ParameterList,
+    pub ref_inputs: Vec<RefInputBlock>,
     pub inputs: Vec<InputBlock>,
     pub outputs: Vec<OutputBlock>,
     pub burn: Option<BurnBlock>,
     pub mint: Option<MintBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
     pub span: Span,
+    pub collateral: Vec<CollateralBlock>,
 
     // analysis
     #[serde(skip)]
@@ -210,6 +212,56 @@ impl HexStringLiteral {
             value: value.into(),
             span: Span::DUMMY,
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CollateralBlockField {
+    From(AddressExpr),
+    MinAmount(AssetExpr),
+    Ref(DataExpr),
+}
+
+impl CollateralBlockField {
+    fn key(&self) -> &str {
+        match self {
+            CollateralBlockField::From(_) => "from",
+            CollateralBlockField::MinAmount(_) => "min_amount",
+            CollateralBlockField::Ref(_) => "ref",
+        }
+    }
+
+    pub fn as_address_expr(&self) -> Option<&AddressExpr> {
+        match self {
+            CollateralBlockField::From(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_asset_expr(&self) -> Option<&AssetExpr> {
+        match self {
+            CollateralBlockField::MinAmount(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_data_expr(&self) -> Option<&DataExpr> {
+        match self {
+            CollateralBlockField::Ref(x) => Some(x),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CollateralBlock {
+    pub fields: Vec<CollateralBlockField>,
+    pub span: Span,
+}
+
+impl CollateralBlock {
+    pub(crate) fn find(&self, key: &str) -> Option<&CollateralBlockField> {
+        self.fields.iter().find(|x| x.key() == key)
     }
 }
 
@@ -264,6 +316,13 @@ impl InputBlockField {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RefInputBlock {
+    pub name: String,
+    pub r#ref: DataExpr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct InputBlock {
     pub name: String,
     pub is_many: bool,
@@ -274,10 +333,6 @@ pub struct InputBlock {
 impl InputBlock {
     pub(crate) fn find(&self, key: &str) -> Option<&InputBlockField> {
         self.fields.iter().find(|x| x.key() == key)
-    }
-
-    pub(crate) fn find_mut(&mut self, key: &str) -> Option<&mut InputBlockField> {
-        self.fields.iter_mut().find(|x| x.key() == key)
     }
 
     pub(crate) fn datum_is(&self) -> Option<&Type> {
@@ -521,6 +576,13 @@ impl VariantCaseConstructor {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct UtxoRef {
+    pub txid: Vec<u8>,
+    pub index: u64,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DataBinaryOp {
     pub left: Box<DataExpr>,
     pub operator: BinaryOperator,
@@ -540,6 +602,7 @@ pub enum DataExpr {
     Identifier(Identifier),
     PropertyAccess(PropertyAccess),
     BinaryOp(DataBinaryOp),
+    UtxoRef(UtxoRef),
 }
 
 impl DataExpr {
