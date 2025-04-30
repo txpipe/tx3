@@ -19,6 +19,7 @@
           "end": 230
         }
       },
+      "references": [],
       "inputs": [
         {
           "name": "source",
@@ -336,7 +337,8 @@
         "dummy": false,
         "start": 186,
         "end": 614
-      }
+      },
+      "collateral": []
     },
     {
       "name": "unlock",
@@ -353,6 +355,7 @@
           "end": 653
         }
       },
+      "references": [],
       "inputs": [
         {
           "name": "gas",
@@ -511,7 +514,8 @@
         "dummy": false,
         "start": 616,
         "end": 919
-      }
+      },
+      "collateral": []
     }
   ],
   "types": [

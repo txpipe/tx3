@@ -176,10 +176,10 @@ pub struct Collateral {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
     pub fees: Expression,
-    pub ref_inputs: Vec<Expression>,
+    pub references: Vec<Expression>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub mint: Option<Mint>,
     pub adhoc: Vec<AdHocDirective>,
-    pub collateral: Vec<Collateral>
+    pub collateral: Vec<Collateral>,
 }

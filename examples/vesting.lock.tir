@@ -1,5 +1,6 @@
 {
   "fees": "FeeQuery",
+  "references": [],
   "inputs": [
     {
       "name": "source",
@@ -144,5 +145,6 @@
     }
   ],
   "mint": null,
-  "adhoc": []
+  "adhoc": [],
+  "collateral": []
 }

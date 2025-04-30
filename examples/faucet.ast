@@ -19,6 +19,7 @@
           "end": 252
         }
       },
+      "references": [],
       "inputs": [
         {
           "name": "provided_gas",
@@ -205,7 +206,8 @@
         "dummy": false,
         "start": 188,
         "end": 523
-      }
+      },
+      "collateral": []
     }
   ],
   "types": [],

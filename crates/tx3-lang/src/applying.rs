@@ -1197,7 +1197,7 @@ impl Apply for ir::Collateral {
 impl Apply for ir::Tx {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         let tx = ir::Tx {
-            ref_inputs: self.ref_inputs.apply_args(args)?,
+            references: self.references.apply_args(args)?,
             inputs: self.inputs.apply_args(args)?,
             outputs: self.outputs.apply_args(args)?,
             mint: self.mint.apply_args(args)?,
@@ -1211,7 +1211,7 @@ impl Apply for ir::Tx {
 
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
         Ok(Self {
-            ref_inputs: self.ref_inputs.apply_inputs(args)?,
+            references: self.references.apply_inputs(args)?,
             inputs: self.inputs.apply_inputs(args)?,
             outputs: self.outputs.apply_inputs(args)?,
             mint: self.mint.apply_inputs(args)?,
@@ -1223,7 +1223,7 @@ impl Apply for ir::Tx {
 
     fn apply_fees(self, fees: u64) -> Result<Self, Error> {
         Ok(Self {
-            ref_inputs: self.ref_inputs.apply_fees(fees)?,
+            references: self.references.apply_fees(fees)?,
             inputs: self.inputs.apply_fees(fees)?,
             outputs: self.outputs.apply_fees(fees)?,
             mint: self.mint.apply_fees(fees)?,
@@ -1269,7 +1269,7 @@ impl Apply for ir::Tx {
 
     fn reduce_nested(self) -> Result<Self, Error> {
         Ok(Self {
-            ref_inputs: self.ref_inputs.reduce()?,
+            references: self.references.reduce()?,
             inputs: self.inputs.reduce()?,
             outputs: self.outputs.reduce()?,
             mint: self.mint.reduce()?,
@@ -1462,12 +1462,17 @@ mod tests {
         match reduced {
             ir::Expression::Assets(assets) => {
                 assert_eq!(assets.len(), 2);
-                assert_eq!(assets[0].policy, ir::Expression::None);
-                assert_eq!(assets[0].asset_name, ir::Expression::None);
-                assert_eq!(assets[0].amount, ir::Expression::Number(100));
-                assert_eq!(assets[1].policy, ir::Expression::Bytes(b"abc".to_vec()));
-                assert_eq!(assets[1].asset_name, ir::Expression::Bytes(b"111".to_vec()));
-                assert_eq!(assets[1].amount, ir::Expression::Number(200));
+
+                for asset in assets {
+                    if asset.policy == ir::Expression::None {
+                        assert_eq!(asset.asset_name, ir::Expression::None);
+                        assert_eq!(asset.amount, ir::Expression::Number(100));
+                    } else {
+                        assert_eq!(asset.policy, ir::Expression::Bytes(b"abc".to_vec()));
+                        assert_eq!(asset.asset_name, ir::Expression::Bytes(b"111".to_vec()));
+                        assert_eq!(asset.amount, ir::Expression::Number(200));
+                    }
+                }
             }
             _ => panic!("Expected assets"),
         };

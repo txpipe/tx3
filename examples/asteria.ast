@@ -27,6 +27,7 @@
           "end": 669
         }
       },
+      "references": [],
       "inputs": [
         {
           "name": "ship",
@@ -645,7 +646,8 @@
         "dummy": false,
         "start": 569,
         "end": 1445
-      }
+      },
+      "collateral": []
     }
   ],
   "types": [

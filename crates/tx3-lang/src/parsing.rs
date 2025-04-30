@@ -144,7 +144,7 @@ impl AstNode for TxDef {
         let name = inner.next().unwrap().as_str().to_string();
         let parameters = ParameterList::parse(inner.next().unwrap())?;
 
-        let mut ref_inputs = Vec::new();
+        let mut references = Vec::new();
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
         let mut burn = None;
@@ -154,7 +154,7 @@ impl AstNode for TxDef {
 
         for item in inner {
             match item.as_rule() {
-                Rule::ref_input_block => ref_inputs.push(RefInputBlock::parse(item)?),
+                Rule::reference_block => references.push(ReferenceBlock::parse(item)?),
                 Rule::input_block => inputs.push(InputBlock::parse(item)?),
                 Rule::output_block => outputs.push(OutputBlock::parse(item)?),
                 Rule::burn_block => burn = Some(BurnBlock::parse(item)?),
@@ -168,7 +168,7 @@ impl AstNode for TxDef {
         Ok(TxDef {
             name,
             parameters,
-            ref_inputs,
+            references,
             inputs,
             outputs,
             burn,
@@ -250,8 +250,8 @@ impl AstNode for PartyDef {
     }
 }
 
-impl AstNode for RefInputBlock {
-    const RULE: Rule = Rule::ref_input_block;
+impl AstNode for ReferenceBlock {
+    const RULE: Rule = Rule::reference_block;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         let span = pair.as_span().into();
@@ -264,7 +264,7 @@ impl AstNode for RefInputBlock {
             Rule::input_block_ref => {
                 let pair = pair.into_inner().next().unwrap();
                 let r#ref = DataExpr::parse(pair)?;
-                Ok(RefInputBlock { name, r#ref, span })
+                Ok(ReferenceBlock { name, r#ref, span })
             }
             x => unreachable!("Unexpected rule in ref_input_block: {:?}", x),
         }
@@ -354,7 +354,7 @@ impl AstNode for InputBlockField {
             }
             Rule::input_block_ref => {
                 let pair = pair.into_inner().next().unwrap();
-                let x = InputBlockField::Ref(DataExpr::UtxoRef(UtxoRef::parse(pair)?));
+                let x = InputBlockField::Ref(DataExpr::parse(pair)?);
                 Ok(x)
             }
             x => unreachable!("Unexpected rule in input_block: {:?}", x),
@@ -1012,7 +1012,7 @@ impl AstNode for DataExpr {
             DataExpr::Identifier(x) => x.span(),
             DataExpr::PropertyAccess(x) => x.span(),
             DataExpr::BinaryOp(x) => &x.span,
-            DataExpr::UtxoRef(x) => &x.span,
+            DataExpr::UtxoRef(x) => &x.span(),
         }
     }
 }

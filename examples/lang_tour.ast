@@ -15,6 +15,7 @@
           "end": 420
         }
       },
+      "references": [],
       "inputs": [
         {
           "name": "source",
@@ -428,7 +429,8 @@
         "dummy": false,
         "start": 391,
         "end": 903
-      }
+      },
+      "collateral": []
     }
   ],
   "types": [

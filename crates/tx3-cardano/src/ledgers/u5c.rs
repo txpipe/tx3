@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use tx3_lang::ir::InputQuery;
 
 use tokio::sync::Mutex;
@@ -121,14 +121,45 @@ impl crate::resolve::Ledger for Ledger {
             crate::Error::LedgerInternalError("unexpected response from read_params".to_string()),
         )?;
 
-        match params {
-            utxorpc::spec::query::any_chain_params::Params::Cardano(params) => Ok(PParams {
+        let out = match params {
+            utxorpc::spec::query::any_chain_params::Params::Cardano(params) => PParams {
                 network: crate::Network::try_from(self.network_id).unwrap(),
                 min_fee_coefficient: params.min_fee_coefficient,
                 min_fee_constant: params.min_fee_constant,
                 coins_per_utxo_byte: params.coins_per_utxo_byte,
-            }),
-        }
+                cost_models: HashMap::from([
+                    (
+                        1,
+                        params
+                            .cost_models
+                            .as_ref()
+                            .and_then(|cm| cm.plutus_v1.as_ref())
+                            .map(|cm| cm.values.clone())
+                            .unwrap_or_default(),
+                    ),
+                    (
+                        2,
+                        params
+                            .cost_models
+                            .as_ref()
+                            .and_then(|cm| cm.plutus_v2.as_ref())
+                            .map(|cm| cm.values.clone())
+                            .unwrap_or_default(),
+                    ),
+                    (
+                        3,
+                        params
+                            .cost_models
+                            .as_ref()
+                            .and_then(|cm| cm.plutus_v3.as_ref())
+                            .map(|cm| cm.values.clone())
+                            .unwrap_or_default(),
+                    ),
+                ]),
+            },
+        };
+
+        Ok(out)
     }
 
     async fn resolve_input(&self, query: &InputQuery) -> Result<tx3_lang::UtxoSet, crate::Error> {

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 mod compile;
 mod resolve;
 
@@ -79,13 +81,15 @@ pub enum Error {
 }
 
 pub type Network = pallas::ledger::primitives::NetworkId;
+pub type PlutusVersion = u8;
+pub type CostModel = Vec<i64>;
 
 pub struct PParams {
     pub network: Network,
     pub min_fee_coefficient: u64,
     pub min_fee_constant: u64,
     pub coins_per_utxo_byte: u64,
-    // TODO: cost models, execution prices
+    pub cost_models: HashMap<PlutusVersion, CostModel>,
 }
 
 pub use compile::compile_tx;
