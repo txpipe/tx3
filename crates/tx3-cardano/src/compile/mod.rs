@@ -401,7 +401,7 @@ fn compile_certs(tx: &ir::Tx) -> Result<Vec<primitives::Certificate>, Error> {
 
 fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionInput>, Error> {
     let explicit_ref_inputs = tx
-        .ref_inputs
+        .references
         .iter()
         .flat_map(|x| coerce_expr_into_utxo_refs(x.clone()))
         .flatten()
@@ -426,29 +426,6 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
         .collect();
 
     Ok(refs)
-}
-
-fn cost_model() -> Vec<u8> {
-    hex::decode("A10198AF1A000189B41901A401011903E818AD00011903E819EA350401192BAF18201A000312591920A404193E801864193E801864193E801864193E801864193E801864193E80186418641864193E8018641A000170A718201A00020782182019F016041A0001194A18B2000119568718201A0001643519030104021A00014F581A00037C71187A0001011903E819A7A90402195FE419733A1826011A000DB464196A8F0119CA3F19022E011999101903E819ECB2011A00022A4718201A000144CE1820193BC318201A0001291101193371041956540A197147184A01197147184A0119A9151902280119AECD19021D0119843C18201A00010A9618201A00011AAA1820191C4B1820191CDF1820192D1A18201A00014F581A00037C71187A0001011A0001614219020700011A000122C118201A00014F581A00037C71187A0001011A00014F581A00037C71187A0001011A000E94721A0003414000021A0004213C19583C041A00163CAD19FC3604194FF30104001A00022AA818201A000189B41901A401011A00013EFF182019E86A1820194EAE182019600C1820195108182019654D182019602F18201A0290F1E70A1A032E93AF1937FD0A1A0298E40B1966C40A").expect("Wrong Cost Model")
-}
-
-fn compile_script_data_hash(
-    plutus_data: &[primitives::PlutusData],
-    redeemer: &Redeemers,
-) -> primitives::Hash<32> {
-    let mut value_to_hash_with_def: Vec<u8> = Vec::new();
-    let _ = encode(redeemer, &mut value_to_hash_with_def);
-    if !plutus_data.is_empty() {
-        let mut plutus_data_encoder_def: Encoder<Vec<u8>> = Encoder::new(Vec::new());
-        let _ = plutus_data_encoder_def.array(plutus_data.len() as u64);
-        for single_plutus_data in plutus_data.iter() {
-            let _ = plutus_data_encoder_def.encode(single_plutus_data);
-        }
-        value_to_hash_with_def.extend(plutus_data_encoder_def.writer().clone());
-    }
-    let cm: Vec<u8> = cost_model();
-    value_to_hash_with_def.extend(&cm);
-    Hasher::<256>::hash(&value_to_hash_with_def)
 }
 
 fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
@@ -629,7 +606,7 @@ fn compile_redeemers(
 
 fn compile_witness_set(
     tx: &ir::Tx,
-    compiled_body: &mut primitives::TransactionBody,
+    compiled_body: &primitives::TransactionBody,
 ) -> Result<primitives::WitnessSet<'static>, Error> {
     let witness_set = primitives::WitnessSet {
         redeemer: compile_redeemers(tx, &compiled_body)?.map(|x| x.into()),
@@ -642,18 +619,37 @@ fn compile_witness_set(
         plutus_v3_script: None,
     };
 
-    if let Some(ref reds) = witness_set.redeemer {
-        let script_data_hash = compile_script_data_hash(&[], &reds);
-        compiled_body.script_data_hash = Some(script_data_hash);
-    }
-
     Ok(witness_set)
+}
+
+fn infer_plutus_version(_transaction_body: &primitives::TransactionBody) -> PlutusVersion {
+    // TODO: infer plutus version from existing scripts
+    return 2;
+}
+
+fn compute_script_data_hash(
+    body: &primitives::TransactionBody,
+    witness_set: &primitives::WitnessSet,
+    pparams: &PParams,
+) -> Option<primitives::Hash<32>> {
+    let version = infer_plutus_version(body);
+
+    let cost_model = pparams.cost_models.get(&version).unwrap();
+
+    let language_view = primitives::LanguageView(version, cost_model.clone());
+
+    let data = primitives::ScriptData::build_for(witness_set, language_view);
+
+    data.map(|x| x.hash())
 }
 
 pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'static>, Error> {
     let mut transaction_body = compile_tx_body(tx, pparams)?;
-    let transaction_witness_set = compile_witness_set(tx, &mut transaction_body)?;
+    let transaction_witness_set = compile_witness_set(tx, &transaction_body)?;
     let auxiliary_data = compile_auxiliary_data(tx)?;
+
+    transaction_body.script_data_hash =
+        compute_script_data_hash(&transaction_body, &transaction_witness_set, pparams);
 
     let tx = primitives::Tx {
         transaction_body: transaction_body.into(),

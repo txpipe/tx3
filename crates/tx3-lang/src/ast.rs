@@ -171,7 +171,7 @@ pub struct ParameterList {
 pub struct TxDef {
     pub name: String,
     pub parameters: ParameterList,
-    pub ref_inputs: Vec<RefInputBlock>,
+    pub references: Vec<ReferenceBlock>,
     pub inputs: Vec<InputBlock>,
     pub outputs: Vec<OutputBlock>,
     pub burn: Option<BurnBlock>,
@@ -316,7 +316,7 @@ impl InputBlockField {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct RefInputBlock {
+pub struct ReferenceBlock {
     pub name: String,
     pub r#ref: DataExpr,
     pub span: Span,

@@ -520,7 +520,7 @@ impl IntoLower for ast::ChainSpecificBlock {
     }
 }
 
-impl IntoLower for ast::RefInputBlock {
+impl IntoLower for ast::ReferenceBlock {
     type Output = ir::Expression;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
@@ -563,8 +563,8 @@ impl IntoLower for ast::CollateralBlock {
 
 pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
     let ir = ir::Tx {
-        ref_inputs: ast
-            .ref_inputs
+        references: ast
+            .references
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,

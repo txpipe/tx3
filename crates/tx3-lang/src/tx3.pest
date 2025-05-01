@@ -195,7 +195,7 @@ collateral_block = {
     "}"
 }
 
-ref_input_block = {
+reference_block = {
     "reference" ~ identifier ~ ("*")? ~ "{" ~
     input_block_ref ~ "," ~
     "}"
@@ -266,7 +266,7 @@ chain_specific_block = {
 // Transaction definition
 tx_def = {
     "tx" ~ identifier ~ parameter_list ~ "{" ~
-    ref_input_block* ~
+    reference_block* ~
     input_block* ~
     collateral_block* ~
     burn_block? ~
