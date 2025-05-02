@@ -721,7 +721,7 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
 name = "faucet"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "console_error_panic_hook",
  "hex",
@@ -3311,7 +3311,7 @@ dependencies = [
 
 [[package]]
 name = "tx3-bindgen"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bincode",
  "clap",
@@ -3330,7 +3330,7 @@ dependencies = [
 
 [[package]]
 name = "tx3-cardano"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "hex",
  "pallas",
@@ -3344,7 +3344,7 @@ dependencies = [
 
 [[package]]
 name = "tx3-lang"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "assert-json-diff",
  "bincode",
@@ -3360,7 +3360,7 @@ dependencies = [
 
 [[package]]
 name = "tx3-test"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "base64 0.22.1",
  "hex",
