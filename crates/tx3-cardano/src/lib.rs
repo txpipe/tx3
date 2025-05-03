@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-mod compile;
-mod resolve;
-
+pub mod coercion;
+pub mod compile;
 pub mod ledgers;
+pub mod resolve;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
