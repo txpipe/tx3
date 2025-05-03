@@ -1,15 +1,13 @@
+use std::collections::BTreeMap;
+
 use pallas::{
-    codec::{
-        minicbor::{encode, Encoder},
-        utils::{KeepRaw, MaybeIndefArray},
-    },
-    crypto::hash::Hasher,
+    codec::utils::{KeepRaw, MaybeIndefArray},
     ledger::primitives::{
         conway::{self as primitives, NonEmptySet, Redeemers},
         TransactionInput,
     },
 };
-use std::{collections::BTreeMap, str::FromStr};
+
 use tx3_lang::ir;
 
 use super::*;
@@ -36,146 +34,6 @@ macro_rules! value {
     ($coin:expr) => {
         pallas::ledger::primitives::conway::Value::Coin($coin)
     };
-}
-
-fn coerce_string_into_address(value: &str) -> Result<pallas::ledger::addresses::Address, Error> {
-    pallas::ledger::addresses::Address::from_str(value)
-        .map_err(|_| Error::CoerceError(value.to_string(), "Address".to_string()))
-}
-
-fn coerce_bytes_into_address(value: &[u8]) -> Result<pallas::ledger::addresses::Address, Error> {
-    pallas::ledger::addresses::Address::from_bytes(value)
-        .map_err(|_| Error::CoerceError(hex::encode(value), "Address".to_string()))
-}
-
-fn coerce_policy_into_address(
-    policy: &[u8],
-    pparams: &PParams,
-) -> Result<pallas::ledger::addresses::Address, Error> {
-    let policy = primitives::Hash::from(policy);
-
-    let network = match pparams.network {
-        primitives::NetworkId::Testnet => pallas::ledger::addresses::Network::Testnet,
-        primitives::NetworkId::Mainnet => pallas::ledger::addresses::Network::Mainnet,
-    };
-
-    let address = pallas::ledger::addresses::ShelleyAddress::new(
-        network,
-        pallas::ledger::addresses::ShelleyPaymentPart::Script(policy),
-        pallas::ledger::addresses::ShelleyDelegationPart::Null,
-    );
-
-    Ok(address.into())
-}
-
-fn coerce_expr_into_number(expr: &ir::Expression) -> Result<i128, Error> {
-    match expr {
-        ir::Expression::Number(x) => Ok(*x),
-        ir::Expression::Assets(x) if x.len() == 1 => coerce_expr_into_number(&x[0].amount),
-        _ => Err(Error::CoerceError(
-            format!("{:?}", expr),
-            "Number".to_string(),
-        )),
-    }
-}
-
-fn coerce_expr_into_utxo_refs(expr: ir::Expression) -> Result<Vec<tx3_lang::UtxoRef>, Error> {
-    match expr {
-        ir::Expression::UtxoRefs(x) => Ok(x.clone()),
-        _ => Err(Error::CoerceError(
-            format!("{:?}", expr),
-            "UtxoRefs".to_string(),
-        )),
-    }
-}
-
-fn coerce_expr_into_assets(ir: &ir::Expression) -> Result<Vec<ir::AssetExpr>, Error> {
-    match ir {
-        ir::Expression::Assets(x) => Ok(x.clone()),
-        _ => Err(Error::CoerceError(
-            format!("{:?}", ir),
-            "Assets".to_string(),
-        )),
-    }
-}
-
-fn coerce_address_into_stake_credential(
-    address: &pallas::ledger::addresses::Address,
-) -> Result<primitives::StakeCredential, Error> {
-    match address {
-        pallas::ledger::addresses::Address::Shelley(x) => match x.delegation() {
-            pallas::ledger::addresses::ShelleyDelegationPart::Key(x) => {
-                Ok(primitives::StakeCredential::AddrKeyhash(*x))
-            }
-            pallas::ledger::addresses::ShelleyDelegationPart::Script(x) => {
-                Ok(primitives::StakeCredential::ScriptHash(*x))
-            }
-            _ => Err(Error::CoerceError(
-                format!("{:?}", address),
-                "StakeCredential".to_string(),
-            )),
-        },
-        pallas::ledger::addresses::Address::Stake(x) => match x.payload() {
-            pallas::ledger::addresses::StakePayload::Stake(x) => {
-                Ok(primitives::StakeCredential::AddrKeyhash(*x))
-            }
-            pallas::ledger::addresses::StakePayload::Script(x) => {
-                Ok(primitives::StakeCredential::ScriptHash(*x))
-            }
-        },
-        _ => Err(Error::CoerceError(
-            format!("{:?}", address),
-            "StakeCredential".to_string(),
-        )),
-    }
-}
-
-fn coerce_expr_into_stake_credential(
-    expr: &ir::Expression,
-) -> Result<primitives::StakeCredential, Error> {
-    match expr {
-        ir::Expression::Address(x) => {
-            let address = coerce_bytes_into_address(x)?;
-            coerce_address_into_stake_credential(&address)
-        }
-        _ => Err(Error::CoerceError(
-            format!("{:?}", expr),
-            "StakeCredential".to_string(),
-        )),
-    }
-}
-
-fn coerce_expr_into_address(
-    expr: &ir::Expression,
-    pparams: &PParams,
-) -> Result<pallas::ledger::addresses::Address, Error> {
-    match expr {
-        ir::Expression::Address(x) => coerce_bytes_into_address(x),
-        ir::Expression::Hash(x) => coerce_policy_into_address(x, pparams),
-        ir::Expression::Bytes(x) => coerce_bytes_into_address(x),
-        ir::Expression::String(x) => coerce_string_into_address(x),
-        _ => Err(Error::CoerceError(
-            format!("{:?}", expr),
-            "Address".to_string(),
-        )),
-    }
-}
-
-fn coerce_expr_into_bytes(ir: &ir::Expression) -> Result<primitives::Bytes, Error> {
-    match ir {
-        ir::Expression::Bytes(x) => Ok(primitives::Bytes::from(x.clone())),
-        _ => Err(Error::CoerceError(format!("{:?}", ir), "Bytes".to_string())),
-    }
-}
-
-#[allow(dead_code)]
-fn coerce_expr_into_hash<const SIZE: usize>(
-    ir: &ir::Expression,
-) -> Result<primitives::Hash<SIZE>, Error> {
-    match ir {
-        ir::Expression::Bytes(x) => Ok(primitives::Hash::from(x.as_slice())),
-        _ => Err(Error::CoerceError(format!("{:?}", ir), "Hash".to_string())),
-    }
 }
 
 // fn extract_classes_from_multiasset(value: &conway::Value) -> Vec<AssetClass>
@@ -226,10 +84,10 @@ fn compile_data_expr(ir: &ir::Expression) -> Result<primitives::PlutusData, Erro
 fn compile_native_asset_for_output(
     ir: &ir::AssetExpr,
 ) -> Result<primitives::Multiasset<primitives::PositiveCoin>, Error> {
-    let policy = coerce_expr_into_bytes(&ir.policy)?;
+    let policy = coercion::expr_into_bytes(&ir.policy)?;
     let policy = primitives::Hash::from(policy.as_slice());
-    let asset_name = coerce_expr_into_bytes(&ir.asset_name)?;
-    let amount = coerce_expr_into_number(&ir.amount)?;
+    let asset_name = coercion::expr_into_bytes(&ir.asset_name)?;
+    let amount = coercion::expr_into_number(&ir.amount)?;
     let amount = primitives::PositiveCoin::try_from(amount as u64).unwrap();
 
     let asset = asset!(policy, asset_name.clone(), amount);
@@ -240,10 +98,10 @@ fn compile_native_asset_for_output(
 fn compile_native_asset_for_mint(
     ir: &ir::AssetExpr,
 ) -> Result<primitives::Multiasset<primitives::NonZeroInt>, Error> {
-    let policy = coerce_expr_into_bytes(&ir.policy)?;
+    let policy = coercion::expr_into_bytes(&ir.policy)?;
     let policy = primitives::Hash::from(policy.as_slice());
-    let asset_name = coerce_expr_into_bytes(&ir.asset_name)?;
-    let amount = coerce_expr_into_number(&ir.amount)?;
+    let asset_name = coercion::expr_into_bytes(&ir.asset_name)?;
+    let amount = coercion::expr_into_number(&ir.amount)?;
     let amount = primitives::NonZeroInt::try_from(amount as i64).unwrap();
 
     let asset = asset!(policy, asset_name.clone(), amount);
@@ -252,13 +110,13 @@ fn compile_native_asset_for_mint(
 }
 
 fn compile_ada_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
-    let amount = coerce_expr_into_number(&ir.amount)?;
+    let amount = coercion::expr_into_number(&ir.amount)?;
 
     Ok(value!(amount as u64))
 }
 
 fn compile_value(ir: &ir::AssetExpr) -> Result<primitives::Value, Error> {
-    let amount = coerce_expr_into_number(&ir.amount)?;
+    let amount = coercion::expr_into_number(&ir.amount)?;
     if ir.policy.is_none() {
         compile_ada_value(ir)
     } else if amount as i64 > 0 {
@@ -292,14 +150,14 @@ fn compile_output_block(
     let address = ir
         .address
         .as_ref()
-        .map(|x| coerce_expr_into_address(x, pparams))
+        .map(|x| coercion::expr_into_address(x, pparams))
         .transpose()?
         .ok_or(Error::MissingAddress)?;
 
     let asset_list = ir
         .amount
         .iter()
-        .map(coerce_expr_into_assets)
+        .map(coercion::expr_into_assets)
         .collect::<Result<Vec<_>, _>>()?;
 
     let values = asset_list
@@ -332,7 +190,7 @@ fn compile_mint_block(tx: &ir::Tx) -> Result<Option<primitives::Mint>, Error> {
         let assets = mint
             .amount
             .as_ref()
-            .map(coerce_expr_into_assets)
+            .map(coercion::expr_into_assets)
             .transpose()?
             .iter()
             .flatten()
@@ -379,8 +237,8 @@ fn compile_outputs(
 fn compile_vote_delegation_certificate(
     x: &ir::AdHocDirective,
 ) -> Result<primitives::Certificate, Error> {
-    let stake = coerce_expr_into_stake_credential(&x.data["stake"])?;
-    let drep = coerce_expr_into_bytes(&x.data["drep"])?;
+    let stake = coercion::expr_into_stake_credential(&x.data["stake"])?;
+    let drep = coercion::expr_into_bytes(&x.data["drep"])?;
     let drep = primitives::DRep::Key(drep.as_slice().into());
 
     Ok(primitives::Certificate::VoteDeleg(stake, drep))
@@ -403,7 +261,7 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
     let explicit_ref_inputs = tx
         .references
         .iter()
-        .flat_map(|x| coerce_expr_into_utxo_refs(x.clone()))
+        .flat_map(|x| coercion::expr_into_utxo_refs(x.clone()))
         .flatten()
         .map(|x| primitives::TransactionInput {
             transaction_id: x.txid.as_slice().into(),
@@ -416,7 +274,7 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
         .filter_map(|x| x.policy.as_ref())
         .filter_map(|x| x.script.as_ref())
         .filter_map(|x| x.as_utxo_ref())
-        .flat_map(coerce_expr_into_utxo_refs)
+        .flat_map(coercion::expr_into_utxo_refs)
         .flatten()
         .map(|x| primitives::TransactionInput {
             transaction_id: x.txid.as_slice().into(),
@@ -454,7 +312,7 @@ fn compile_tx_body(
     let out = primitives::TransactionBody {
         inputs: compile_inputs(tx)?.into(),
         outputs: compile_outputs(tx, pparams)?,
-        fee: coerce_expr_into_number(&tx.fees)? as u64,
+        fee: coercion::expr_into_number(&tx.fees)? as u64,
         certificates: primitives::NonEmptySet::from_vec(compile_certs(tx)?),
         mint: compile_mint_block(tx)?,
         reference_inputs: primitives::NonEmptySet::from_vec(compile_reference_inputs(tx)?),
@@ -563,11 +421,11 @@ fn compile_mint_redeemers(
     if let Some(r) = &tx.mint {
         let red = r.redeemer.clone().ok_or(Error::MissingRedeemer)?;
         let amount = r.amount.clone().ok_or(Error::MissingAmount)?;
-        let assets = coerce_expr_into_assets(&amount)?;
+        let assets = coercion::expr_into_assets(&amount)?;
         // TODO: This only works with the first redeemer.
         // Are we allowed to include more than one?
         let asset = assets.first().ok_or(Error::MissingAsset)?;
-        let policy = coerce_expr_into_bytes(&asset.policy)?;
+        let policy = coercion::expr_into_bytes(&asset.policy)?;
         let policy = primitives::Hash::from(policy.as_slice());
 
         let out = primitives::Redeemer {
