@@ -3,7 +3,7 @@ use std::str::FromStr as _;
 use pallas::ledger::primitives::conway as primitives;
 use tx3_lang::ir;
 
-use crate::{Error, PParams};
+use crate::{Error, Network, PParams};
 
 pub fn string_into_address(value: &str) -> Result<pallas::ledger::addresses::Address, Error> {
     pallas::ledger::addresses::Address::from_str(value)
@@ -17,11 +17,11 @@ pub fn bytes_into_address(value: &[u8]) -> Result<pallas::ledger::addresses::Add
 
 pub fn policy_into_address(
     policy: &[u8],
-    pparams: &PParams,
+    network: Network,
 ) -> Result<pallas::ledger::addresses::Address, Error> {
     let policy = primitives::Hash::from(policy);
 
-    let network = match pparams.network {
+    let network = match network {
         primitives::NetworkId::Testnet => pallas::ledger::addresses::Network::Testnet,
         primitives::NetworkId::Mainnet => pallas::ledger::addresses::Network::Mainnet,
     };
@@ -46,7 +46,7 @@ pub fn expr_into_number(expr: &ir::Expression) -> Result<i128, Error> {
     }
 }
 
-pub fn expr_into_utxo_refs(expr: ir::Expression) -> Result<Vec<tx3_lang::UtxoRef>, Error> {
+pub fn expr_into_utxo_refs(expr: &ir::Expression) -> Result<Vec<tx3_lang::UtxoRef>, Error> {
     match expr {
         ir::Expression::UtxoRefs(x) => Ok(x.clone()),
         _ => Err(Error::CoerceError(
@@ -114,11 +114,11 @@ pub fn expr_into_stake_credential(
 
 pub fn expr_into_address(
     expr: &ir::Expression,
-    pparams: &PParams,
+    network: Network,
 ) -> Result<pallas::ledger::addresses::Address, Error> {
     match expr {
         ir::Expression::Address(x) => bytes_into_address(x),
-        ir::Expression::Hash(x) => policy_into_address(x, pparams),
+        ir::Expression::Hash(x) => policy_into_address(x, network),
         ir::Expression::Bytes(x) => bytes_into_address(x),
         ir::Expression::String(x) => string_into_address(x),
         _ => Err(Error::CoerceError(

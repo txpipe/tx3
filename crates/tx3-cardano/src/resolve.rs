@@ -1,5 +1,5 @@
 use pallas::ledger::primitives::conway as primitives;
-use tx3_lang::ir::InputQuery;
+use tx3_lang::{applying::Apply, ir::InputQuery};
 
 use crate::{compile::compile_tx, Error, PParams};
 
@@ -39,14 +39,21 @@ async fn eval_pass<L: Ledger>(
 
     attempt = attempt.apply()?;
 
-    for (name, query) in tx.find_queries() {
+    for (name, query) in attempt.find_queries() {
         let utxos = ledger.resolve_input(&query).await?;
 
-        // TODO: actually filter utxos
+        if utxos.is_empty() {
+            return Err(Error::InputsNotResolved(name, query));
+        }
+
         attempt.set_input(&name, utxos);
     }
 
     let attempt = attempt.apply()?;
+
+    if !attempt.as_ref().is_constant() {
+        return Err(Error::CantCompileNonConstantTir);
+    }
 
     let tx = compile_tx(&attempt.as_ref(), pparams)?;
 
