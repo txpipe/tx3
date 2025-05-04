@@ -145,12 +145,12 @@ fn eval_minutxo_constructor(&self, ctr: &ir::AssetConstructor) -> Result<primiti
 
 fn compile_output_block(
     ir: &ir::Output,
-    pparams: &PParams,
+    network: Network,
 ) -> Result<primitives::TransactionOutput<'static>, Error> {
     let address = ir
         .address
         .as_ref()
-        .map(|x| coercion::expr_into_address(x, pparams))
+        .map(|x| coercion::expr_into_address(x, network))
         .transpose()?
         .ok_or(Error::MissingAddress)?;
 
@@ -223,12 +223,12 @@ fn compile_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionInput>, Erro
 
 fn compile_outputs(
     tx: &ir::Tx,
-    pparams: &PParams,
+    network: Network,
 ) -> Result<Vec<primitives::TransactionOutput<'static>>, Error> {
     let resolved = tx
         .outputs
         .iter()
-        .map(|x| compile_output_block(x, pparams))
+        .map(|x| compile_output_block(x, network))
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(resolved)
@@ -261,7 +261,7 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
     let explicit_ref_inputs = tx
         .references
         .iter()
-        .flat_map(|x| coercion::expr_into_utxo_refs(x.clone()))
+        .flat_map(|x| coercion::expr_into_utxo_refs(x))
         .flatten()
         .map(|x| primitives::TransactionInput {
             transaction_id: x.txid.as_slice().into(),
@@ -274,7 +274,7 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
         .filter_map(|x| x.policy.as_ref())
         .filter_map(|x| x.script.as_ref())
         .filter_map(|x| x.as_utxo_ref())
-        .flat_map(coercion::expr_into_utxo_refs)
+        .flat_map(|x| coercion::expr_into_utxo_refs(&x))
         .flatten()
         .map(|x| primitives::TransactionInput {
             transaction_id: x.txid.as_slice().into(),
@@ -307,16 +307,16 @@ fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
 
 fn compile_tx_body(
     tx: &ir::Tx,
-    pparams: &PParams,
+    network: Network,
 ) -> Result<primitives::TransactionBody<'static>, Error> {
     let out = primitives::TransactionBody {
         inputs: compile_inputs(tx)?.into(),
-        outputs: compile_outputs(tx, pparams)?,
+        outputs: compile_outputs(tx, network)?,
         fee: coercion::expr_into_number(&tx.fees)? as u64,
         certificates: primitives::NonEmptySet::from_vec(compile_certs(tx)?),
         mint: compile_mint_block(tx)?,
         reference_inputs: primitives::NonEmptySet::from_vec(compile_reference_inputs(tx)?),
-        network_id: Some(pparams.network),
+        network_id: Some(network),
         ttl: None,
         validity_interval_start: None,
         withdrawals: None,
@@ -502,7 +502,7 @@ fn compute_script_data_hash(
 }
 
 pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'static>, Error> {
-    let mut transaction_body = compile_tx_body(tx, pparams)?;
+    let mut transaction_body = compile_tx_body(tx, pparams.network)?;
     let transaction_witness_set = compile_witness_set(tx, &transaction_body)?;
     let auxiliary_data = compile_auxiliary_data(tx)?;
 
