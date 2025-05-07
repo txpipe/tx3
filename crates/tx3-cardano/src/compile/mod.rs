@@ -482,7 +482,7 @@ fn compile_witness_set(
 
 fn infer_plutus_version(_transaction_body: &primitives::TransactionBody) -> PlutusVersion {
     // TODO: infer plutus version from existing scripts
-    return 2;
+    return 1;
 }
 
 fn compute_script_data_hash(
