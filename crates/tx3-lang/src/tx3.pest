@@ -12,8 +12,25 @@ wildcard = @{ "*" }
 unit = { "()" }
 utxo_ref = { "0x" ~ ASCII_HEX_DIGIT+ ~ "#" ~ ASCII_DIGIT+ }
 
-// Type definitions
-type = { "Int" | "Bool" | "Bytes" | "AnyAsset" | identifier }
+// Type identifiers
+
+primitive_type = {
+    "Int" |
+    "Bool" |
+    "Bytes" |
+    "AnyAsset" |
+    "Address" |
+    "UtxoRef"
+}
+
+custom_type = { identifier }
+list_type = { "List<" ~ type ~ ">" }
+
+type = { 
+    primitive_type |
+    list_type |
+    custom_type
+}
 
 // Parameters
 parameter = { identifier ~ ":" ~ type }
@@ -114,14 +131,14 @@ binary_operator = { "+" | "-" }
 
 data_expr = { data_term ~ (binary_operator ~ data_term)* }
 data_term = _{
-    "none" |
     unit |
     utxo_ref |
     hex_string |
     number |
     bool |
     string |
-    datum_constructor |
+    struct_constructor |
+    list_constructor |
     property_access |
     identifier
 }
@@ -151,8 +168,12 @@ variant_case_constructor = _{
     implicit_variant_case_constructor
 }
 
-datum_constructor = {
+struct_constructor = {
     identifier ~ variant_case_constructor
+}
+
+list_constructor = {
+    "[" ~ (data_expr ~ ",")* ~ data_expr? ~ "]"
 }
 
 address_expr = {

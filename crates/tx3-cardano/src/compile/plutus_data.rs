@@ -88,6 +88,17 @@ impl IntoData for i128 {
     }
 }
 
+impl TryIntoData for Vec<ir::Expression> {
+    fn try_into_data(&self) -> Result<PlutusData, super::Error> {
+        let items = self
+            .iter()
+            .map(TryIntoData::try_into_data)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(PlutusData::Array(MaybeIndefArray::Def(items)))
+    }
+}
+
 impl TryIntoData for ir::StructExpr {
     fn try_into_data(&self) -> Result<PlutusData, super::Error> {
         let fields = self
@@ -123,6 +134,7 @@ impl TryIntoData for ir::Expression {
             ir::Expression::String(x) => Ok(x.as_bytes().into_data()),
             ir::Expression::Address(x) => Ok(x.into_data()),
             ir::Expression::Hash(x) => Ok(x.into_data()),
+            ir::Expression::List(x) => x.try_into_data(),
             x => Err(super::Error::CoerceError(
                 format!("{:?}", x),
                 "PlutusData".to_string(),

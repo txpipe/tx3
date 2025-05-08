@@ -51,7 +51,7 @@
             },
             {
               "Redeemer": {
-                "Constructor": {
+                "StructConstructor": {
                   "type": {
                     "value": "SwapParams",
                     "span": {
@@ -217,7 +217,7 @@
             },
             {
               "Datum": {
-                "Constructor": {
+                "StructConstructor": {
                   "type": {
                     "value": "PoolState",
                     "span": {

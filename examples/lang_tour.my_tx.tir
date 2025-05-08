@@ -82,6 +82,27 @@
                 },
                 "field": "field3"
               }
+            },
+            {
+              "List": [
+                {
+                  "Number": 1
+                },
+                {
+                  "Number": 2
+                },
+                {
+                  "Number": 3
+                },
+                {
+                  "EvalProperty": {
+                    "object": {
+                      "EvalInputDatum": "source"
+                    },
+                    "field": "field1"
+                  }
+                }
+              ]
             }
           ]
         }

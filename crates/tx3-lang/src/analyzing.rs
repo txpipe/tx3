@@ -442,7 +442,7 @@ impl Analyzable for VariantCaseConstructor {
     }
 }
 
-impl Analyzable for DatumConstructor {
+impl Analyzable for StructConstructor {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         let r#type = self.r#type.analyze(parent.clone());
 
@@ -470,10 +470,21 @@ impl Analyzable for DatumConstructor {
     }
 }
 
+impl Analyzable for ListConstructor {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.elements.analyze(parent)
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.elements.is_resolved()
+    }
+}
+
 impl Analyzable for DataExpr {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
-            DataExpr::Constructor(x) => x.analyze(parent),
+            DataExpr::StructConstructor(x) => x.analyze(parent),
+            DataExpr::ListConstructor(x) => x.analyze(parent),
             DataExpr::Identifier(x) => x.analyze(parent),
             DataExpr::PropertyAccess(x) => x.analyze(parent),
             DataExpr::BinaryOp(x) => x.analyze(parent),
@@ -483,7 +494,8 @@ impl Analyzable for DataExpr {
 
     fn is_resolved(&self) -> bool {
         match self {
-            DataExpr::Constructor(x) => x.is_resolved(),
+            DataExpr::StructConstructor(x) => x.is_resolved(),
+            DataExpr::ListConstructor(x) => x.is_resolved(),
             DataExpr::Identifier(x) => x.is_resolved(),
             DataExpr::PropertyAccess(x) => x.is_resolved(),
             DataExpr::BinaryOp(x) => x.is_resolved(),
@@ -613,6 +625,7 @@ impl Analyzable for Type {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
             Type::Custom(x) => x.analyze(parent),
+            Type::List(x) => x.analyze(parent),
             _ => AnalyzeReport::default(),
         }
     }
@@ -620,6 +633,7 @@ impl Analyzable for Type {
     fn is_resolved(&self) -> bool {
         match self {
             Type::Custom(x) => x.is_resolved(),
+            Type::List(x) => x.is_resolved(),
             _ => true,
         }
     }

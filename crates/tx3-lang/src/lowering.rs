@@ -158,7 +158,7 @@ impl IntoLower for ast::UtxoRef {
     }
 }
 
-impl IntoLower for ast::DatumConstructor {
+impl IntoLower for ast::StructConstructor {
     type Output = ir::StructExpr;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
@@ -266,6 +266,7 @@ impl IntoLower for ast::Type {
             ast::Type::Address => Ok(ir::Type::Address),
             ast::Type::UtxoRef => Ok(ir::Type::UtxoRef),
             ast::Type::AnyAsset => Ok(ir::Type::AnyAsset),
+            ast::Type::List(_) => Ok(ir::Type::List),
             ast::Type::Custom(x) => Ok(ir::Type::Custom(x.value.clone())),
         }
     }
@@ -306,6 +307,20 @@ impl IntoLower for ast::PropertyAccess {
     }
 }
 
+impl IntoLower for ast::ListConstructor {
+    type Output = Vec<ir::Expression>;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let elements = self
+            .elements
+            .iter()
+            .map(|x| x.into_lower())
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(elements)
+    }
+}
+
 impl IntoLower for ast::DataExpr {
     type Output = ir::Expression;
 
@@ -316,7 +331,8 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::Bool(x) => ir::Expression::Bool(*x),
             ast::DataExpr::String(x) => ir::Expression::Bytes(x.value.as_bytes().to_vec()),
             ast::DataExpr::HexString(x) => ir::Expression::Bytes(hex::decode(&x.value)?),
-            ast::DataExpr::Constructor(x) => ir::Expression::Struct(x.into_lower()?),
+            ast::DataExpr::StructConstructor(x) => ir::Expression::Struct(x.into_lower()?),
+            ast::DataExpr::ListConstructor(x) => ir::Expression::List(x.into_lower()?),
             ast::DataExpr::Unit => ir::Expression::Struct(ir::StructExpr::unit()),
             ast::DataExpr::Identifier(x) => x.into_lower()?,
             ast::DataExpr::BinaryOp(x) => ir::Expression::EvalCustom(Box::new(x.into_lower()?)),
