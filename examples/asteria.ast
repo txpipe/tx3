@@ -125,7 +125,7 @@
             },
             {
               "Redeemer": {
-                "Constructor": {
+                "StructConstructor": {
                   "type": {
                     "value": "ShipCommand",
                     "span": {
@@ -372,7 +372,7 @@
             },
             {
               "Datum": {
-                "Constructor": {
+                "StructConstructor": {
                   "type": {
                     "value": "ShipState",
                     "span": {

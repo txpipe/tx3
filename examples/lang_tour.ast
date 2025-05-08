@@ -11,8 +11,8 @@
         ],
         "span": {
           "dummy": false,
-          "start": 399,
-          "end": 420
+          "start": 422,
+          "end": 443
         }
       },
       "references": [],
@@ -27,8 +27,8 @@
                   "value": "MyParty",
                   "span": {
                     "dummy": false,
-                    "start": 456,
-                    "end": 463
+                    "start": 479,
+                    "end": 486
                   }
                 }
               }
@@ -52,8 +52,8 @@
                     "value": "Ada",
                     "span": {
                       "dummy": false,
-                      "start": 513,
-                      "end": 516
+                      "start": 536,
+                      "end": 539
                     }
                   },
                   "amount": {
@@ -61,28 +61,28 @@
                       "value": "quantity",
                       "span": {
                         "dummy": false,
-                        "start": 517,
-                        "end": 525
+                        "start": 540,
+                        "end": 548
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 513,
-                    "end": 526
+                    "start": 536,
+                    "end": 549
                   }
                 }
               }
             },
             {
               "Redeemer": {
-                "Constructor": {
+                "StructConstructor": {
                   "type": {
                     "value": "MyVariant",
                     "span": {
                       "dummy": false,
-                      "start": 546,
-                      "end": 555
+                      "start": 569,
+                      "end": 578
                     }
                   },
                   "case": {
@@ -90,8 +90,8 @@
                       "value": "Case1",
                       "span": {
                         "dummy": false,
-                        "start": 557,
-                        "end": 562
+                        "start": 580,
+                        "end": 585
                       }
                     },
                     "fields": [
@@ -100,8 +100,8 @@
                           "value": "field1",
                           "span": {
                             "dummy": false,
-                            "start": 577,
-                            "end": 583
+                            "start": 600,
+                            "end": 606
                           }
                         },
                         "value": {
@@ -109,8 +109,8 @@
                         },
                         "span": {
                           "dummy": false,
-                          "start": 577,
-                          "end": 587
+                          "start": 600,
+                          "end": 610
                         }
                       },
                       {
@@ -118,8 +118,8 @@
                           "value": "field2",
                           "span": {
                             "dummy": false,
-                            "start": 601,
-                            "end": 607
+                            "start": 624,
+                            "end": 630
                           }
                         },
                         "value": {
@@ -127,15 +127,15 @@
                             "value": "AFAFAF",
                             "span": {
                               "dummy": false,
-                              "start": 609,
-                              "end": 617
+                              "start": 632,
+                              "end": 640
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 601,
-                          "end": 617
+                          "start": 624,
+                          "end": 640
                         }
                       },
                       {
@@ -143,8 +143,8 @@
                           "value": "field3",
                           "span": {
                             "dummy": false,
-                            "start": 631,
-                            "end": 637
+                            "start": 654,
+                            "end": 660
                           }
                         },
                         "value": {
@@ -152,29 +152,29 @@
                             "value": "quantity",
                             "span": {
                               "dummy": false,
-                              "start": 639,
-                              "end": 647
+                              "start": 662,
+                              "end": 670
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 631,
-                          "end": 647
+                          "start": 654,
+                          "end": 670
                         }
                       }
                     ],
                     "spread": null,
                     "span": {
                       "dummy": false,
-                      "start": 555,
-                      "end": 658
+                      "start": 578,
+                      "end": 681
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 546,
-                    "end": 658
+                    "start": 569,
+                    "end": 681
                   }
                 }
               }
@@ -182,8 +182,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 427,
-            "end": 665
+            "start": 450,
+            "end": 688
           }
         }
       ],
@@ -197,21 +197,21 @@
                   "value": "MyParty",
                   "span": {
                     "dummy": false,
-                    "start": 692,
-                    "end": 699
+                    "start": 715,
+                    "end": 722
                   }
                 }
               }
             },
             {
               "Datum": {
-                "Constructor": {
+                "StructConstructor": {
                   "type": {
                     "value": "MyRecord",
                     "span": {
                       "dummy": false,
-                      "start": 716,
-                      "end": 724
+                      "start": 739,
+                      "end": 747
                     }
                   },
                   "case": {
@@ -229,8 +229,8 @@
                           "value": "field1",
                           "span": {
                             "dummy": false,
-                            "start": 739,
-                            "end": 745
+                            "start": 762,
+                            "end": 768
                           }
                         },
                         "value": {
@@ -238,15 +238,15 @@
                             "value": "quantity",
                             "span": {
                               "dummy": false,
-                              "start": 747,
-                              "end": 755
+                              "start": 770,
+                              "end": 778
                             }
                           }
                         },
                         "span": {
                           "dummy": false,
-                          "start": 739,
-                          "end": 755
+                          "start": 762,
+                          "end": 778
                         }
                       },
                       {
@@ -254,8 +254,8 @@
                           "value": "field2",
                           "span": {
                             "dummy": false,
-                            "start": 769,
-                            "end": 775
+                            "start": 792,
+                            "end": 798
                           }
                         },
                         "value": {
@@ -263,8 +263,70 @@
                         },
                         "span": {
                           "dummy": false,
-                          "start": 769,
-                          "end": 779
+                          "start": 792,
+                          "end": 802
+                        }
+                      },
+                      {
+                        "name": {
+                          "value": "field4",
+                          "span": {
+                            "dummy": false,
+                            "start": 816,
+                            "end": 822
+                          }
+                        },
+                        "value": {
+                          "ListConstructor": {
+                            "elements": [
+                              {
+                                "Number": 1
+                              },
+                              {
+                                "Number": 2
+                              },
+                              {
+                                "Number": 3
+                              },
+                              {
+                                "PropertyAccess": {
+                                  "object": {
+                                    "value": "source",
+                                    "span": {
+                                      "dummy": false,
+                                      "start": 834,
+                                      "end": 840
+                                    }
+                                  },
+                                  "path": [
+                                    {
+                                      "value": "field1",
+                                      "span": {
+                                        "dummy": false,
+                                        "start": 841,
+                                        "end": 847
+                                      }
+                                    }
+                                  ],
+                                  "span": {
+                                    "dummy": false,
+                                    "start": 834,
+                                    "end": 847
+                                  }
+                                }
+                              }
+                            ],
+                            "span": {
+                              "dummy": false,
+                              "start": 824,
+                              "end": 848
+                            }
+                          }
+                        },
+                        "span": {
+                          "dummy": false,
+                          "start": 816,
+                          "end": 848
                         }
                       }
                     ],
@@ -273,21 +335,21 @@
                         "value": "source",
                         "span": {
                           "dummy": false,
-                          "start": 796,
-                          "end": 802
+                          "start": 865,
+                          "end": 871
                         }
                       }
                     },
                     "span": {
                       "dummy": false,
-                      "start": 725,
-                      "end": 812
+                      "start": 748,
+                      "end": 881
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 716,
-                    "end": 812
+                    "start": 739,
+                    "end": 881
                   }
                 }
               }
@@ -303,8 +365,8 @@
                             "value": "source",
                             "span": {
                               "dummy": false,
-                              "start": 839,
-                              "end": 845
+                              "start": 908,
+                              "end": 914
                             }
                           },
                           "path": [
@@ -312,15 +374,15 @@
                               "value": "field3",
                               "span": {
                                 "dummy": false,
-                                "start": 846,
-                                "end": 852
+                                "start": 915,
+                                "end": 921
                               }
                             }
                           ],
                           "span": {
                             "dummy": false,
-                            "start": 839,
-                            "end": 852
+                            "start": 908,
+                            "end": 921
                           }
                         }
                       },
@@ -330,8 +392,8 @@
                             "value": "source",
                             "span": {
                               "dummy": false,
-                              "start": 854,
-                              "end": 860
+                              "start": 923,
+                              "end": 929
                             }
                           },
                           "path": [
@@ -339,15 +401,15 @@
                               "value": "field2",
                               "span": {
                                 "dummy": false,
-                                "start": 861,
-                                "end": 867
+                                "start": 930,
+                                "end": 936
                               }
                             }
                           ],
                           "span": {
                             "dummy": false,
-                            "start": 854,
-                            "end": 867
+                            "start": 923,
+                            "end": 936
                           }
                         }
                       },
@@ -357,8 +419,8 @@
                             "value": "source",
                             "span": {
                               "dummy": false,
-                              "start": 869,
-                              "end": 875
+                              "start": 938,
+                              "end": 944
                             }
                           },
                           "path": [
@@ -366,22 +428,22 @@
                               "value": "field1",
                               "span": {
                                 "dummy": false,
-                                "start": 876,
-                                "end": 882
+                                "start": 945,
+                                "end": 951
                               }
                             }
                           ],
                           "span": {
                             "dummy": false,
-                            "start": 869,
-                            "end": 882
+                            "start": 938,
+                            "end": 951
                           }
                         }
                       },
                       "span": {
                         "dummy": false,
-                        "start": 830,
-                        "end": 883
+                        "start": 899,
+                        "end": 952
                       }
                     }
                   },
@@ -392,8 +454,8 @@
                         "value": "Ada",
                         "span": {
                           "dummy": false,
-                          "start": 886,
-                          "end": 889
+                          "start": 955,
+                          "end": 958
                         }
                       },
                       "amount": {
@@ -401,15 +463,15 @@
                       },
                       "span": {
                         "dummy": false,
-                        "start": 886,
-                        "end": 893
+                        "start": 955,
+                        "end": 962
                       }
                     }
                   },
                   "span": {
                     "dummy": false,
-                    "start": 884,
-                    "end": 885
+                    "start": 953,
+                    "end": 954
                   }
                 }
               }
@@ -417,8 +479,8 @@
           ],
           "span": {
             "dummy": false,
-            "start": 671,
-            "end": 900
+            "start": 694,
+            "end": 969
           }
         }
       ],
@@ -427,8 +489,8 @@
       "adhoc": [],
       "span": {
         "dummy": false,
-        "start": 391,
-        "end": 903
+        "start": 414,
+        "end": 971
       },
       "collateral": []
     }
@@ -466,19 +528,30 @@
                 "start": 72,
                 "end": 85
               }
+            },
+            {
+              "name": "field4",
+              "type": {
+                "List": "Int"
+              },
+              "span": {
+                "dummy": false,
+                "start": 91,
+                "end": 108
+              }
             }
           ],
           "span": {
             "dummy": false,
             "start": 16,
-            "end": 88
+            "end": 111
           }
         }
       ],
       "span": {
         "dummy": false,
         "start": 16,
-        "end": 88
+        "end": 111
       }
     },
     {
@@ -492,8 +565,8 @@
               "type": "Int",
               "span": {
                 "dummy": false,
-                "start": 127,
-                "end": 138
+                "start": 150,
+                "end": 161
               }
             },
             {
@@ -501,8 +574,8 @@
               "type": "Bytes",
               "span": {
                 "dummy": false,
-                "start": 148,
-                "end": 161
+                "start": 171,
+                "end": 184
               }
             },
             {
@@ -510,15 +583,15 @@
               "type": "Int",
               "span": {
                 "dummy": false,
-                "start": 171,
-                "end": 182
+                "start": 194,
+                "end": 205
               }
             }
           ],
           "span": {
             "dummy": false,
-            "start": 111,
-            "end": 189
+            "start": 134,
+            "end": 212
           }
         },
         {
@@ -526,15 +599,15 @@
           "fields": [],
           "span": {
             "dummy": false,
-            "start": 195,
-            "end": 200
+            "start": 218,
+            "end": 223
           }
         }
       ],
       "span": {
         "dummy": false,
-        "start": 90,
-        "end": 203
+        "start": 113,
+        "end": 226
       }
     }
   ],
@@ -545,15 +618,15 @@
         "value": "ABCDEF1234",
         "span": {
           "dummy": false,
-          "start": 264,
-          "end": 276
+          "start": 287,
+          "end": 299
         }
       },
       "asset_name": "MYTOKEN",
       "span": {
         "dummy": false,
-        "start": 244,
-        "end": 285
+        "start": 267,
+        "end": 308
       }
     }
   ],
@@ -575,15 +648,15 @@
           "value": "ABCDEF1234",
           "span": {
             "dummy": false,
-            "start": 229,
-            "end": 241
+            "start": 252,
+            "end": 264
           }
         }
       },
       "span": {
         "dummy": false,
-        "start": 205,
-        "end": 242
+        "start": 228,
+        "end": 265
       }
     },
     {
@@ -597,8 +670,8 @@
                   "value": "ABCDEF1234",
                   "span": {
                     "dummy": false,
-                    "start": 325,
-                    "end": 337
+                    "start": 348,
+                    "end": 360
                   }
                 }
               }
@@ -609,8 +682,8 @@
                   "value": "ABCDEF1234",
                   "span": {
                     "dummy": false,
-                    "start": 351,
-                    "end": 363
+                    "start": 374,
+                    "end": 386
                   }
                 }
               }
@@ -621,8 +694,8 @@
                   "value": "ABCDEF1234",
                   "span": {
                     "dummy": false,
-                    "start": 374,
-                    "end": 386
+                    "start": 397,
+                    "end": 409
                   }
                 }
               }
@@ -630,21 +703,21 @@
           ],
           "span": {
             "dummy": false,
-            "start": 313,
-            "end": 389
+            "start": 336,
+            "end": 412
           }
         }
       },
       "span": {
         "dummy": false,
-        "start": 287,
-        "end": 389
+        "start": 310,
+        "end": 412
       }
     }
   ],
   "span": {
     "dummy": false,
     "start": 0,
-    "end": 904
+    "end": 972
   }
 }

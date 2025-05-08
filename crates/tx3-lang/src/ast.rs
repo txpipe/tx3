@@ -544,7 +544,7 @@ pub struct RecordConstructorField {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct DatumConstructor {
+pub struct StructConstructor {
     pub r#type: Identifier,
     pub case: VariantCaseConstructor,
     pub span: Span,
@@ -576,6 +576,12 @@ impl VariantCaseConstructor {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ListConstructor {
+    pub elements: Vec<DataExpr>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UtxoRef {
     pub txid: Vec<u8>,
     pub index: u64,
@@ -598,7 +604,8 @@ pub enum DataExpr {
     Bool(bool),
     String(StringLiteral),
     HexString(HexStringLiteral),
-    Constructor(DatumConstructor),
+    StructConstructor(StructConstructor),
+    ListConstructor(ListConstructor),
     Identifier(Identifier),
     PropertyAccess(PropertyAccess),
     BinaryOp(DataBinaryOp),
@@ -645,6 +652,7 @@ pub enum Type {
     Address,
     UtxoRef,
     AnyAsset,
+    List(Box<Type>),
     Custom(Identifier),
 }
 

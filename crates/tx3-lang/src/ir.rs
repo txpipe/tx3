@@ -97,6 +97,7 @@ pub enum Type {
     Address,
     UtxoRef,
     AnyAsset,
+    List,
     Custom(String),
 }
 
@@ -109,6 +110,7 @@ pub struct PropertyAccess {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Expression {
     None,
+    List(Vec<Expression>),
     Struct(StructExpr),
     Bytes(Vec<u8>),
     Number(i128),

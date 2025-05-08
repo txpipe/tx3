@@ -836,8 +836,8 @@ impl AstNode for UtxoRef {
     }
 }
 
-impl AstNode for DatumConstructor {
-    const RULE: Rule = Rule::datum_constructor;
+impl AstNode for StructConstructor {
+    const RULE: Rule = Rule::struct_constructor;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         let span = pair.as_span().into();
@@ -846,7 +846,7 @@ impl AstNode for DatumConstructor {
         let r#type = Identifier::parse(inner.next().unwrap())?;
         let case = VariantCaseConstructor::parse(inner.next().unwrap())?;
 
-        Ok(DatumConstructor {
+        Ok(StructConstructor {
             r#type,
             case,
             scope: None,
@@ -935,6 +935,23 @@ impl AstNode for VariantCaseConstructor {
     }
 }
 
+impl AstNode for ListConstructor {
+    const RULE: Rule = Rule::list_constructor;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let inner = pair.into_inner();
+
+        let elements = inner.map(DataExpr::parse).collect::<Result<Vec<_>, _>>()?;
+
+        Ok(ListConstructor { elements, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
 impl DataExpr {
     fn number_parse(pair: Pair<Rule>) -> Result<Self, Error> {
         Ok(DataExpr::Number(pair.as_str().parse().unwrap()))
@@ -952,8 +969,12 @@ impl DataExpr {
         Ok(DataExpr::PropertyAccess(PropertyAccess::parse(pair)?))
     }
 
-    fn constructor_parse(pair: Pair<Rule>) -> Result<Self, Error> {
-        Ok(DataExpr::Constructor(DatumConstructor::parse(pair)?))
+    fn struct_constructor_parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        Ok(DataExpr::StructConstructor(StructConstructor::parse(pair)?))
+    }
+
+    fn list_constructor_parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        Ok(DataExpr::ListConstructor(ListConstructor::parse(pair)?))
     }
 
     fn utxo_ref_parse(pair: Pair<Rule>) -> Result<Self, Error> {
@@ -966,7 +987,8 @@ impl DataExpr {
             Rule::string => Ok(DataExpr::String(StringLiteral::parse(pair)?)),
             Rule::bool => DataExpr::bool_parse(pair),
             Rule::hex_string => Ok(DataExpr::HexString(HexStringLiteral::parse(pair)?)),
-            Rule::datum_constructor => DataExpr::constructor_parse(pair),
+            Rule::struct_constructor => DataExpr::struct_constructor_parse(pair),
+            Rule::list_constructor => DataExpr::list_constructor_parse(pair),
             Rule::unit => Ok(DataExpr::Unit),
             Rule::identifier => DataExpr::identifier_parse(pair),
             Rule::property_access => DataExpr::property_access_parse(pair),
@@ -1008,7 +1030,8 @@ impl AstNode for DataExpr {
             DataExpr::Bool(_) => &Span::DUMMY,   // TODO
             DataExpr::String(x) => x.span(),
             DataExpr::HexString(x) => x.span(),
-            DataExpr::Constructor(x) => x.span(),
+            DataExpr::StructConstructor(x) => x.span(),
+            DataExpr::ListConstructor(x) => x.span(),
             DataExpr::Identifier(x) => x.span(),
             DataExpr::PropertyAccess(x) => x.span(),
             DataExpr::BinaryOp(x) => &x.span,
@@ -1037,14 +1060,24 @@ impl AstNode for Type {
     const RULE: Rule = Rule::r#type;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
-        match pair.as_str() {
-            "Int" => Ok(Type::Int),
-            "Bool" => Ok(Type::Bool),
-            "Bytes" => Ok(Type::Bytes),
-            "Address" => Ok(Type::Address),
-            "UtxoRef" => Ok(Type::UtxoRef),
-            "AnyAsset" => Ok(Type::AnyAsset),
-            t => Ok(Type::Custom(Identifier::new(t.to_string()))),
+        let inner = pair.into_inner().next().unwrap();
+
+        match inner.as_rule() {
+            Rule::primitive_type => match inner.as_str() {
+                "Int" => Ok(Type::Int),
+                "Bool" => Ok(Type::Bool),
+                "Bytes" => Ok(Type::Bytes),
+                "Address" => Ok(Type::Address),
+                "UtxoRef" => Ok(Type::UtxoRef),
+                "AnyAsset" => Ok(Type::AnyAsset),
+                _ => unreachable!("Unexpected string in primitive_type: {:?}", inner.as_str()),
+            },
+            Rule::list_type => {
+                let inner = inner.into_inner().next().unwrap();
+                Ok(Type::List(Box::new(Type::parse(inner)?)))
+            }
+            Rule::custom_type => Ok(Type::Custom(Identifier::new(inner.as_str().to_owned()))),
+            x => unreachable!("Unexpected rule in type: {:?}", x),
         }
     }
 
@@ -1284,6 +1317,29 @@ mod tests {
 
     input_to_ast_check!(Type, "any_asset", "AnyAsset", Type::AnyAsset);
 
+    input_to_ast_check!(Type, "list", "List<Int>", Type::List(Box::new(Type::Int)));
+
+    input_to_ast_check!(
+        Type,
+        "identifier",
+        "MyType",
+        Type::Custom(Identifier::new("MyType".to_string()))
+    );
+
+    input_to_ast_check!(
+        Type,
+        "other_type",
+        "List<Bytes>",
+        Type::List(Box::new(Type::Bytes))
+    );
+
+    input_to_ast_check!(
+        Type,
+        "within_list",
+        "List<List<Int>>",
+        Type::List(Box::new(Type::List(Box::new(Type::Int))))
+    );
+
     input_to_ast_check!(
         TypeDef,
         "type_def_record",
@@ -1358,10 +1414,79 @@ mod tests {
     );
 
     input_to_ast_check!(
-        DataExpr,
-        "identifier",
-        "my_party",
-        DataExpr::Identifier(Identifier::new("my_party".to_string()))
+        ListConstructor,
+        "empty_list",
+        "[]",
+        ListConstructor {
+            elements: vec![],
+            span: Span::DUMMY,
+        }
+    );
+
+    input_to_ast_check!(
+        ListConstructor,
+        "trailing_comma",
+        "[1, 2,]",
+        ListConstructor {
+            elements: vec![DataExpr::Number(1), DataExpr::Number(2),],
+            span: Span::DUMMY,
+        }
+    );
+
+    input_to_ast_check!(
+        ListConstructor,
+        "int_list",
+        "[1, 2]",
+        ListConstructor {
+            elements: vec![DataExpr::Number(1), DataExpr::Number(2),],
+            span: Span::DUMMY,
+        }
+    );
+
+    input_to_ast_check!(
+        ListConstructor,
+        "string_list",
+        "[\"Hello\", \"World\"]",
+        ListConstructor {
+            elements: vec![
+                DataExpr::String(StringLiteral::new("Hello".to_string())),
+                DataExpr::String(StringLiteral::new("World".to_string()))
+            ],
+            span: Span::DUMMY,
+        }
+    );
+
+    input_to_ast_check!(
+        ListConstructor,
+        "mixed_list",
+        "[1, \"Hello\", true]",
+        ListConstructor {
+            elements: vec![
+                DataExpr::Number(1),
+                DataExpr::String(StringLiteral::new("Hello".to_string())),
+                DataExpr::Bool(true)
+            ],
+            span: Span::DUMMY,
+        }
+    );
+
+    input_to_ast_check!(
+        ListConstructor,
+        "list_within_list",
+        "[[1, 2], [3, 4]]",
+        ListConstructor {
+            elements: vec![
+                DataExpr::ListConstructor(ListConstructor {
+                    elements: vec![DataExpr::Number(1), DataExpr::Number(2),],
+                    span: Span::DUMMY,
+                }),
+                DataExpr::ListConstructor(ListConstructor {
+                    elements: vec![DataExpr::Number(3), DataExpr::Number(4),],
+                    span: Span::DUMMY,
+                }),
+            ],
+            span: Span::DUMMY,
+        }
     );
 
     input_to_ast_check!(DataExpr, "literal_bool_true", "true", DataExpr::Bool(true));
@@ -1374,6 +1499,8 @@ mod tests {
     );
 
     input_to_ast_check!(DataExpr, "unit_value", "())", DataExpr::Unit);
+
+    input_to_ast_check!(DataExpr, "number_value", "123", DataExpr::Number(123));
 
     input_to_ast_check!(
         PropertyAccess,
@@ -1550,13 +1677,13 @@ mod tests {
     );
 
     input_to_ast_check!(
-        DatumConstructor,
-        "datum_constructor_record",
+        StructConstructor,
+        "struct_constructor_record",
         "MyRecord {
             field1: 10,
             field2: abc,
         }",
-        DatumConstructor {
+        StructConstructor {
             r#type: Identifier::new("MyRecord"),
             case: VariantCaseConstructor {
                 name: Identifier::new("Default"),
@@ -1582,13 +1709,13 @@ mod tests {
     );
 
     input_to_ast_check!(
-        DatumConstructor,
-        "datum_constructor_variant",
+        StructConstructor,
+        "struct_constructor_variant",
         "ShipCommand::MoveShip {
             delta_x: delta_x,
             delta_y: delta_y,
         }",
-        DatumConstructor {
+        StructConstructor {
             r#type: Identifier::new("ShipCommand"),
             case: VariantCaseConstructor {
                 name: Identifier::new("MoveShip"),
@@ -1614,14 +1741,14 @@ mod tests {
     );
 
     input_to_ast_check!(
-        DatumConstructor,
-        "datum_constructor_variant_with_spread",
+        StructConstructor,
+        "struct_constructor_variant_with_spread",
         "ShipCommand::MoveShip {
             delta_x: delta_x,
             delta_y: delta_y,
             ...abc
         }",
-        DatumConstructor {
+        StructConstructor {
             r#type: Identifier::new("ShipCommand"),
             case: VariantCaseConstructor {
                 name: Identifier::new("MoveShip"),
@@ -1692,11 +1819,11 @@ mod tests {
     #[test]
     fn test_spans_are_respected() {
         let program = parse_well_known_example("lang_tour");
-        assert_eq!(program.span, Span::new(0, 904));
+        assert_eq!(program.span, Span::new(0, 972));
 
         assert_eq!(program.parties[0].span, Span::new(0, 14));
 
-        assert_eq!(program.types[0].span, Span::new(16, 88));
+        assert_eq!(program.types[0].span, Span::new(16, 111));
     }
 
     fn make_snapshot_if_missing(example: &str, program: &Program) {

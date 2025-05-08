@@ -4,6 +4,7 @@ type MyRecord {
     field1: Int,
     field2: Bytes,
     field3: Bytes,
+    field4: List<Int>,
 }
 
 type MyVariant {
@@ -44,9 +45,9 @@ tx my_tx(
         datum: MyRecord {
             field1: quantity,
             field2: 54,
+            field4: [1, 2, 3, source.field1],
             ...source
         },
         amount: AnyAsset(source.field3, source.field2, source.field1) + Ada(40),
     }
-
 }

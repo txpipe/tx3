@@ -121,7 +121,7 @@
             },
             {
               "Datum": {
-                "Constructor": {
+                "StructConstructor": {
                   "type": {
                     "value": "State",
                     "span": {

@@ -12,6 +12,9 @@ pub enum Error {
 
     #[error("invalid argument {0:?} for {1}")]
     InvalidArgument(ArgValue, String),
+
+    #[error("property {0} not found in {1}")]
+    PropertyNotFound(String, String),
 }
 
 fn arg_value_into_expr(arg: ArgValue) -> ir::Expression {
@@ -526,6 +529,52 @@ impl Apply for ir::StructExpr {
     }
 }
 
+impl Apply for ir::PropertyAccess {
+    fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            object: self.object.apply_args(args)?,
+            field: self.field,
+        })
+    }
+
+    fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            object: self.object.apply_inputs(args)?,
+            field: self.field,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            object: self.object.apply_fees(fees)?,
+            field: self.field,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.object.is_constant()
+    }
+
+    fn params(&self) -> BTreeMap<String, ir::Type> {
+        self.object.params()
+    }
+
+    fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        self.object.queries()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            object: self.object.reduce()?,
+            field: self.field,
+        })
+    }
+}
+
 impl Apply for ir::AssetExpr {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         Ok(Self {
@@ -858,6 +907,7 @@ impl Apply for ir::Expression {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         match self {
             ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.apply_args(args)?)),
+            ir::Expression::List(x) => Ok(ir::Expression::List(x.apply_args(args)?)),
             ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.apply_args(args)?)),
             ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.apply_args(args)?)),
             ir::Expression::EvalParameter(name, ty) => {
@@ -905,6 +955,7 @@ impl Apply for ir::Expression {
                 }
             }
             ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.apply_inputs(args)?)),
+            ir::Expression::List(x) => Ok(ir::Expression::List(x.apply_inputs(args)?)),
             ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.apply_inputs(args)?)),
             ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.apply_inputs(args)?)),
             _ => Ok(self),
@@ -919,6 +970,7 @@ impl Apply for ir::Expression {
                 amount: ir::Expression::Number(fees as i128),
             }])),
             ir::Expression::Struct(x) => Ok(ir::Expression::Struct(x.apply_fees(fees)?)),
+            ir::Expression::List(x) => Ok(ir::Expression::List(x.apply_fees(fees)?)),
             ir::Expression::Assets(x) => Ok(ir::Expression::Assets(x.apply_fees(fees)?)),
             ir::Expression::EvalCustom(x) => Ok(ir::Expression::EvalCustom(x.apply_fees(fees)?)),
             _ => Ok(self),
@@ -934,10 +986,18 @@ impl Apply for ir::Expression {
             Self::String(_) => true,
             Self::Address(_) => true,
             Self::Hash(_) => true,
+            Self::UtxoRefs(_) => true,
+            Self::UtxoSet(_) => true,
+            Self::List(x) => x.is_constant(),
             Self::Struct(x) => x.is_constant(),
             Self::Assets(x) => x.is_constant(),
             Self::EvalCustom(x) => x.is_constant(),
-            _ => false,
+            Self::EvalProperty(x) => x.is_constant(),
+            Self::AdHocDirective(x) => x.is_constant(),
+            Self::EvalInputDatum(..) => false,
+            Self::EvalInputAssets(..) => false,
+            Self::FeeQuery => false,
+            Self::EvalParameter(..) => false,
         }
     }
 
@@ -981,6 +1041,13 @@ impl Apply for ir::Expression {
                 }
                 _ => Err(Error::InvalidBinaryOp(*op)),
             },
+            ir::Expression::EvalProperty(x) => {
+                //TODO: property access of constant objects should be reduced but we're erasing
+                // field names from the struct, making this impossible. We need to refactor
+                // either the StructExpr so that it retains field names or the PropertyAccess
+                // so that the path gets turned into field indexes.
+                todo!("fix this")
+            }
             _ => Ok(self),
         }
     }
