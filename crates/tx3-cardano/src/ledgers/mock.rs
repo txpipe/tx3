@@ -45,8 +45,8 @@ impl Ledger for MockLedger {
             min_fee_constant: 2,
             coins_per_utxo_byte: 1,
             cost_models: HashMap::from([
-                (1, COST_MODEL_PLUTUS_V1.clone()),
-                (2, COST_MODEL_PLUTUS_V2.clone()),
+                (0, COST_MODEL_PLUTUS_V1.clone()),
+                (1, COST_MODEL_PLUTUS_V2.clone()),
             ]),
         })
     }
