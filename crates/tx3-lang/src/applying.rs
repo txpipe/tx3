@@ -1041,7 +1041,7 @@ impl Apply for ir::Expression {
                 }
                 _ => Err(Error::InvalidBinaryOp(*op)),
             },
-            ir::Expression::EvalProperty(x) => {
+            ir::Expression::EvalProperty(_x) => {
                 //TODO: property access of constant objects should be reduced but we're erasing
                 // field names from the struct, making this impossible. We need to refactor
                 // either the StructExpr so that it retains field names or the PropertyAccess
