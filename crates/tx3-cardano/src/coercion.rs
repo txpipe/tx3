@@ -3,7 +3,7 @@ use std::str::FromStr as _;
 use pallas::ledger::primitives::conway as primitives;
 use tx3_lang::ir;
 
-use crate::{Error, Network, PParams};
+use crate::{Error, Network};
 
 pub fn string_into_address(value: &str) -> Result<pallas::ledger::addresses::Address, Error> {
     pallas::ledger::addresses::Address::from_str(value)
