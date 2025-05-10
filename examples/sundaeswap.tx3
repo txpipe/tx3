@@ -1,0 +1,101 @@
+party Owner;
+
+// Script Addr: addr_test1wqa9gen6xe23ktpxcgf0h2ejzrjk86xw55nf2dqwpklg3ygqhzmhh
+// Deployed Script utxo: 49dace0e1b6732a6c0b5565baa0864336d0299133152b2576b1dd40c959a6da5#0
+policy Validator = 0x3a54667a36551b2c26c212fbab3210e563e8cea52695340e0dbe8891;
+
+// It would be nice if we could do type-aliases
+// for the types in the tx3 language similar to
+// aiken
+type Ident = Bytes;
+type Script = Bytes;
+type AssetName = Bytes;
+
+// It would also be nice if we could do phantom
+// types too
+type Hash<alg, a> = Bytes;
+type PolicyId = Hash<Blake2b_224, Script>;
+
+// For our use case in replicating sundaeswap's
+// pool datum, we need to have a type for
+// a tuple of AssetClass which is a pair of PolicyId 
+// and AssetName, so tuple support would be nice
+type AssetClass = (PolicyId, AssetName);
+
+// This is a custom type based on sundaeswap's
+// definition on MultiSigScript
+type MultiSigScript {
+    Signature { key_hash: Bytes },
+    // Would also be nice to have a support for List / Vector / Array
+    AllOf { scripts: List<MultiSigScript> }, 
+    AnyOf { scripts: List<MultiSigScript> },
+    AtLeast { required: Int, scripts: List<MultiSigScript> },
+    Before { time: Int }
+    Script { script_hash: Bytes },
+}
+
+// The above MultiSigScript type definition is good
+// but it would also be nice to define it like this
+/*
+    type Signature {
+        key_hash: Bytes,
+    }
+
+    type MultiSigScript {
+        signature: Signature,
+    }
+
+    // still the same as how we could access variant cases in the first place
+    datum: MultiSigScript::Signature {
+        key_hash: 0x1c45590247a5be780c18c769276296d24a3b09c365401264af6998ee432be21b
+    }
+*/
+
+// SundaeSwap's pool datum defintion
+// https://github.com/SundaeSwap-finance/sundae-contracts/blob/be33466b7dbe0f8e6c0e0f46ff23737897f45835/lib/types/pool.ak#L6
+type PoolDatum {
+    identifier: Ident,
+    assets: (AssetClass, AssetClass),
+    circulating_lp: Int,
+    bid_fees_per_10_thousand: Int,
+    ask_fees_per_10_thousand: Int,
+    fee_manager: MultiSigScript,
+    market_open: Int,
+    protocol_fees: Int,
+}
+
+
+// example locking with example pool datum values
+tx lock(
+    quantity: Int,
+) {
+    input source {
+        from: Owner,
+        min_amount: Ada(quantity),
+    }
+
+    output {
+        to: Validator,
+        amount: Ada(quantity),
+        datum: PoolDatum {
+            identifier: 0x656261746164616E,
+            assets: (
+                (0x6d66991f741f352129ae8b3f32f9b5b45220f0ff2bc66efe0f5f77c3, 0x656261746164616E),
+                (0x6d66991f741f352129ae8b3f32f9b5b45220f0ff2bc66efe0f5f77c3, 0x656261746164616E),
+            ),
+            circulating_lp: 0,
+            bid_fees_per_10_thousand: 0,
+            ask_fees_per_10_thousand: 0,
+            fee_manager: MultiSigScript::Signature { 
+                key_hash: 0x1c45590247a5be780c18c769276296d24a3b09c365401264af6998ee432be21b 
+            },
+            market_open: 0,
+            protocol_fees: 0,
+        },
+    }
+
+    output {
+        to: Owner,
+        amount: source - Ada(quantity) - fees,
+    }
+}
