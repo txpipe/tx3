@@ -131,6 +131,10 @@ pub fn expr_into_address(
 pub fn expr_into_bytes(ir: &ir::Expression) -> Result<primitives::Bytes, Error> {
     match ir {
         ir::Expression::Bytes(x) => Ok(primitives::Bytes::from(x.clone())),
+        ir::Expression::String(s) => match hex::decode(s) {
+            Ok(x) => Ok(primitives::Bytes::from(x)),
+            Err(_) => Err(Error::CoerceError(format!("{:?}", ir), "Bytes".to_string())),
+        },
         _ => Err(Error::CoerceError(format!("{:?}", ir), "Bytes".to_string())),
     }
 }
