@@ -1267,7 +1267,7 @@ impl Apply for ir::Tx {
             references: self.references.apply_args(args)?,
             inputs: self.inputs.apply_args(args)?,
             outputs: self.outputs.apply_args(args)?,
-            mint: self.mint.apply_args(args)?,
+            mints: self.mints.apply_args(args)?,
             fees: self.fees.apply_args(args)?,
             adhoc: self.adhoc.apply_args(args)?,
             collateral: self.collateral.apply_args(args)?,
@@ -1281,7 +1281,7 @@ impl Apply for ir::Tx {
             references: self.references.apply_inputs(args)?,
             inputs: self.inputs.apply_inputs(args)?,
             outputs: self.outputs.apply_inputs(args)?,
-            mint: self.mint.apply_inputs(args)?,
+            mints: self.mints.apply_inputs(args)?,
             fees: self.fees.apply_inputs(args)?,
             adhoc: self.adhoc.apply_inputs(args)?,
             collateral: self.collateral.apply_inputs(args)?,
@@ -1293,7 +1293,7 @@ impl Apply for ir::Tx {
             references: self.references.apply_fees(fees)?,
             inputs: self.inputs.apply_fees(fees)?,
             outputs: self.outputs.apply_fees(fees)?,
-            mint: self.mint.apply_fees(fees)?,
+            mints: self.mints.apply_fees(fees)?,
             fees: self.fees.apply_fees(fees)?,
             adhoc: self.adhoc.apply_fees(fees)?,
             collateral: self.collateral.apply_fees(fees)?,
@@ -1303,7 +1303,7 @@ impl Apply for ir::Tx {
     fn is_constant(&self) -> bool {
         self.inputs.iter().all(|x| x.is_constant())
             && self.outputs.iter().all(|x| x.is_constant())
-            && self.mint.is_constant()
+            && self.mints.iter().all(|x| x.is_constant())
             && self.fees.is_constant()
             && self.adhoc.iter().all(|x| x.is_constant())
     }
@@ -1313,7 +1313,7 @@ impl Apply for ir::Tx {
         let mut params = BTreeMap::new();
         params.extend(self.inputs.params());
         params.extend(self.outputs.params());
-        params.extend(self.mint.params());
+        params.extend(self.mints.params());
         params.extend(self.fees.params());
         params.extend(self.adhoc.params());
         params
@@ -1324,7 +1324,7 @@ impl Apply for ir::Tx {
         let mut queries = BTreeMap::new();
         queries.extend(self.inputs.queries());
         queries.extend(self.outputs.queries());
-        queries.extend(self.mint.queries());
+        queries.extend(self.mints.queries());
         queries.extend(self.fees.queries());
         queries.extend(self.adhoc.queries());
         queries
@@ -1339,7 +1339,7 @@ impl Apply for ir::Tx {
             references: self.references.reduce()?,
             inputs: self.inputs.reduce()?,
             outputs: self.outputs.reduce()?,
-            mint: self.mint.reduce()?,
+            mints: self.mints.reduce()?,
             fees: self.fees.reduce()?,
             adhoc: self.adhoc.reduce()?,
             collateral: self.collateral.reduce()?,
