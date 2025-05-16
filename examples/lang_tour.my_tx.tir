@@ -155,7 +155,85 @@
       }
     }
   ],
-  "mint": null,
+  "mints": [
+    {
+      "amount": {
+        "Assets": [
+          {
+            "policy": {
+              "Bytes": [
+                171,
+                205,
+                239,
+                18,
+                52
+              ]
+            },
+            "asset_name": {
+              "Bytes": [
+                77,
+                89,
+                84,
+                79,
+                75,
+                69,
+                78
+              ]
+            },
+            "amount": {
+              "Number": 100
+            }
+          }
+        ]
+      },
+      "redeemer": {
+        "Struct": {
+          "constructor": 0,
+          "fields": []
+        }
+      }
+    },
+    {
+      "amount": {
+        "Assets": [
+          {
+            "policy": {
+              "Bytes": [
+                171,
+                205,
+                18,
+                52
+              ]
+            },
+            "asset_name": {
+              "Bytes": [
+                79,
+                84,
+                72,
+                69,
+                82,
+                95,
+                84,
+                79,
+                75,
+                69,
+                78
+              ]
+            },
+            "amount": {
+              "Number": 10
+            }
+          }
+        ]
+      },
+      "redeemer": {
+        "Struct": {
+          "constructor": 0,
+          "fields": []
+        }
+      }
+    }
+  ],
   "adhoc": [],
   "collateral": []
 }

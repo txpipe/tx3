@@ -331,7 +331,7 @@
         }
       ],
       "burn": null,
-      "mint": null,
+      "mints": [],
       "adhoc": [],
       "span": {
         "dummy": false,
@@ -508,7 +508,7 @@
         }
       ],
       "burn": null,
-      "mint": null,
+      "mints": [],
       "adhoc": [],
       "span": {
         "dummy": false,

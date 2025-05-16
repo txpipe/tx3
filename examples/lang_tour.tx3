@@ -40,6 +40,16 @@ tx my_tx(
         },
     }
 
+    mint {
+        amount: StaticAsset(100),
+        redeemer: (),
+    }
+
+    mint {
+        amount: AnyAsset(0xAB11223344, "OTHER_TOKEN", 10),
+        redeemer: (),
+    }
+
     output {
         to: MyParty,
         datum: MyRecord {

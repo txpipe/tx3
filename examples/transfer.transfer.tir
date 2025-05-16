@@ -94,7 +94,7 @@
       }
     }
   ],
-  "mint": null,
+  "mints": [],
   "adhoc": [],
   "collateral": []
 }

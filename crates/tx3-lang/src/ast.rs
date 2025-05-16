@@ -175,7 +175,7 @@ pub struct TxDef {
     pub inputs: Vec<InputBlock>,
     pub outputs: Vec<OutputBlock>,
     pub burn: Option<BurnBlock>,
-    pub mint: Option<MintBlock>,
+    pub mints: Vec<MintBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
     pub span: Span,
     pub collateral: Vec<CollateralBlock>,

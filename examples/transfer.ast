@@ -215,7 +215,7 @@
         }
       ],
       "burn": null,
-      "mint": null,
+      "mints": [],
       "adhoc": [],
       "span": {
         "dummy": false,
