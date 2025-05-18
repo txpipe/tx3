@@ -5,6 +5,9 @@ pub mod compile;
 pub mod ledgers;
 pub mod resolve;
 
+// Re-export pallas for upstream users
+pub use pallas;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("error coercing {0} into {1}")]
