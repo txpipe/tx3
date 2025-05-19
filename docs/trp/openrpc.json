@@ -1,0 +1,186 @@
+{
+  "openrpc": "1.2.4",
+  "info": {
+    "version": "1.0.0",
+    "title": "TRP",
+    "description": "TRP is a backend for tx3",
+    "contact": { "url": "https://txpipe.io" }
+  },
+  "servers": [
+    {
+      "name": "Demeter Preview",
+      "description": "Free Demeter TRP",
+      "url": "https://cardano-preview.trp-m1.demeter.run",
+      "variables": {
+        "dmtr-api-key": {
+          "default": "trp1ffyf88ugcyg6j6n3yuh"
+        }
+      }
+    }
+  ],
+  "components": {
+    "schemas": {
+      "tir": {
+        "type": "object",
+        "required": ["bytecode", "encoding", "version"],
+        "properties": {
+          "bytecode": {
+            "type": "string",
+            "title": "Tx3 bytecode"
+          },
+          "encoding": {
+            "type": "string",
+            "title": "Encode type",
+            "description": "hex,base64",
+            "examples": ["hex", "base64"]
+          },
+          "version": {
+            "type": "string",
+            "title": "Tx3 version",
+            "examples": ["v1alpha3"]
+          }
+        }
+      },
+      "args": {
+        "type": "object",
+        "properties": {
+          "tx": {
+            "type": "string",
+            "title": "tx cbor",
+            "description": "hex encoded"
+          }
+        }
+      }
+    },
+    "examples": {
+      "tir": {
+        "name": "tir",
+        "value": {
+          "bytecode": "11000000000000000000000001000000000000000600000000000000736f7572636501010c000000060000000000000073656e64657205000000010b000000010000000000000000000000000000000c00000008000000000000007175616e746974790200000000000000000000000000000200000000000000010c000000080000000000000072656365697665720500000000010b000000010000000000000000000000000000000c00000008000000000000007175616e7469747902000000010c000000060000000000000073656e64657205000000000110000000100000000f0000000600000000000000736f757263650b000000010000000000000000000000000000000c00000008000000000000007175616e74697479020000000100000011000000010000000000000000000000000000000000000000",
+          "encoding": "hex",
+          "version": "v1alpha3"
+        }
+      },
+      "args": {
+        "name": "args",
+        "value": {
+          "sender": "addr_test1qqxfzzm8cl05gssccyt3dtcp25fgrcfw6akjp9r4wtx09ujl8vdgga5pvrmprvd67asp7tr6vrwwnjku5l7ly4xhq9esagp6ag",
+          "receiver": "addr_test1qqxfzzm8cl05gssccyt3dtcp25fgrcfw6akjp9r4wtx09ujl8vdgga5pvrmprvd67asp7tr6vrwwnjku5l7ly4xhq9esagp6ag",
+          "quantity": 5000000
+        }
+      }
+    }
+  },
+  "methods": [
+    {
+      "name": "trp.resolve",
+      "description": "Resolve transaction",
+      "params": [
+        {
+          "name": "tir",
+          "description": "Intermediate representation (IR) for the transaction that will be executed.",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/tir"
+          }
+        },
+        {
+          "name": "args",
+          "description": "A json object of args to be passed into the tx execution.",
+          "required": true,
+          "schema": {
+            "title": "Arguments for tx",
+            "description": "Any json",
+            "type": "object"
+          }
+        }
+      ],
+      "result": {
+        "name": "tx",
+        "description": "Transaction cbor resolved",
+        "schema": {
+          "$ref": "#/components/schemas/args"
+        }
+      },
+      "examples": [
+        {
+          "name": "transfer",
+          "description": "Simple transaction to transfer coin",
+          "params": [
+            {
+              "$ref": "#/components/examples/tir"
+            },
+            {
+              "$ref": "#/components/examples/args"
+            }
+          ],
+          "result": {
+            "name": "transferResult",
+            "description": "Return the transaction cbor",
+            "value": {
+              "tx": "84a600d90102818258205663c3e28539f4b847043..."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "trp.submit",
+      "description": "Resolve and submit transaction",
+      "params": [
+        {
+          "name": "tir",
+          "description": "Intermediate representation (IR) for the transaction that will be executed.",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/tir"
+          }
+        },
+        {
+          "name": "args",
+          "description": "A json object of args to be passed into the tx execution.",
+          "required": true,
+          "schema": {
+            "title": "Arguments for tx",
+            "description": "Any json",
+            "type": "object"
+          }
+        }
+      ],
+      "result": {
+        "name": "tx",
+        "description": "Transaction submitted",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "hash": {
+              "type": "string",
+              "title": "tx hash"
+            }
+          }
+        }
+      },
+      "examples": [
+        {
+          "name": "transfer",
+          "description": "Simple transaction to transfer coin",
+          "params": [
+            {
+              "$ref": "#/components/examples/tir"
+            },
+            {
+              "$ref": "#/components/examples/args"
+            }
+          ],
+          "result": {
+            "name": "transferResult",
+            "description": "Return the transaction hash",
+            "value": {
+              "hash": "5663c3e28539f4b847043cf2b1d87e5e4bd3e070..."
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
