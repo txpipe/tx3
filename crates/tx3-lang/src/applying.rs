@@ -8,7 +8,7 @@ use crate::{
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("invalid binary operation {0:?}")]
-    InvalidBinaryOp(BinaryOp),
+    InvalidBinaryOp(Box<BinaryOp>),
 
     #[error("invalid argument {0:?} for {1}")]
     InvalidArgument(ArgValue, String),
@@ -1039,7 +1039,7 @@ impl Apply for ir::Expression {
 
                     Ok(ir::Expression::Assets(build_assets(result)))
                 }
-                _ => Err(Error::InvalidBinaryOp(*op)),
+                _ => Err(Error::InvalidBinaryOp(Box::new(*op))),
             },
             ir::Expression::EvalProperty(_x) => {
                 //TODO: property access of constant objects should be reduced but we're erasing
