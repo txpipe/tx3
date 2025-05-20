@@ -569,8 +569,7 @@ impl IntoLower for ast::CollateralBlock {
                 address: from.into_lower()?,
                 min_amount: min_amount.into_lower()?,
                 r#ref: r#ref.into_lower()?,
-            }
-            .into(),
+            },
         };
 
         Ok(collateral)
