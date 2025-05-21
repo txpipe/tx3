@@ -1,0 +1,28 @@
+
+party Sender;
+
+tx some_action(
+    quantity: Int
+) {
+    output {
+        to: Receiver,
+        amount: Ada(quantity),
+    }
+
+    input source {
+        from: Sender,
+        min_amount: Ada(quantity),
+    }
+
+    output {
+        to: Sender,
+        amount: source - Ada(quantity) - fees,
+    }
+
+    reference abc {
+        ref: 0x0000000000000000000000000000000000000000000000000000000000000000,
+    }
+}
+
+
+party Receiver;
