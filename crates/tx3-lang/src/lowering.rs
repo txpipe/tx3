@@ -571,8 +571,7 @@ impl IntoLower for ast::CollateralBlock {
                 address: from.into_lower()?,
                 min_amount: min_amount.into_lower()?,
                 r#ref: r#ref.into_lower()?,
-            }
-            .into(),
+            },
         };
 
         Ok(collateral)
@@ -596,7 +595,11 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
-        mint: ast.mint.as_ref().map(|x| x.into_lower()).transpose()?,
+        mints: ast
+            .mints
+            .iter()
+            .map(|x| x.into_lower())
+            .collect::<Result<Vec<_>, _>>()?,
         adhoc: ast
             .adhoc
             .iter()

@@ -43,7 +43,7 @@ async fn eval_pass<L: Ledger>(
         let utxos = ledger.resolve_input(&query).await?;
 
         if utxos.is_empty() {
-            return Err(Error::InputsNotResolved(name, query));
+            return Err(Error::InputsNotResolved(name, Box::new(query)));
         }
 
         attempt.set_input(&name, utxos);
@@ -55,7 +55,7 @@ async fn eval_pass<L: Ledger>(
         return Err(Error::CantCompileNonConstantTir);
     }
 
-    let tx = compile_tx(&attempt.as_ref(), pparams)?;
+    let tx = compile_tx(attempt.as_ref(), pparams)?;
 
     let payload = pallas::codec::minicbor::to_vec(&tx).unwrap();
 

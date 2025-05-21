@@ -69,13 +69,13 @@ fn compile_struct(ir: &ir::StructExpr) -> Result<primitives::PlutusData, Error> 
 
 fn compile_data_expr(ir: &ir::Expression) -> Result<primitives::PlutusData, Error> {
     match ir {
-        ir::Expression::None => Ok(().into_data()),
-        ir::Expression::Bytes(x) => Ok(x.into_data()),
-        ir::Expression::Number(x) => Ok(x.into_data()),
-        ir::Expression::Bool(x) => Ok(x.into_data()),
-        ir::Expression::String(x) => Ok(x.as_str().into_data()),
+        ir::Expression::None => Ok(().as_data()),
+        ir::Expression::Bytes(x) => Ok(x.as_data()),
+        ir::Expression::Number(x) => Ok(x.as_data()),
+        ir::Expression::Bool(x) => Ok(x.as_data()),
+        ir::Expression::String(x) => Ok(x.as_str().as_data()),
         ir::Expression::Struct(x) => compile_struct(x),
-        ir::Expression::Address(x) => Ok(x.into_data()),
+        ir::Expression::Address(x) => Ok(x.as_data()),
         _ => Err(Error::CoerceError(
             format!("{:?}", ir),
             "DataExpr".to_string(),
@@ -188,12 +188,13 @@ fn compile_output_block(
 }
 
 fn compile_mint_block(tx: &ir::Tx) -> Result<Option<primitives::Mint>, Error> {
-    let mint = if let Some(mint) = tx.mint.as_ref() {
-        let assets = mint
-            .amount
-            .as_ref()
-            .map(coercion::expr_into_assets)
-            .transpose()?
+    let mint = if !tx.mints.is_empty() {
+        let assets = tx
+            .mints
+            .iter()
+            .flat_map(|x| x.amount.as_ref().map(coercion::expr_into_assets))
+            .collect::<Result<Vec<_>, _>>()?;
+        let assets = assets
             .iter()
             .flatten()
             .map(compile_native_asset_for_mint)
@@ -263,7 +264,7 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
     let explicit_ref_inputs = tx
         .references
         .iter()
-        .flat_map(|x| coercion::expr_into_utxo_refs(x))
+        .flat_map(coercion::expr_into_utxo_refs)
         .flatten()
         .map(|x| primitives::TransactionInput {
             transaction_id: x.txid.as_slice().into(),
@@ -368,7 +369,7 @@ fn compile_single_spend_redeemer(
         tag: primitives::RedeemerTag::Spend,
         index: index as u32,
         ex_units: primitives::ExUnits { mem: 0, steps: 0 },
-        data: redeemer.try_into_data()?,
+        data: redeemer.try_as_data()?,
     };
 
     Ok(redeemer)
@@ -417,33 +418,43 @@ pub fn mint_redeemer_index(
     Err(Error::MissingMintingPolicy)
 }
 
+fn compile_mint_redeemer(
+    mint: &ir::Mint,
+    compiled_body: &primitives::TransactionBody,
+) -> Result<primitives::Redeemer, Error> {
+    let red = mint.redeemer.clone().ok_or(Error::MissingRedeemer)?;
+    let amount = mint.amount.clone().ok_or(Error::MissingAmount)?;
+    let assets: Vec<ir::AssetExpr> = coercion::expr_into_assets(&amount)?;
+    // TODO: This only works with the first redeemer.
+    // Are we allowed to include more than one?
+    let asset = assets.first().ok_or(Error::MissingAsset)?;
+    let policy = coercion::expr_into_bytes(&asset.policy)?;
+    let policy = primitives::Hash::from(policy.as_slice());
+
+    let out = primitives::Redeemer {
+        tag: primitives::RedeemerTag::Mint,
+        index: mint_redeemer_index(compiled_body, policy)?,
+        ex_units: primitives::ExUnits {
+            mem: 2000,
+            steps: 200000,
+        },
+        data: red.try_as_data()?,
+    };
+
+    Ok(out)
+}
+
 fn compile_mint_redeemers(
     tx: &ir::Tx,
     compiled_body: &primitives::TransactionBody,
 ) -> Result<Vec<primitives::Redeemer>, Error> {
-    if let Some(r) = &tx.mint {
-        let red = r.redeemer.clone().ok_or(Error::MissingRedeemer)?;
-        let amount = r.amount.clone().ok_or(Error::MissingAmount)?;
-        let assets = coercion::expr_into_assets(&amount)?;
-        // TODO: This only works with the first redeemer.
-        // Are we allowed to include more than one?
-        let asset = assets.first().ok_or(Error::MissingAsset)?;
-        let policy = coercion::expr_into_bytes(&asset.policy)?;
-        let policy = primitives::Hash::from(policy.as_slice());
+    let redeemers = tx
+        .mints
+        .iter()
+        .map(|mint| compile_mint_redeemer(mint, compiled_body))
+        .collect::<Result<Vec<_>, _>>()?;
 
-        let out = primitives::Redeemer {
-            tag: primitives::RedeemerTag::Mint,
-            index: mint_redeemer_index(compiled_body, policy)?,
-            ex_units: primitives::ExUnits {
-                mem: 2000,
-                steps: 200000,
-            },
-            data: red.try_into_data()?,
-        };
-        Ok(vec![out])
-    } else {
-        Ok(vec![])
-    }
+    Ok(redeemers)
 }
 
 fn compile_redeemers(
@@ -470,7 +481,7 @@ fn compile_witness_set(
     compiled_body: &primitives::TransactionBody,
 ) -> Result<primitives::WitnessSet<'static>, Error> {
     let witness_set = primitives::WitnessSet {
-        redeemer: compile_redeemers(tx, &compiled_body)?.map(|x| x.into()),
+        redeemer: compile_redeemers(tx, compiled_body)?.map(|x| x.into()),
         vkeywitness: None,
         native_script: None,
         bootstrap_witness: None,
@@ -485,7 +496,7 @@ fn compile_witness_set(
 
 fn infer_plutus_version(_transaction_body: &primitives::TransactionBody) -> PlutusVersion {
     // TODO: infer plutus version from existing scripts
-    return 1;
+    1
 }
 
 fn compute_script_data_hash(

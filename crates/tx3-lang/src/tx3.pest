@@ -291,7 +291,7 @@ tx_def = {
     input_block* ~
     collateral_block* ~
     burn_block? ~
-    mint_block? ~
+    mint_block* ~
     output_block* ~
     metadata_block? ~
     chain_specific_block* ~
