@@ -5,6 +5,9 @@ pub mod compile;
 pub mod ledgers;
 pub mod resolve;
 
+// Re-export pallas for upstream users
+pub use pallas;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("error coercing {0} into {1}")]
@@ -71,10 +74,10 @@ pub enum Error {
     NoAstAnalysis,
 
     #[error("inputs for '{0}' not resolved, query: {1:?}")]
-    InputsNotResolved(String, tx3_lang::ir::InputQuery),
+    InputsNotResolved(String, Box<tx3_lang::ir::InputQuery>),
 
     #[error("can't resolve symbol '{0:?}'")]
-    CantResolveSymbol(tx3_lang::ast::Symbol),
+    CantResolveSymbol(Box<tx3_lang::ast::Symbol>),
 
     #[error("max optimize rounds reached")]
     MaxOptimizeRoundsReached,

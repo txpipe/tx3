@@ -67,13 +67,13 @@ fn compile_struct(ir: &ir::StructExpr) -> Result<primitives::PlutusData, Error> 
 
 fn compile_data_expr(ir: &ir::Expression) -> Result<primitives::PlutusData, Error> {
     match ir {
-        ir::Expression::None => Ok(().into_data()),
-        ir::Expression::Bytes(x) => Ok(x.into_data()),
-        ir::Expression::Number(x) => Ok(x.into_data()),
-        ir::Expression::Bool(x) => Ok(x.into_data()),
-        ir::Expression::String(x) => Ok(x.as_str().into_data()),
+        ir::Expression::None => Ok(().as_data()),
+        ir::Expression::Bytes(x) => Ok(x.as_data()),
+        ir::Expression::Number(x) => Ok(x.as_data()),
+        ir::Expression::Bool(x) => Ok(x.as_data()),
+        ir::Expression::String(x) => Ok(x.as_str().as_data()),
         ir::Expression::Struct(x) => compile_struct(x),
-        ir::Expression::Address(x) => Ok(x.into_data()),
+        ir::Expression::Address(x) => Ok(x.as_data()),
         _ => Err(Error::CoerceError(
             format!("{:?}", ir),
             "DataExpr".to_string(),
@@ -266,7 +266,7 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
     let explicit_ref_inputs = tx
         .references
         .iter()
-        .flat_map(|x| coercion::expr_into_utxo_refs(x))
+        .flat_map(coercion::expr_into_utxo_refs)
         .flatten()
         .map(|x| primitives::TransactionInput {
             transaction_id: x.txid.as_slice().into(),
@@ -370,7 +370,7 @@ fn compile_single_spend_redeemer(
         tag: primitives::RedeemerTag::Spend,
         index: index as u32,
         ex_units: primitives::ExUnits { mem: 0, steps: 0 },
-        data: redeemer.try_into_data()?,
+        data: redeemer.try_as_data()?,
     };
 
     Ok(redeemer)
@@ -482,7 +482,7 @@ fn compile_witness_set(
     compiled_body: &primitives::TransactionBody,
 ) -> Result<primitives::WitnessSet<'static>, Error> {
     let witness_set = primitives::WitnessSet {
-        redeemer: compile_redeemers(tx, &compiled_body)?.map(|x| x.into()),
+        redeemer: compile_redeemers(tx, compiled_body)?.map(|x| x.into()),
         vkeywitness: None,
         native_script: None,
         bootstrap_witness: None,
@@ -497,7 +497,7 @@ fn compile_witness_set(
 
 fn infer_plutus_version(_transaction_body: &primitives::TransactionBody) -> PlutusVersion {
     // TODO: infer plutus version from existing scripts
-    return 1;
+    1
 }
 
 fn compute_script_data_hash(

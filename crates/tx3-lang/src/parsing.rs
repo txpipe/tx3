@@ -1035,7 +1035,7 @@ impl AstNode for DataExpr {
             DataExpr::Identifier(x) => x.span(),
             DataExpr::PropertyAccess(x) => x.span(),
             DataExpr::BinaryOp(x) => &x.span,
-            DataExpr::UtxoRef(x) => &x.span(),
+            DataExpr::UtxoRef(x) => x.span(),
         }
     }
 }

@@ -317,7 +317,7 @@ impl<T: Analyzable> Analyzable for Option<T> {
     }
 
     fn is_resolved(&self) -> bool {
-        self.as_ref().map_or(true, |x| x.is_resolved())
+        self.as_ref().is_none_or(|x| x.is_resolved())
     }
 }
 
