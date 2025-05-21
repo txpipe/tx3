@@ -1873,4 +1873,6 @@ mod tests {
     test_parsing!(vesting);
 
     test_parsing!(faucet);
+
+    test_parsing!(disordered);
 }
