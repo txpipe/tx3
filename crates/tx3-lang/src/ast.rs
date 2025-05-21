@@ -174,6 +174,7 @@ pub struct TxDef {
     pub references: Vec<ReferenceBlock>,
     pub inputs: Vec<InputBlock>,
     pub outputs: Vec<OutputBlock>,
+    pub validity_range: Option<ValidityRangeBlock>,
     pub burn: Option<BurnBlock>,
     pub mints: Vec<MintBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
@@ -378,6 +379,33 @@ pub struct OutputBlock {
 
 impl OutputBlock {
     pub(crate) fn find(&self, key: &str) -> Option<&OutputBlockField> {
+        self.fields.iter().find(|x| x.key() == key)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ValidityRangeBlockField {
+    From(Box<DataExpr>),
+    To(Box<DataExpr>),
+}
+
+impl ValidityRangeBlockField {
+    fn key(&self) -> &str {
+        match self {
+            ValidityRangeBlockField::From(_) => "from",
+            ValidityRangeBlockField::To(_) => "to",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ValidityRangeBlock {
+    pub fields: Vec<ValidityRangeBlockField>,
+    pub span: Span,
+}
+
+impl ValidityRangeBlock {
+    pub(crate) fn find(&self, key: &str) -> Option<&ValidityRangeBlockField> {
         self.fields.iter().find(|x| x.key() == key)
     }
 }

@@ -238,6 +238,20 @@ output_block = {
     "}"
 }
 
+validity_range_to = {"to" ~ ":" ~ data_expr}
+validity_range_from = {"from" ~ ":" ~ data_expr}
+
+validity_range_block_field = _{
+    validity_range_to |
+    validity_range_from
+}
+
+validity_range_block = {
+    "range" ~ "{" ~
+    (validity_range_block_field ~ ",")* ~
+    "}"
+}
+
 mint_block_amount = { "amount" ~ ":" ~ asset_expr }
 mint_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
 
@@ -294,6 +308,7 @@ tx_def = {
     mint_block* ~
     output_block* ~
     metadata_block? ~
+    validity_range_block? ~ 
     chain_specific_block* ~
     "}"
 }

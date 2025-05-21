@@ -152,6 +152,7 @@ impl AstNode for TxDef {
         let mut references = Vec::new();
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
+        let mut validity_range = None;
         let mut burn = None;
         let mut mints = Vec::new();
         let mut adhoc = Vec::new();
@@ -163,6 +164,7 @@ impl AstNode for TxDef {
                 Rule::reference_block => references.push(ReferenceBlock::parse(item)?),
                 Rule::input_block => inputs.push(InputBlock::parse(item)?),
                 Rule::output_block => outputs.push(OutputBlock::parse(item)?),
+                Rule::validity_range_block => validity_range = Some(ValidityRangeBlock::parse(item)?),
                 Rule::burn_block => burn = Some(BurnBlock::parse(item)?),
                 Rule::mint_block => mints.push(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
@@ -178,6 +180,7 @@ impl AstNode for TxDef {
             references,
             inputs,
             outputs,
+            validity_range,
             burn,
             mints,
             adhoc,
@@ -481,6 +484,52 @@ impl AstNode for OutputBlock {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(OutputBlock { name, fields, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
+impl AstNode for ValidityRangeBlockField {
+    const RULE: Rule = Rule::validity_range_block_field;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        match pair.as_rule() {
+            Rule::validity_range_from => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = ValidityRangeBlockField::From(DataExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            Rule::validity_range_to => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = ValidityRangeBlockField::To(DataExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            x => unreachable!("Unexpected rule in validity_range_block: {:?}", x),
+        }
+    }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::From(x) => x.span(),
+            Self::To(x) => x.span(),
+        }
+    }
+}
+
+impl AstNode for ValidityRangeBlock {
+    const RULE: Rule = Rule::validity_range_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let inner = pair.into_inner();
+
+        let fields = inner
+            .map(|x| ValidityRangeBlockField::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(ValidityRangeBlock { fields, span })
     }
 
     fn span(&self) -> &Span {

@@ -506,6 +506,28 @@ impl IntoLower for ast::OutputBlock {
     }
 }
 
+impl IntoLower for ast::ValidityRangeBlockField {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::ValidityRangeBlockField::From(x) => x.into_lower(),
+            ast::ValidityRangeBlockField::To(x) => x.into_lower(),
+        }
+    }
+}
+
+impl IntoLower for ast::ValidityRangeBlock {
+    type Output = ir::ValidityRange;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        Ok(ir::ValidityRange { 
+            from:self.find("from").into_lower()?, 
+            to: self.find("to").into_lower()?,
+        })
+    }
+}
+
 impl IntoLower for ast::MintBlockField {
     type Output = ir::Expression;
 
@@ -595,6 +617,11 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
+        validity_range: ast
+            .validity_range
+            .as_ref()
+            .map(|x| x.into_lower())
+            .transpose()?,
         mints: ast
             .mints
             .iter()
