@@ -1,6 +1,9 @@
-use std::str::FromStr as _;
+use std::{collections::BTreeMap, str::FromStr as _};
 
-use pallas::ledger::primitives::conway as primitives;
+use pallas::{
+    codec::utils::Int,
+    ledger::primitives::{conway as primitives, Metadata, Metadatum},
+};
 use tx3_lang::ir;
 
 use crate::{Error, Network};
@@ -42,6 +45,30 @@ pub fn expr_into_number(expr: &ir::Expression) -> Result<i128, Error> {
         _ => Err(Error::CoerceError(
             format!("{:?}", expr),
             "Number".to_string(),
+        )),
+    }
+}
+
+pub fn expr_into_metadatum(expr: &ir::Expression) -> Result<Metadatum, Error> {
+    match expr {
+        ir::Expression::Number(x) => Ok(Metadatum::Int(Int::from(*x as i64))),
+        ir::Expression::String(x) => Ok(Metadatum::Text(x.clone())),
+        _ => Err(Error::CoerceError(
+            format!("{:?}", expr),
+            "Metadatum".to_string(),
+        )),
+    }
+}
+
+pub fn expr_into_metadata(expr: &ir::Expression) -> Result<Metadata, Error> {
+    match expr {
+        ir::Expression::Map(x) => Ok(BTreeMap::from_iter(x.iter().map(|(k, v)| {
+            let v = expr_into_metadatum(v).expect("Failed to convert metadatum");
+            (*k as u64, v)
+        }))),
+        _ => Err(Error::CoerceError(
+            format!("{:?}", expr),
+            "Metadata".to_string(),
         )),
     }
 }

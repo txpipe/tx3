@@ -10,6 +10,8 @@ use pallas::{
 
 use tx3_lang::ir;
 
+use crate::coercion::expr_into_metadata;
+
 use super::*;
 
 pub(crate) mod asset_math;
@@ -336,15 +338,16 @@ fn compile_tx_body(
 }
 
 fn compile_auxiliary_data(_tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryData>, Error> {
-    // Ok(Some(primitives::AuxiliaryData::PostAlonzo(
-    //     pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
-    //         metadata: None,
-    //         native_scripts: None,
-    //         plutus_scripts: None,
-    //     },
-    // )))
-
-    Ok(None)
+    Ok(Some(primitives::AuxiliaryData::PostAlonzo(
+        pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
+            metadata: Some(
+                expr_into_metadata(&(_tx.metadata.as_ref().unwrap().value))
+                    .expect("Failed to convert metadata"),
+            ),
+            native_scripts: None,
+            plutus_scripts: None,
+        },
+    )))
 }
 
 fn utxo_ref_matches(ref1: &tx3_lang::UtxoRef, ref2: &primitives::TransactionInput) -> bool {

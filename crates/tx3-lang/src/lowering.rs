@@ -3,11 +3,13 @@
 //! This module takes an AST and performs lowering on it. It converts the AST
 //! into the intermediate representation (IR) of the Tx3 language.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 
 use crate::ast;
+use crate::ast::MetaDatum;
 use crate::ir;
+use crate::ir::Metadata;
 use crate::UtxoRef;
 
 #[derive(Debug, thiserror::Error)]
@@ -606,6 +608,18 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
+        metadata: ast.metadata.as_ref().map(|x| {
+            // x.fields.iter().ne.map(|(key, metadatum)| Metadata {
+            //     value: ir::Expression::Number(metadatum),
+            // })
+            let hashmap = x.fields.iter().map(|(key, metadatum)| {
+                let MetaDatum::Number(n) = metadatum.clone();
+                (*key, ir::Expression::Number(n as i128))
+            });
+            ir::Metadata {
+                value: ir::Expression::Map(HashMap::from_iter(hashmap)),
+            }
+        }),
     };
 
     Ok(ir)

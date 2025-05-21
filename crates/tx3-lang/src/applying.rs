@@ -998,6 +998,7 @@ impl Apply for ir::Expression {
             Self::EvalInputAssets(..) => false,
             Self::FeeQuery => false,
             Self::EvalParameter(..) => false,
+            Self::Map(..) => true, // TODO: check if this is correct
         }
     }
 
@@ -1271,6 +1272,7 @@ impl Apply for ir::Tx {
             fees: self.fees.apply_args(args)?,
             adhoc: self.adhoc.apply_args(args)?,
             collateral: self.collateral.apply_args(args)?,
+            metadata: self.metadata,
         };
 
         Ok(tx)
@@ -1285,6 +1287,7 @@ impl Apply for ir::Tx {
             fees: self.fees.apply_inputs(args)?,
             adhoc: self.adhoc.apply_inputs(args)?,
             collateral: self.collateral.apply_inputs(args)?,
+            metadata: self.metadata,
         })
     }
 
@@ -1297,6 +1300,7 @@ impl Apply for ir::Tx {
             fees: self.fees.apply_fees(fees)?,
             adhoc: self.adhoc.apply_fees(fees)?,
             collateral: self.collateral.apply_fees(fees)?,
+            metadata: self.metadata,
         })
     }
 
@@ -1343,6 +1347,7 @@ impl Apply for ir::Tx {
             fees: self.fees.reduce()?,
             adhoc: self.adhoc.reduce()?,
             collateral: self.collateral.reduce()?,
+            metadata: self.metadata,
         })
     }
 }
