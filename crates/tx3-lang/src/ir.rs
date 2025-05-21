@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Utxo, UtxoRef};
 
-pub const IR_VERSION: &str = "v1alpha3";
+pub const IR_VERSION: &str = "v1alpha4";
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct StructExpr {
@@ -183,7 +183,7 @@ pub struct Tx {
     pub references: Vec<Expression>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
-    pub mint: Option<Mint>,
+    pub mints: Vec<Mint>,
     pub adhoc: Vec<AdHocDirective>,
     pub collateral: Vec<Collateral>,
 }

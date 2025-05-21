@@ -640,7 +640,7 @@
           "end": 1142
         }
       },
-      "mint": null,
+      "mints": [],
       "adhoc": [],
       "span": {
         "dummy": false,

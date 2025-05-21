@@ -148,7 +148,7 @@ impl AstNode for TxDef {
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
         let mut burn = None;
-        let mut mint = None;
+        let mut mints = Vec::new();
         let mut adhoc = Vec::new();
         let mut collateral = Vec::new();
 
@@ -158,7 +158,7 @@ impl AstNode for TxDef {
                 Rule::input_block => inputs.push(InputBlock::parse(item)?),
                 Rule::output_block => outputs.push(OutputBlock::parse(item)?),
                 Rule::burn_block => burn = Some(BurnBlock::parse(item)?),
-                Rule::mint_block => mint = Some(MintBlock::parse(item)?),
+                Rule::mint_block => mints.push(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
                 Rule::collateral_block => collateral.push(CollateralBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
@@ -172,7 +172,7 @@ impl AstNode for TxDef {
             inputs,
             outputs,
             burn,
-            mint,
+            mints,
             adhoc,
             scope: None,
             span,
@@ -1819,7 +1819,7 @@ mod tests {
     #[test]
     fn test_spans_are_respected() {
         let program = parse_well_known_example("lang_tour");
-        assert_eq!(program.span, Span::new(0, 972));
+        assert_eq!(program.span, Span::new(0, 1145));
 
         assert_eq!(program.parties[0].span, Span::new(0, 14));
 

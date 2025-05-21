@@ -186,12 +186,13 @@ fn compile_output_block(
 }
 
 fn compile_mint_block(tx: &ir::Tx) -> Result<Option<primitives::Mint>, Error> {
-    let mint = if let Some(mint) = tx.mint.as_ref() {
-        let assets = mint
-            .amount
-            .as_ref()
-            .map(coercion::expr_into_assets)
-            .transpose()?
+    let mint = if !tx.mints.is_empty() {
+        let assets = tx
+            .mints
+            .iter()
+            .flat_map(|x| x.amount.as_ref().map(coercion::expr_into_assets))
+            .collect::<Result<Vec<_>, _>>()?;
+        let assets = assets
             .iter()
             .flatten()
             .map(compile_native_asset_for_mint)
@@ -414,33 +415,43 @@ pub fn mint_redeemer_index(
     Err(Error::MissingMintingPolicy)
 }
 
+fn compile_mint_redeemer(
+    mint: &ir::Mint,
+    compiled_body: &primitives::TransactionBody,
+) -> Result<primitives::Redeemer, Error> {
+    let red = mint.redeemer.clone().ok_or(Error::MissingRedeemer)?;
+    let amount = mint.amount.clone().ok_or(Error::MissingAmount)?;
+    let assets: Vec<ir::AssetExpr> = coercion::expr_into_assets(&amount)?;
+    // TODO: This only works with the first redeemer.
+    // Are we allowed to include more than one?
+    let asset = assets.first().ok_or(Error::MissingAsset)?;
+    let policy = coercion::expr_into_bytes(&asset.policy)?;
+    let policy = primitives::Hash::from(policy.as_slice());
+
+    let out = primitives::Redeemer {
+        tag: primitives::RedeemerTag::Mint,
+        index: mint_redeemer_index(compiled_body, policy)?,
+        ex_units: primitives::ExUnits {
+            mem: 2000,
+            steps: 200000,
+        },
+        data: red.try_as_data()?,
+    };
+
+    Ok(out)
+}
+
 fn compile_mint_redeemers(
     tx: &ir::Tx,
     compiled_body: &primitives::TransactionBody,
 ) -> Result<Vec<primitives::Redeemer>, Error> {
-    if let Some(r) = &tx.mint {
-        let red = r.redeemer.clone().ok_or(Error::MissingRedeemer)?;
-        let amount = r.amount.clone().ok_or(Error::MissingAmount)?;
-        let assets = coercion::expr_into_assets(&amount)?;
-        // TODO: This only works with the first redeemer.
-        // Are we allowed to include more than one?
-        let asset = assets.first().ok_or(Error::MissingAsset)?;
-        let policy = coercion::expr_into_bytes(&asset.policy)?;
-        let policy = primitives::Hash::from(policy.as_slice());
+    let redeemers = tx
+        .mints
+        .iter()
+        .map(|mint| compile_mint_redeemer(mint, compiled_body))
+        .collect::<Result<Vec<_>, _>>()?;
 
-        let out = primitives::Redeemer {
-            tag: primitives::RedeemerTag::Mint,
-            index: mint_redeemer_index(compiled_body, policy)?,
-            ex_units: primitives::ExUnits {
-                mem: 2000,
-                steps: 200000,
-            },
-            data: red.try_as_data()?,
-        };
-        Ok(vec![out])
-    } else {
-        Ok(vec![])
-    }
+    Ok(redeemers)
 }
 
 fn compile_redeemers(

@@ -151,56 +151,58 @@
         }
       ],
       "burn": null,
-      "mint": {
-        "fields": [
-          {
-            "Amount": {
-              "StaticConstructor": {
-                "type": {
-                  "value": "MyToken",
+      "mints": [
+        {
+          "fields": [
+            {
+              "Amount": {
+                "StaticConstructor": {
+                  "type": {
+                    "value": "MyToken",
+                    "span": {
+                      "dummy": false,
+                      "start": 365,
+                      "end": 372
+                    }
+                  },
+                  "amount": {
+                    "Identifier": {
+                      "value": "quantity",
+                      "span": {
+                        "dummy": false,
+                        "start": 373,
+                        "end": 381
+                      }
+                    }
+                  },
                   "span": {
                     "dummy": false,
                     "start": 365,
-                    "end": 372
+                    "end": 382
                   }
-                },
-                "amount": {
-                  "Identifier": {
-                    "value": "quantity",
-                    "span": {
-                      "dummy": false,
-                      "start": 373,
-                      "end": 381
-                    }
+                }
+              }
+            },
+            {
+              "Redeemer": {
+                "Identifier": {
+                  "value": "password",
+                  "span": {
+                    "dummy": false,
+                    "start": 402,
+                    "end": 410
                   }
-                },
-                "span": {
-                  "dummy": false,
-                  "start": 365,
-                  "end": 382
                 }
               }
             }
-          },
-          {
-            "Redeemer": {
-              "Identifier": {
-                "value": "password",
-                "span": {
-                  "dummy": false,
-                  "start": 402,
-                  "end": 410
-                }
-              }
-            }
+          ],
+          "span": {
+            "dummy": false,
+            "start": 342,
+            "end": 417
           }
-        ],
-        "span": {
-          "dummy": false,
-          "start": 342,
-          "end": 417
         }
-      },
+      ],
       "adhoc": [],
       "span": {
         "dummy": false,

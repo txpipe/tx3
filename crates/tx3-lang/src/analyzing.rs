@@ -815,17 +815,17 @@ impl Analyzable for TxDef {
 
         let outputs = self.outputs.analyze(self.scope.clone());
 
-        let mint = self.mint.analyze(self.scope.clone());
+        let mints = self.mints.analyze(self.scope.clone());
 
         let adhoc = self.adhoc.analyze(self.scope.clone());
 
-        params + input_types + inputs + outputs + mint + adhoc
+        params + input_types + inputs + outputs + mints + adhoc
     }
 
     fn is_resolved(&self) -> bool {
         self.inputs.is_resolved()
             && self.outputs.is_resolved()
-            && self.mint.is_resolved()
+            && self.mints.is_resolved()
             && self.adhoc.is_resolved()
     }
 }
