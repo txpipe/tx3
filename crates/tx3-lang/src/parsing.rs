@@ -339,18 +339,22 @@ impl AstNode for MetadataBlock {
     const RULE: Rule = Rule::metadata_block;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
-        print!("{:?}", pair);
-        let span: Span = pair.as_span().into();
-        let pair = pair.into_inner().next().unwrap();
-        match pair.as_rule() {
-            Rule::metadatum => {
-                let mut fields = HashMap::new();
-                let n: u32 = pair.as_span().as_str().parse().expect("Invalid number");
-                fields.insert(1 as u32, MetaDatum::Number(n));
-                Ok(MetadataBlock { fields, span })
-            }
-            x => unreachable!("Unexpected rule in metadata_block: {:?}", x),
-        }
+        let span = pair.as_span().into();
+        let inner = pair.into_inner();
+
+        let fields = inner
+            .map(|x| match x.as_rule() {
+                Rule::metadata_block_field => {
+                    let mut inner = x.into_inner();
+                    let key = inner.next().unwrap();
+                    let value = inner.next().unwrap();
+                    Ok((DataExpr::parse(key)?, DataExpr::parse(value)?))
+                }
+                _ => unreachable!("Unexpected rule in metadata_block: {:?}", x),
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        Ok(MetadataBlock { fields, span })
     }
 
     fn span(&self) -> &Span {

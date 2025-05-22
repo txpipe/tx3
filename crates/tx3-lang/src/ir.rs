@@ -113,7 +113,7 @@ pub struct PropertyAccess {
 pub enum Expression {
     None,
     List(Vec<Expression>),
-    Map(HashMap<u32, Expression>),
+    Tuple(Box<(Expression, Expression)>),
     Struct(StructExpr),
     Bytes(Vec<u8>),
     Number(i128),
@@ -179,11 +179,6 @@ pub struct Collateral {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Metadata {
-    pub value: Expression,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
     pub fees: Expression,
     pub references: Vec<Expression>,
@@ -192,5 +187,5 @@ pub struct Tx {
     pub mints: Vec<Mint>,
     pub adhoc: Vec<AdHocDirective>,
     pub collateral: Vec<Collateral>,
-    pub metadata: Option<Metadata>,
+    pub metadata: Option<Expression>,
 }

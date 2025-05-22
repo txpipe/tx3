@@ -998,7 +998,10 @@ impl Apply for ir::Expression {
             Self::EvalInputAssets(..) => false,
             Self::FeeQuery => false,
             Self::EvalParameter(..) => false,
-            Self::Map(..) => true, // TODO: check if this is correct
+            Self::Tuple(b) => {
+                let (x, y) = &**b;
+                x.is_constant() && y.is_constant()
+            }
         }
     }
 

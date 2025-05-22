@@ -305,8 +305,11 @@ program = {
     EOI
 }
 
-metadatum = @{number}
+
+metadata_block_field = {
+    data_expr ~ ":" ~ data_expr
+}
 
 metadata_block = {
-    "metadata" ~ "{" ~ "1" ~ ":" ~ metadatum ~ "}"
+  "metadata" ~ "{" ~  (metadata_block_field ~ ",")+ ~ "}"
 }

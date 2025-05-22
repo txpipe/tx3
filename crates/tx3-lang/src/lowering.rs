@@ -3,13 +3,11 @@
 //! This module takes an AST and performs lowering on it. It converts the AST
 //! into the intermediate representation (IR) of the Tx3 language.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::ops::Deref;
 
 use crate::ast;
-use crate::ast::MetaDatum;
 use crate::ir;
-use crate::ir::Metadata;
 use crate::UtxoRef;
 
 #[derive(Debug, thiserror::Error)]
@@ -528,6 +526,31 @@ impl IntoLower for ast::MintBlock {
     }
 }
 
+impl IntoLower for ast::MetadataBlock {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let fields = self
+            .fields
+            .iter()
+            .map(|(key, value)| {
+                if let ast::DataExpr::Number(n) = key {
+                    Ok(ir::Expression::Tuple(Box::new((
+                        key.into_lower()?,
+                        value.into_lower()?,
+                    ))))
+                } else {
+                    Err(Error::InvalidAst(
+                        "metadata key must be a number".to_string(),
+                    ))
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(ir::Expression::List(fields))
+    }
+}
+
 impl IntoLower for ast::ChainSpecificBlock {
     type Output = ir::AdHocDirective;
 
@@ -611,18 +634,7 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
-        metadata: ast.metadata.as_ref().map(|x| {
-            // x.fields.iter().ne.map(|(key, metadatum)| Metadata {
-            //     value: ir::Expression::Number(metadatum),
-            // })
-            let hashmap = x.fields.iter().map(|(key, metadatum)| {
-                let MetaDatum::Number(n) = metadatum.clone();
-                (*key, ir::Expression::Number(n as i128))
-            });
-            ir::Metadata {
-                value: ir::Expression::Map(HashMap::from_iter(hashmap)),
-            }
-        }),
+        metadata: ast.metadata.as_ref().into_lower()?,
     };
 
     Ok(ir)

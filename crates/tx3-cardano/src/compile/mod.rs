@@ -342,7 +342,7 @@ fn compile_auxiliary_data(_tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryDa
     Ok(Some(primitives::AuxiliaryData::PostAlonzo(
         pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
             metadata: Some(
-                expr_into_metadata(&(_tx.metadata.as_ref().unwrap().value))
+                expr_into_metadata(&(_tx.metadata.as_ref().unwrap()))
                     .expect("Failed to convert metadata"),
             ),
             native_scripts: None,
