@@ -174,7 +174,7 @@ pub struct TxDef {
     pub references: Vec<ReferenceBlock>,
     pub inputs: Vec<InputBlock>,
     pub outputs: Vec<OutputBlock>,
-    pub validity_range: Option<ValidityRangeBlock>,
+    pub validity: Option<ValidityBlock>,
     pub burn: Option<BurnBlock>,
     pub mints: Vec<MintBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
@@ -384,28 +384,28 @@ impl OutputBlock {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ValidityRangeBlockField {
-    From(Box<DataExpr>),
-    To(Box<DataExpr>),
+pub enum ValidityBlockField {
+    ValidUntil(Box<DataExpr>),
+    ValidSince(Box<DataExpr>),
 }
 
-impl ValidityRangeBlockField {
+impl ValidityBlockField {
     fn key(&self) -> &str {
         match self {
-            ValidityRangeBlockField::From(_) => "from",
-            ValidityRangeBlockField::To(_) => "to",
+            ValidityBlockField::ValidUntil(_) => "valid_until",
+            ValidityBlockField::ValidSince(_) => "valid_since",
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ValidityRangeBlock {
-    pub fields: Vec<ValidityRangeBlockField>,
+pub struct ValidityBlock {
+    pub fields: Vec<ValidityBlockField>,
     pub span: Span,
 }
 
-impl ValidityRangeBlock {
-    pub(crate) fn find(&self, key: &str) -> Option<&ValidityRangeBlockField> {
+impl ValidityBlock {
+    pub(crate) fn find(&self, key: &str) -> Option<&ValidityBlockField> {
         self.fields.iter().find(|x| x.key() == key)
     }
 }

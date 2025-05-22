@@ -238,17 +238,17 @@ output_block = {
     "}"
 }
 
-validity_range_to = {"to" ~ ":" ~ data_expr}
-validity_range_from = {"from" ~ ":" ~ data_expr}
+validity_until = {"valid_until" ~ ":" ~ data_expr}
+validity_since = {"valid_since" ~ ":" ~ data_expr}
 
-validity_range_block_field = _{
-    validity_range_to |
-    validity_range_from
+validity_block_field = _{
+    validity_until |
+    validity_since
 }
 
-validity_range_block = {
+validity_block = {
     "range" ~ "{" ~
-    (validity_range_block_field ~ ",")* ~
+    (validity_block_field ~ ",")* ~
     "}"
 }
 
@@ -308,7 +308,7 @@ tx_def = {
     mint_block* ~
     output_block* ~
     metadata_block? ~
-    validity_range_block? ~ 
+    validity_block? ~ 
     chain_specific_block* ~
     "}"
 }

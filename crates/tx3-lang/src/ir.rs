@@ -168,9 +168,9 @@ pub struct Output {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ValidityRange {
-    pub from: Option<Expression>,
-    pub to: Option<Expression>,
+pub struct Validity {
+    pub since: Option<Expression>,
+    pub until: Option<Expression>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -195,7 +195,7 @@ pub struct Tx {
     pub references: Vec<Expression>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
-    pub validity_range: Option<ValidityRange>,
+    pub validity: Option<Validity>,
     pub mints: Vec<Mint>,
     pub adhoc: Vec<AdHocDirective>,
     pub collateral: Vec<Collateral>,

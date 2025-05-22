@@ -1262,13 +1262,63 @@ impl Apply for ir::Collateral {
     }
 }
 
+impl Apply for ir::Validity {
+    fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            since: self.since.apply_args(args)?,
+            until: self.until.apply_args(args)?,
+        })
+    }
+
+    fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            since: self.since.apply_inputs(args)?,
+            until: self.until.apply_inputs(args)?,
+        })
+    }
+
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            since: self.since.apply_fees(fees)?,
+            until: self.until.apply_fees(fees)?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.since.is_constant() && self.until.is_constant()
+    }
+
+    fn params(&self) -> BTreeMap<String, ir::Type> {
+        let mut params = BTreeMap::new();
+        params.extend(self.since.params());
+        params.extend(self.until.params());
+        params
+    }
+
+    fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        // validity range does not have queries
+        BTreeMap::new()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            since: self.since.reduce()?,
+            until: self.until.reduce()?,
+        })
+    }
+}
+
 impl Apply for ir::Tx {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         let tx = ir::Tx {
             references: self.references.apply_args(args)?,
             inputs: self.inputs.apply_args(args)?,
             outputs: self.outputs.apply_args(args)?,
-            validity_range: self.validity_range,
+            validity: self.validity.apply_args(args)?,
             mints: self.mints.apply_args(args)?,
             fees: self.fees.apply_args(args)?,
             adhoc: self.adhoc.apply_args(args)?,
@@ -1284,7 +1334,7 @@ impl Apply for ir::Tx {
             references: self.references.apply_inputs(args)?,
             inputs: self.inputs.apply_inputs(args)?,
             outputs: self.outputs.apply_inputs(args)?,
-            validity_range: self.validity_range,
+            validity: self.validity.apply_inputs(args)?,
             mints: self.mints.apply_inputs(args)?,
             fees: self.fees.apply_inputs(args)?,
             adhoc: self.adhoc.apply_inputs(args)?,
@@ -1298,7 +1348,7 @@ impl Apply for ir::Tx {
             references: self.references.apply_fees(fees)?,
             inputs: self.inputs.apply_fees(fees)?,
             outputs: self.outputs.apply_fees(fees)?,
-            validity_range: self.validity_range,
+            validity: self.validity.apply_fees(fees)?,
             mints: self.mints.apply_fees(fees)?,
             fees: self.fees.apply_fees(fees)?,
             adhoc: self.adhoc.apply_fees(fees)?,
@@ -1346,7 +1396,7 @@ impl Apply for ir::Tx {
             references: self.references.reduce()?,
             inputs: self.inputs.reduce()?,
             outputs: self.outputs.reduce()?,
-            validity_range: self.validity_range,
+            validity: self.validity.reduce()?,
             mints: self.mints.reduce()?,
             fees: self.fees.reduce()?,
             adhoc: self.adhoc.reduce()?,
