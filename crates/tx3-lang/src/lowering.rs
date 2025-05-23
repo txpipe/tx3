@@ -504,6 +504,28 @@ impl IntoLower for ast::OutputBlock {
     }
 }
 
+impl IntoLower for ast::ValidityBlockField {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::ValidityBlockField::ValidSince(x) => x.into_lower(),
+            ast::ValidityBlockField::ValidUntil(x) => x.into_lower(),
+        }
+    }
+}
+
+impl IntoLower for ast::ValidityBlock {
+    type Output = ir::Validity;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        Ok(ir::Validity { 
+            since: self.find("valid_since").into_lower()?, 
+            until: self.find("valid_until").into_lower()?,
+        })
+    }
+}
+
 impl IntoLower for ast::MintBlockField {
     type Output = ir::Expression;
 
@@ -618,6 +640,11 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
+        validity: ast
+            .validity
+            .as_ref()
+            .map(|x| x.into_lower())
+            .transpose()?,
         mints: ast
             .mints
             .iter()

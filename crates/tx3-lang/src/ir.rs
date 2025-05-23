@@ -168,6 +168,12 @@ pub struct Output {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Validity {
+    pub since: Option<Expression>,
+    pub until: Option<Expression>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mint {
     pub amount: Option<Expression>,
     pub redeemer: Option<Expression>,
@@ -184,6 +190,7 @@ pub struct Tx {
     pub references: Vec<Expression>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
+    pub validity: Option<Validity>,
     pub mints: Vec<Mint>,
     pub adhoc: Vec<AdHocDirective>,
     pub collateral: Vec<Collateral>,

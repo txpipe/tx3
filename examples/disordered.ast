@@ -1,0 +1,273 @@
+{
+  "txs": [
+    {
+      "name": "some_action",
+      "parameters": {
+        "parameters": [
+          {
+            "name": "quantity",
+            "type": "Int"
+          }
+        ],
+        "span": {
+          "dummy": false,
+          "start": 30,
+          "end": 51
+        }
+      },
+      "references": [
+        {
+          "name": "abc",
+          "ref": {
+            "HexString": {
+              "value": "0000000000000000000000000000000000000000000000000000000000000000",
+              "span": {
+                "dummy": false,
+                "start": 330,
+                "end": 396
+              }
+            }
+          },
+          "span": {
+            "dummy": false,
+            "start": 301,
+            "end": 403
+          }
+        }
+      ],
+      "inputs": [
+        {
+          "name": "source",
+          "is_many": false,
+          "fields": [
+            {
+              "From": {
+                "Identifier": {
+                  "value": "Sender",
+                  "span": {
+                    "dummy": false,
+                    "start": 160,
+                    "end": 166
+                  }
+                }
+              }
+            },
+            {
+              "MinAmount": {
+                "StaticConstructor": {
+                  "type": {
+                    "value": "Ada",
+                    "span": {
+                      "dummy": false,
+                      "start": 188,
+                      "end": 191
+                    }
+                  },
+                  "amount": {
+                    "Identifier": {
+                      "value": "quantity",
+                      "span": {
+                        "dummy": false,
+                        "start": 192,
+                        "end": 200
+                      }
+                    }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 188,
+                    "end": 201
+                  }
+                }
+              }
+            }
+          ],
+          "span": {
+            "dummy": false,
+            "start": 131,
+            "end": 208
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": null,
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "Receiver",
+                  "span": {
+                    "dummy": false,
+                    "start": 79,
+                    "end": 87
+                  }
+                }
+              }
+            },
+            {
+              "Amount": {
+                "StaticConstructor": {
+                  "type": {
+                    "value": "Ada",
+                    "span": {
+                      "dummy": false,
+                      "start": 105,
+                      "end": 108
+                    }
+                  },
+                  "amount": {
+                    "Identifier": {
+                      "value": "quantity",
+                      "span": {
+                        "dummy": false,
+                        "start": 109,
+                        "end": 117
+                      }
+                    }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 105,
+                    "end": 118
+                  }
+                }
+              }
+            }
+          ],
+          "span": {
+            "dummy": false,
+            "start": 58,
+            "end": 125
+          }
+        },
+        {
+          "name": null,
+          "fields": [
+            {
+              "To": {
+                "Identifier": {
+                  "value": "Sender",
+                  "span": {
+                    "dummy": false,
+                    "start": 235,
+                    "end": 241
+                  }
+                }
+              }
+            },
+            {
+              "Amount": {
+                "BinaryOp": {
+                  "left": {
+                    "BinaryOp": {
+                      "left": {
+                        "Identifier": {
+                          "value": "source",
+                          "span": {
+                            "dummy": false,
+                            "start": 259,
+                            "end": 265
+                          }
+                        }
+                      },
+                      "operator": "Subtract",
+                      "right": {
+                        "StaticConstructor": {
+                          "type": {
+                            "value": "Ada",
+                            "span": {
+                              "dummy": false,
+                              "start": 268,
+                              "end": 271
+                            }
+                          },
+                          "amount": {
+                            "Identifier": {
+                              "value": "quantity",
+                              "span": {
+                                "dummy": false,
+                                "start": 272,
+                                "end": 280
+                              }
+                            }
+                          },
+                          "span": {
+                            "dummy": false,
+                            "start": 268,
+                            "end": 281
+                          }
+                        }
+                      },
+                      "span": {
+                        "dummy": false,
+                        "start": 266,
+                        "end": 267
+                      }
+                    }
+                  },
+                  "operator": "Subtract",
+                  "right": {
+                    "Identifier": {
+                      "value": "fees",
+                      "span": {
+                        "dummy": false,
+                        "start": 284,
+                        "end": 288
+                      }
+                    }
+                  },
+                  "span": {
+                    "dummy": false,
+                    "start": 282,
+                    "end": 283
+                  }
+                }
+              }
+            }
+          ],
+          "span": {
+            "dummy": false,
+            "start": 214,
+            "end": 295
+          }
+        }
+      ],
+      "burn": null,
+      "mints": [],
+      "adhoc": [],
+      "span": {
+        "dummy": false,
+        "start": 16,
+        "end": 405
+      },
+      "collateral": []
+    }
+  ],
+  "types": [],
+  "assets": [],
+  "parties": [
+    {
+      "name": "Sender",
+      "span": {
+        "dummy": false,
+        "start": 1,
+        "end": 14
+      }
+    },
+    {
+      "name": "Receiver",
+      "span": {
+        "dummy": false,
+        "start": 408,
+        "end": 423
+      }
+    }
+  ],
+  "policies": [],
+  "span": {
+    "dummy": false,
+    "start": 0,
+    "end": 423
+  }
+}
