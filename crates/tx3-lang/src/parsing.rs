@@ -2,8 +2,13 @@
 //!
 //! This module takes a string and parses it into Tx3 AST.
 
+use std::{collections::HashMap, hash::Hash};
+
 use miette::SourceOffset;
-use pest::{iterators::Pair, Parser};
+use pest::{
+    iterators::{Pair, Pairs},
+    Parser,
+};
 use pest_derive::Parser;
 
 use crate::ast::*;
@@ -147,20 +152,24 @@ impl AstNode for TxDef {
         let mut references = Vec::new();
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
+        let mut validity = None;
         let mut burn = None;
         let mut mints = Vec::new();
         let mut adhoc = Vec::new();
         let mut collateral = Vec::new();
+        let mut metadata = None;
 
         for item in inner {
             match item.as_rule() {
                 Rule::reference_block => references.push(ReferenceBlock::parse(item)?),
                 Rule::input_block => inputs.push(InputBlock::parse(item)?),
                 Rule::output_block => outputs.push(OutputBlock::parse(item)?),
+                Rule::validity_block => validity = Some(ValidityBlock::parse(item)?),
                 Rule::burn_block => burn = Some(BurnBlock::parse(item)?),
                 Rule::mint_block => mints.push(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
                 Rule::collateral_block => collateral.push(CollateralBlock::parse(item)?),
+                Rule::metadata_block => metadata = Some(MetadataBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
         }
@@ -171,12 +180,14 @@ impl AstNode for TxDef {
             references,
             inputs,
             outputs,
+            validity,
             burn,
             mints,
             adhoc,
             scope: None,
             span,
             collateral,
+            metadata,
         })
     }
 
@@ -327,6 +338,33 @@ impl AstNode for CollateralBlock {
     }
 }
 
+impl AstNode for MetadataBlock {
+    const RULE: Rule = Rule::metadata_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let inner = pair.into_inner();
+
+        let fields = inner
+            .map(|x| match x.as_rule() {
+                Rule::metadata_block_field => {
+                    let mut inner = x.into_inner();
+                    let key = inner.next().unwrap();
+                    let value = inner.next().unwrap();
+                    Ok((DataExpr::parse(key)?, DataExpr::parse(value)?))
+                }
+                _ => unreachable!("Unexpected rule in metadata_block: {:?}", x),
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        Ok(MetadataBlock { fields, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
 impl AstNode for InputBlockField {
     const RULE: Rule = Rule::input_block_field;
 
@@ -450,6 +488,52 @@ impl AstNode for OutputBlock {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(OutputBlock { name, fields, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
+impl AstNode for ValidityBlockField {
+    const RULE: Rule = Rule::validity_block_field;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        match pair.as_rule() {
+            Rule::validity_since => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = ValidityBlockField::ValidSince(DataExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            Rule::validity_until => {
+                let pair = pair.into_inner().next().unwrap();
+                let x = ValidityBlockField::ValidUntil(DataExpr::parse(pair)?.into());
+                Ok(x)
+            }
+            x => unreachable!("Unexpected rule in validity_block: {:?}", x),
+        }
+    }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::ValidUntil(x) => x.span(),
+            Self::ValidSince(x) => x.span(),
+        }
+    }
+}
+
+impl AstNode for ValidityBlock {
+    const RULE: Rule = Rule::validity_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let inner = pair.into_inner();
+
+        let fields = inner
+            .map(|x| ValidityBlockField::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
+    
+        Ok(ValidityBlock { fields, span })
     }
 
     fn span(&self) -> &Span {
