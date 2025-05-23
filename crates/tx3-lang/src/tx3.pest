@@ -298,18 +298,19 @@ chain_specific_block = {
     bitcoin_block
 }
 
+tx_body_block = _{
+    reference_block |
+    input_block |
+    collateral_block |
+    burn_block |
+    mint_block |
+    output_block |
+    chain_specific_block
+}
+
 // Transaction definition
 tx_def = {
-    "tx" ~ identifier ~ parameter_list ~ "{" ~
-    reference_block* ~
-    input_block* ~
-    collateral_block* ~
-    burn_block? ~
-    mint_block* ~
-    output_block* ~
-    validity_block? ~ 
-    chain_specific_block* ~
-    "}"
+    "tx" ~ identifier ~ parameter_list ~ "{" ~ tx_body_block* ~ "}"
 }
 
 // Program
