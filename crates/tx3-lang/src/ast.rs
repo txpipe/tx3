@@ -180,7 +180,6 @@ pub struct TxDef {
     pub adhoc: Vec<ChainSpecificBlock>,
     pub span: Span,
     pub collateral: Vec<CollateralBlock>,
-    pub metadata: Option<MetadataBlock>,
 
     // analysis
     #[serde(skip)]

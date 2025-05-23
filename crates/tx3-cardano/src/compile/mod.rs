@@ -308,16 +308,15 @@ fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
         .flatten()
 }
 
-fn compile_validity(validity: &ir::Validity) -> Result<(Option<u64>, Option<u64>), Error> {
+fn compile_validity(validity: Option<&ir::Validity>) -> Result<(Option<u64>, Option<u64>), Error> {
     let since = validity
-        .since
-        .as_ref()
-        .map(|expr| coercion::expr_into_number(&expr).map(|x| x as u64))
+        .and_then(|v| v.since.as_ref())
+        .map(|expr| coercion::expr_into_number(expr).map(|n| n as u64))
         .transpose()?;
+
     let until = validity
-        .until
-        .as_ref()
-        .map(|expr| coercion::expr_into_number(&expr).map(|x| x as u64))
+        .and_then(|v| v.until.as_ref())
+        .map(|expr| coercion::expr_into_number(expr).map(|n| n as u64))
         .transpose()?;
 
     Ok((since, until))
@@ -327,7 +326,8 @@ fn compile_tx_body(
     tx: &ir::Tx,
     network: Network,
 ) -> Result<primitives::TransactionBody<'static>, Error> {
-    let (since, until) = compile_validity(tx.validity.as_ref().unwrap())?;
+    let (since, until) = compile_validity(tx.validity.as_ref())?;
+
     let out = primitives::TransactionBody {
         inputs: compile_inputs(tx)?.into(),
         outputs: compile_outputs(tx, network)?,
@@ -357,10 +357,7 @@ fn compile_tx_body(
 fn compile_auxiliary_data(_tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryData>, Error> {
     Ok(Some(primitives::AuxiliaryData::PostAlonzo(
         pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
-            metadata: Some(
-                expr_into_metadata(&(_tx.metadata.as_ref().unwrap().value))
-                    .expect("Failed to convert metadata"),
-            ),
+            metadata: None,
             native_scripts: None,
             plutus_scripts: None,
         },

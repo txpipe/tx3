@@ -157,7 +157,6 @@ impl AstNode for TxDef {
         let mut mints = Vec::new();
         let mut adhoc = Vec::new();
         let mut collateral = Vec::new();
-        let mut metadata = None;
 
         for item in inner {
             match item.as_rule() {
@@ -169,7 +168,6 @@ impl AstNode for TxDef {
                 Rule::mint_block => mints.push(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
                 Rule::collateral_block => collateral.push(CollateralBlock::parse(item)?),
-                Rule::metadata_block => metadata = Some(MetadataBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
         }
@@ -187,7 +185,6 @@ impl AstNode for TxDef {
             scope: None,
             span,
             collateral,
-            metadata,
         })
     }
 
@@ -338,28 +335,6 @@ impl AstNode for CollateralBlock {
     }
 }
 
-impl AstNode for MetadataBlock {
-    const RULE: Rule = Rule::metadata_block;
-
-    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
-        print!("{:?}", pair);
-        let span: Span = pair.as_span().into();
-        let pair = pair.into_inner().next().unwrap();
-        match pair.as_rule() {
-            Rule::metadatum => {
-                let mut fields = HashMap::new();
-                let n: u32 = pair.as_span().as_str().parse().expect("Invalid number");
-                fields.insert(1 as u32, MetaDatum::Number(n));
-                Ok(MetadataBlock { fields, span })
-            }
-            x => unreachable!("Unexpected rule in metadata_block: {:?}", x),
-        }
-    }
-
-    fn span(&self) -> &Span {
-        &self.span
-    }
-}
 
 impl AstNode for InputBlockField {
     const RULE: Rule = Rule::input_block_field;
@@ -528,7 +503,7 @@ impl AstNode for ValidityBlock {
         let fields = inner
             .map(|x| ValidityBlockField::parse(x))
             .collect::<Result<Vec<_>, _>>()?;
-
+    
         Ok(ValidityBlock { fields, span })
     }
 

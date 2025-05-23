@@ -247,7 +247,7 @@ validity_block_field = _{
 }
 
 validity_block = {
-    "range" ~ "{" ~
+    "validity" ~ "{" ~
     (validity_block_field ~ ",")* ~
     "}"
 }
@@ -307,7 +307,6 @@ tx_def = {
     burn_block? ~
     mint_block* ~
     output_block* ~
-    metadata_block? ~
     validity_block? ~ 
     chain_specific_block* ~
     "}"
@@ -318,10 +317,4 @@ program = {
     SOI ~
     (asset_def | party_def | policy_def | type_def | tx_def)* ~
     EOI
-}
-
-metadatum = @{number}
-
-metadata_block = {
-    "metadata" ~ "{" ~ "1" ~ ":" ~ metadatum ~ "}"
 }
