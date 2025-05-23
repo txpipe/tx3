@@ -180,6 +180,7 @@ pub struct TxDef {
     pub adhoc: Vec<ChainSpecificBlock>,
     pub span: Span,
     pub collateral: Vec<CollateralBlock>,
+    pub metadata: Option<MetadataBlock>,
 
     // analysis
     #[serde(skip)]
@@ -325,13 +326,8 @@ pub struct ReferenceBlock {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MetadataBlock {
-    pub fields: HashMap<u32, MetaDatum>,
+    pub fields: Vec<(DataExpr, DataExpr)>,
     pub span: Span,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum MetaDatum {
-    Number(u32),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

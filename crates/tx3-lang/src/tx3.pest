@@ -298,6 +298,14 @@ chain_specific_block = {
     bitcoin_block
 }
 
+metadata_block_field = {
+    data_expr ~ ":" ~ data_expr
+}
+
+metadata_block = {
+    "metadata" ~ "{" ~  (metadata_block_field ~ ",")+ ~ "}"
+}
+
 tx_body_block = _{
     reference_block |
     input_block |
@@ -305,7 +313,9 @@ tx_body_block = _{
     burn_block |
     mint_block |
     output_block |
-    chain_specific_block
+    chain_specific_block | 
+    metadata_block |
+    validity_block
 }
 
 // Transaction definition

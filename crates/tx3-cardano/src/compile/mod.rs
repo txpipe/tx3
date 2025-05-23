@@ -357,7 +357,10 @@ fn compile_tx_body(
 fn compile_auxiliary_data(_tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryData>, Error> {
     Ok(Some(primitives::AuxiliaryData::PostAlonzo(
         pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
-            metadata: None,
+            metadata: Some(
+                expr_into_metadata(&(_tx.metadata.as_ref().unwrap()))
+                    .expect("Failed to convert metadata"),
+            ),
             native_scripts: None,
             plutus_scripts: None,
         },

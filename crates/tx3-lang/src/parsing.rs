@@ -157,6 +157,7 @@ impl AstNode for TxDef {
         let mut mints = Vec::new();
         let mut adhoc = Vec::new();
         let mut collateral = Vec::new();
+        let mut metadata = None;
 
         for item in inner {
             match item.as_rule() {
@@ -168,6 +169,7 @@ impl AstNode for TxDef {
                 Rule::mint_block => mints.push(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
                 Rule::collateral_block => collateral.push(CollateralBlock::parse(item)?),
+                Rule::metadata_block => metadata = Some(MetadataBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
         }
@@ -185,6 +187,7 @@ impl AstNode for TxDef {
             scope: None,
             span,
             collateral,
+            metadata,
         })
     }
 
@@ -335,6 +338,32 @@ impl AstNode for CollateralBlock {
     }
 }
 
+impl AstNode for MetadataBlock {
+    const RULE: Rule = Rule::metadata_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let inner = pair.into_inner();
+
+        let fields = inner
+            .map(|x| match x.as_rule() {
+                Rule::metadata_block_field => {
+                    let mut inner = x.into_inner();
+                    let key = inner.next().unwrap();
+                    let value = inner.next().unwrap();
+                    Ok((DataExpr::parse(key)?, DataExpr::parse(value)?))
+                }
+                _ => unreachable!("Unexpected rule in metadata_block: {:?}", x),
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        Ok(MetadataBlock { fields, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
 
 impl AstNode for InputBlockField {
     const RULE: Rule = Rule::input_block_field;

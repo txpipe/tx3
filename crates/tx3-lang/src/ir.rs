@@ -113,7 +113,7 @@ pub struct PropertyAccess {
 pub enum Expression {
     None,
     List(Vec<Expression>),
-    Map(HashMap<u32, Expression>),
+    Tuple(Box<(Expression, Expression)>),
     Struct(StructExpr),
     Bytes(Vec<u8>),
     Number(i128),
@@ -184,7 +184,6 @@ pub struct Collateral {
     pub query: InputQuery,
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
     pub fees: Expression,
@@ -195,4 +194,5 @@ pub struct Tx {
     pub mints: Vec<Mint>,
     pub adhoc: Vec<AdHocDirective>,
     pub collateral: Vec<Collateral>,
+    pub metadata: Option<Expression>,
 }

@@ -3,7 +3,7 @@
 //! This module takes an AST and performs lowering on it. It converts the AST
 //! into the intermediate representation (IR) of the Tx3 language.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::ops::Deref;
 
 use crate::ast;
@@ -548,6 +548,31 @@ impl IntoLower for ast::MintBlock {
     }
 }
 
+impl IntoLower for ast::MetadataBlock {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let fields = self
+            .fields
+            .iter()
+            .map(|(key, value)| {
+                if let ast::DataExpr::Number(n) = key {
+                    Ok(ir::Expression::Tuple(Box::new((
+                        key.into_lower()?,
+                        value.into_lower()?,
+                    ))))
+                } else {
+                    Err(Error::InvalidAst(
+                        "metadata key must be a number".to_string(),
+                    ))
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(ir::Expression::List(fields))
+    }
+}
+
 impl IntoLower for ast::ChainSpecificBlock {
     type Output = ir::AdHocDirective;
 
@@ -636,6 +661,7 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
+        metadata: ast.metadata.as_ref().into_lower()?,
     };
 
     Ok(ir)

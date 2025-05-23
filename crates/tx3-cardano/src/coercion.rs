@@ -62,9 +62,14 @@ pub fn expr_into_metadatum(expr: &ir::Expression) -> Result<Metadatum, Error> {
 
 pub fn expr_into_metadata(expr: &ir::Expression) -> Result<Metadata, Error> {
     match expr {
-        ir::Expression::Map(x) => Ok(BTreeMap::from_iter(x.iter().map(|(k, v)| {
-            let v = expr_into_metadatum(v).expect("Failed to convert metadatum");
-            (*k as u64, v)
+        ir::Expression::List(x) => Ok(BTreeMap::from_iter(x.iter().map(|item| {
+            if let ir::Expression::Tuple(x) = item {
+                let (k, v) = x.as_ref();
+                let v = expr_into_metadatum(v).expect("Failed to convert metadatum");
+                (expr_into_number(k).expect("Key is not a number") as u64, v)
+            } else {
+                panic!("Expected Tuple in Metadata List, found {:?}", item);
+            }
         }))),
         _ => Err(Error::CoerceError(
             format!("{:?}", expr),
