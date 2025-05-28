@@ -3,7 +3,7 @@
 //! This module takes an AST and performs semantic analysis on it. It checks for
 //! duplicate definitions, unknown symbols, and other semantic errors.
 
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, convert::identity, fs::metadata, rc::Rc};
 use thiserror::Error;
 
 use crate::ast::*;
@@ -671,6 +671,49 @@ impl Analyzable for InputBlock {
     }
 }
 
+impl Analyzable for MetadataBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields
+            .to_owned()
+            .into_iter()
+            .map(|(x, y)| {
+                x.to_owned().analyze(parent.clone()) + y.to_owned().analyze(parent.clone())
+            })
+            .collect()
+    }
+    fn is_resolved(&self) -> bool {
+        self.clone()
+            .fields
+            .into_iter()
+            .map(|(x, y)| x.is_resolved() && y.is_resolved())
+            .all(identity)
+    }
+}
+
+impl Analyzable for ValidityBlockField {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        match self {
+            ValidityBlockField::ValidSince(x) => x.analyze(parent),
+            ValidityBlockField::ValidUntil(x) => x.analyze(parent),
+        }
+    }
+    fn is_resolved(&self) -> bool {
+        match self {
+            ValidityBlockField::ValidSince(x) => x.is_resolved(),
+            ValidityBlockField::ValidUntil(x) => x.is_resolved(),
+        }
+    }
+}
+
+impl Analyzable for ValidityBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields.analyze(parent)
+    }
+    fn is_resolved(&self) -> bool {
+        self.fields.is_resolved()
+    }
+}
+
 impl Analyzable for OutputBlockField {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
@@ -819,7 +862,11 @@ impl Analyzable for TxDef {
 
         let adhoc = self.adhoc.analyze(self.scope.clone());
 
-        params + input_types + inputs + outputs + mints + adhoc
+        let validity = self.validity.analyze(self.scope.clone());
+
+        let metadata = self.metadata.analyze(self.scope.clone());
+
+        params + input_types + inputs + outputs + mints + adhoc + validity + metadata
     }
 
     fn is_resolved(&self) -> bool {
@@ -839,6 +886,7 @@ static ADA: std::sync::LazyLock<AssetDef> = std::sync::LazyLock::new(|| AssetDef
 
 impl Analyzable for Program {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        println!("PROGRAM ANALYZE");
         let mut scope = Scope::new(parent);
 
         for party in self.parties.iter() {
