@@ -712,21 +712,23 @@ fn build_assets(aggregated: HashMap<AssetClass, i128>) -> Vec<ir::AssetExpr> {
         .collect()
 }
 
-type AssetClass<'a> = (Option<&'a [u8]>, Option<&'a [u8]>);
+type AssetClass = (Option<Vec<u8>>, Option<Vec<u8>>);
 
 impl ir::AssetExpr {
-    fn expect_constant_policy(&self) -> Option<&[u8]> {
+    fn expect_constant_policy(&self) -> Option<Vec<u8>> {
         match &self.policy {
             ir::Expression::None => None,
-            ir::Expression::Bytes(x) => Some(x.as_slice()),
+            ir::Expression::Bytes(x) => Some(x.clone()),
+            ir::Expression::String(x) => hex::decode(x).map(Some).unwrap_or(None),
             _ => None,
         }
     }
 
-    fn expect_constant_name(&self) -> Option<&[u8]> {
+    fn expect_constant_name(&self) -> Option<Vec<u8>> {
         match &self.asset_name {
             ir::Expression::None => None,
-            ir::Expression::Bytes(x) => Some(x.as_slice()),
+            ir::Expression::Bytes(x) => Some(x.clone()),
+            ir::Expression::String(x) => hex::decode(x).map(Some).unwrap_or(None),
             _ => None,
         }
     }
@@ -754,10 +756,10 @@ impl ir::AssetExpr {
         aggregated
     }
 
-    fn sum<'a>(
-        a: HashMap<AssetClass<'a>, i128>,
-        b: HashMap<AssetClass<'a>, i128>,
-    ) -> HashMap<AssetClass<'a>, i128> {
+    fn sum(
+        a: HashMap<AssetClass, i128>,
+        b: HashMap<AssetClass, i128>,
+    ) -> HashMap<AssetClass, i128> {
         let mut aggregated = a;
 
         for (key, value) in b {
@@ -767,10 +769,10 @@ impl ir::AssetExpr {
         aggregated
     }
 
-    fn sub<'a>(
-        a: HashMap<AssetClass<'a>, i128>,
-        b: HashMap<AssetClass<'a>, i128>,
-    ) -> HashMap<AssetClass<'a>, i128> {
+    fn sub(
+        a: HashMap<AssetClass, i128>,
+        b: HashMap<AssetClass, i128>,
+    ) -> HashMap<AssetClass, i128> {
         let mut aggregated = a;
 
         for (key, value) in b {
