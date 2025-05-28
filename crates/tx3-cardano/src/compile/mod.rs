@@ -448,6 +448,7 @@ fn compile_mint_redeemers(
     let redeemers = tx
         .mints
         .iter()
+        .filter(|mint| mint.redeemer.is_some())
         .map(|mint| compile_mint_redeemer(mint, compiled_body))
         .collect::<Result<Vec<_>, _>>()?;
 
