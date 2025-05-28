@@ -325,8 +325,15 @@ pub struct ReferenceBlock {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MetadataBlockField {
+    pub key: DataExpr,
+    pub value: DataExpr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MetadataBlock {
-    pub fields: Vec<(DataExpr, DataExpr)>,
+    pub fields: Vec<MetadataBlockField>,
     pub span: Span,
 }
 

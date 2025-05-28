@@ -3,7 +3,7 @@
 //! This module takes an AST and performs semantic analysis on it. It checks for
 //! duplicate definitions, unknown symbols, and other semantic errors.
 
-use std::{collections::HashMap, convert::identity, fs::metadata, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 use thiserror::Error;
 
 use crate::ast::*;
@@ -671,22 +671,22 @@ impl Analyzable for InputBlock {
     }
 }
 
-impl Analyzable for MetadataBlock {
+impl Analyzable for MetadataBlockField {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
-        self.fields
-            .to_owned()
-            .into_iter()
-            .map(|(x, y)| {
-                x.to_owned().analyze(parent.clone()) + y.to_owned().analyze(parent.clone())
-            })
-            .collect()
+        // TODO: check keys are actually numbers
+        self.key.analyze(parent.clone()) + self.value.analyze(parent.clone())
     }
     fn is_resolved(&self) -> bool {
-        self.clone()
-            .fields
-            .into_iter()
-            .map(|(x, y)| x.is_resolved() && y.is_resolved())
-            .all(identity)
+        self.key.is_resolved() && self.value.is_resolved()
+    }
+}
+
+impl Analyzable for MetadataBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields.analyze(parent)
+    }
+    fn is_resolved(&self) -> bool {
+        self.fields.is_resolved()
     }
 }
 

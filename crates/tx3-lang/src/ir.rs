@@ -183,6 +183,11 @@ pub struct Mint {
 pub struct Collateral {
     pub query: InputQuery,
 }
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Metadata {
+    pub key: Expression,
+    pub value: Expression,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
@@ -194,5 +199,5 @@ pub struct Tx {
     pub mints: Vec<Mint>,
     pub adhoc: Vec<AdHocDirective>,
     pub collateral: Vec<Collateral>,
-    pub metadata: Option<Expression>,
+    pub metadata: Vec<Metadata>,
 }

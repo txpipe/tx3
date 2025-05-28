@@ -519,8 +519,8 @@ impl IntoLower for ast::ValidityBlock {
     type Output = ir::Validity;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
-        Ok(ir::Validity { 
-            since: self.find("valid_since").into_lower()?, 
+        Ok(ir::Validity {
+            since: self.find("valid_since").into_lower()?,
             until: self.find("valid_until").into_lower()?,
         })
     }
@@ -547,29 +547,27 @@ impl IntoLower for ast::MintBlock {
         })
     }
 }
+impl IntoLower for ast::MetadataBlockField {
+    type Output = ir::Metadata;
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        Ok(ir::Metadata {
+            key: self.key.into_lower()?,
+            value: self.value.into_lower()?,
+        })
+    }
+}
 
 impl IntoLower for ast::MetadataBlock {
-    type Output = ir::Expression;
+    type Output = Vec<ir::Metadata>;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         let fields = self
             .fields
             .iter()
-            .map(|(key, value)| {
-                if let ast::DataExpr::Number(n) = key {
-                    Ok(ir::Expression::Tuple(Box::new((
-                        key.into_lower()?,
-                        value.into_lower()?,
-                    ))))
-                } else {
-                    Err(Error::InvalidAst(
-                        "metadata key must be a number".to_string(),
-                    ))
-                }
-            })
+            .map(|metadata_field| metadata_field.into_lower())
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(ir::Expression::List(fields))
+        Ok(fields)
     }
 }
 
@@ -640,11 +638,7 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
-        validity: ast
-            .validity
-            .as_ref()
-            .map(|x| x.into_lower())
-            .transpose()?,
+        validity: ast.validity.as_ref().map(|x| x.into_lower()).transpose()?,
         mints: ast
             .mints
             .iter()
@@ -661,7 +655,12 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
-        metadata: ast.metadata.as_ref().into_lower()?,
+        metadata: ast
+            .metadata
+            .as_ref()
+            .map(|x| x.into_lower())
+            .transpose()?
+            .unwrap_or(vec![]),
     };
 
     Ok(ir)

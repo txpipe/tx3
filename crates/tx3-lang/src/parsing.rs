@@ -2,13 +2,10 @@
 //!
 //! This module takes a string and parses it into Tx3 AST.
 
-use std::{collections::HashMap, hash::Hash};
+use std::hash::Hash;
 
 use miette::SourceOffset;
-use pest::{
-    iterators::{Pair, Pairs},
-    Parser,
-};
+use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 
 use crate::ast::*;
@@ -338,6 +335,31 @@ impl AstNode for CollateralBlock {
     }
 }
 
+impl AstNode for MetadataBlockField {
+    const RULE: Rule = Rule::metadata_block_field;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        match pair.as_rule() {
+            Rule::metadata_block_field => {
+                let mut inner = pair.into_inner();
+                let key = inner.next().unwrap();
+                let value = inner.next().unwrap();
+                Ok(MetadataBlockField {
+                    key: DataExpr::parse(key)?,
+                    value: DataExpr::parse(value)?,
+                    span,
+                })
+            }
+            x => unreachable!("Unexpected rule in metadata_block: {:?}", x),
+        }
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
+    }
+}
+
 impl AstNode for MetadataBlock {
     const RULE: Rule = Rule::metadata_block;
 
@@ -346,16 +368,8 @@ impl AstNode for MetadataBlock {
         let inner = pair.into_inner();
 
         let fields = inner
-            .map(|x| match x.as_rule() {
-                Rule::metadata_block_field => {
-                    let mut inner = x.into_inner();
-                    let key = inner.next().unwrap();
-                    let value = inner.next().unwrap();
-                    Ok((DataExpr::parse(key)?, DataExpr::parse(value)?))
-                }
-                _ => unreachable!("Unexpected rule in metadata_block: {:?}", x),
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
+            .map(|x| MetadataBlockField::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(MetadataBlock { fields, span })
     }
@@ -532,7 +546,7 @@ impl AstNode for ValidityBlock {
         let fields = inner
             .map(|x| ValidityBlockField::parse(x))
             .collect::<Result<Vec<_>, _>>()?;
-    
+
         Ok(ValidityBlock { fields, span })
     }
 

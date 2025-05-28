@@ -10,7 +10,7 @@ use pallas::{
 
 use tx3_lang::ir;
 
-use crate::coercion::expr_into_metadata;
+use crate::coercion::{expr_into_metadatum, expr_into_number};
 
 use super::*;
 
@@ -354,17 +354,37 @@ fn compile_tx_body(
     Ok(out)
 }
 
-fn compile_auxiliary_data(_tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryData>, Error> {
-    Ok(Some(primitives::AuxiliaryData::PostAlonzo(
-        pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
-            metadata: Some(
-                expr_into_metadata(&(_tx.metadata.as_ref().unwrap()))
-                    .expect("Failed to convert metadata"),
-            ),
-            native_scripts: None,
-            plutus_scripts: None,
-        },
-    )))
+fn compile_auxiliary_data(tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryData>, Error> {
+    let metadata_kv = tx
+        .clone()
+        .metadata
+        .into_iter()
+        .map(|x| {
+            let key = expr_into_number(&x.key)? as u64;
+            let value = expr_into_metadatum(&x.value)?;
+            Ok((key, value))
+        })
+        .collect::<Result<Vec<_>, _>>();
+
+    match metadata_kv {
+        Ok(key_values) => {
+            let metadata_tree = pallas::ledger::primitives::alonzo::Metadata::from_iter(key_values);
+            let metadata = if metadata_tree.is_empty() {
+                None
+            } else {
+                Some(metadata_tree)
+            };
+
+            Ok(Some(primitives::AuxiliaryData::PostAlonzo(
+                pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
+                    metadata,
+                    native_scripts: None,
+                    plutus_scripts: None,
+                },
+            )))
+        }
+        Err(err) => Err(err),
+    }
 }
 
 fn utxo_ref_matches(ref1: &tx3_lang::UtxoRef, ref2: &primitives::TransactionInput) -> bool {
