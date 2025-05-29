@@ -484,6 +484,25 @@
           }
         }
       ],
+      "validity": {
+        "fields": [
+          {
+            "ValidSince": {
+              "Number": 1735700400000
+            }
+          },
+          {
+            "ValidUntil": {
+              "Number": 1893466800000
+            }
+          }
+        ],
+        "span": {
+          "dummy": false,
+          "start": 1148,
+          "end": 1236
+        }
+      },
       "burn": null,
       "mints": [
         {
@@ -571,9 +590,38 @@
       "span": {
         "dummy": false,
         "start": 414,
-        "end": 1144
+        "end": 1283
       },
-      "collateral": []
+      "collateral": [],
+      "metadata": {
+        "fields": [
+          {
+            "key": {
+              "Number": 1
+            },
+            "value": {
+              "String": {
+                "value": "METADATA",
+                "span": {
+                  "dummy": false,
+                  "start": 1264,
+                  "end": 1274
+                }
+              }
+            },
+            "span": {
+              "dummy": false,
+              "start": 1261,
+              "end": 1274
+            }
+          }
+        ],
+        "span": {
+          "dummy": false,
+          "start": 1242,
+          "end": 1281
+        }
+      }
     }
   ],
   "types": [
@@ -799,6 +847,6 @@
   "span": {
     "dummy": false,
     "start": 0,
-    "end": 1145
+    "end": 1284
   }
 }

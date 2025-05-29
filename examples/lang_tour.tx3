@@ -60,4 +60,13 @@ tx my_tx(
         },
         amount: AnyAsset(source.field3, source.field2, source.field1) + Ada(40),
     }
+
+    validity {
+        valid_since: 1735700400000,
+        valid_until: 1893466800000,
+    }
+
+    metadata {
+        1: "METADATA",
+    }
 }

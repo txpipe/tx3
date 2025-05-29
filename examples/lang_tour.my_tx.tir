@@ -155,6 +155,14 @@
       }
     }
   ],
+  "validity": {
+    "since": {
+      "Number": 1735700400000
+    },
+    "until": {
+      "Number": 1893466800000
+    }
+  },
   "mints": [
     {
       "amount": {
@@ -207,19 +215,7 @@
               ]
             },
             "asset_name": {
-              "Bytes": [
-                79,
-                84,
-                72,
-                69,
-                82,
-                95,
-                84,
-                79,
-                75,
-                69,
-                78
-              ]
+              "String": "OTHER_TOKEN"
             },
             "amount": {
               "Number": 10
@@ -236,5 +232,15 @@
     }
   ],
   "adhoc": [],
-  "collateral": []
+  "collateral": [],
+  "metadata": [
+    {
+      "key": {
+        "Number": 1
+      },
+      "value": {
+        "String": "METADATA"
+      }
+    }
+  ]
 }

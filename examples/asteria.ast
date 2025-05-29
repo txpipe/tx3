@@ -602,6 +602,7 @@
           }
         }
       ],
+      "validity": null,
       "burn": {
         "fields": [
           {
@@ -647,7 +648,8 @@
         "start": 569,
         "end": 1445
       },
-      "collateral": []
+      "collateral": [],
+      "metadata": null
     }
   ],
   "types": [
