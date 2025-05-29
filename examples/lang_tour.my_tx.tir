@@ -160,7 +160,10 @@
       "Number": 1735700400000
     },
     "until": {
-      "Number": 1893466800000
+      "EvalParameter": [
+        "validuntil",
+        "Int"
+      ]
     }
   },
   "mints": [
@@ -239,7 +242,10 @@
         "Number": 1
       },
       "value": {
-        "String": "METADATA"
+        "EvalParameter": [
+          "metadata",
+          "Bytes"
+        ]
       }
     }
   ]

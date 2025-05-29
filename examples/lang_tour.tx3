@@ -27,7 +27,9 @@ policy FullyDefinedPolicy {
 }
 
 tx my_tx(
-    quantity: Int
+    quantity: Int,
+    validUntil: Int,
+    metadata: Bytes,
 ) {
     input source {
         from: MyParty,
@@ -63,10 +65,10 @@ tx my_tx(
 
     validity {
         valid_since: 1735700400000,
-        valid_until: 1893466800000,
+        valid_until: validUntil,
     }
 
     metadata {
-        1: "METADATA",
+        1: metadata,
     }
 }
