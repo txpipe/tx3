@@ -144,7 +144,9 @@
       }
     }
   ],
+  "validity": null,
   "mints": [],
   "adhoc": [],
-  "collateral": []
+  "collateral": [],
+  "metadata": []
 }

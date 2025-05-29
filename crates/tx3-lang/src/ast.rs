@@ -174,11 +174,13 @@ pub struct TxDef {
     pub references: Vec<ReferenceBlock>,
     pub inputs: Vec<InputBlock>,
     pub outputs: Vec<OutputBlock>,
+    pub validity: Option<ValidityBlock>,
     pub burn: Option<BurnBlock>,
     pub mints: Vec<MintBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
     pub span: Span,
     pub collateral: Vec<CollateralBlock>,
+    pub metadata: Option<MetadataBlock>,
 
     // analysis
     #[serde(skip)]
@@ -323,6 +325,19 @@ pub struct ReferenceBlock {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MetadataBlockField {
+    pub key: DataExpr,
+    pub value: DataExpr,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct MetadataBlock {
+    pub fields: Vec<MetadataBlockField>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct InputBlock {
     pub name: String,
     pub is_many: bool,
@@ -366,6 +381,33 @@ pub struct OutputBlock {
 
 impl OutputBlock {
     pub(crate) fn find(&self, key: &str) -> Option<&OutputBlockField> {
+        self.fields.iter().find(|x| x.key() == key)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ValidityBlockField {
+    ValidUntil(Box<DataExpr>),
+    ValidSince(Box<DataExpr>),
+}
+
+impl ValidityBlockField {
+    fn key(&self) -> &str {
+        match self {
+            ValidityBlockField::ValidUntil(_) => "valid_until",
+            ValidityBlockField::ValidSince(_) => "valid_since",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ValidityBlock {
+    pub fields: Vec<ValidityBlockField>,
+    pub span: Span,
+}
+
+impl ValidityBlock {
+    pub(crate) fn find(&self, key: &str) -> Option<&ValidityBlockField> {
         self.fields.iter().find(|x| x.key() == key)
     }
 }

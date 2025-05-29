@@ -214,6 +214,7 @@
           }
         }
       ],
+      "validity": null,
       "burn": null,
       "mints": [],
       "adhoc": [],
@@ -222,7 +223,8 @@
         "start": 33,
         "end": 315
       },
-      "collateral": []
+      "collateral": [],
+      "metadata": null
     }
   ],
   "types": [],

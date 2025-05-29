@@ -1,6 +1,6 @@
 use std::str::FromStr as _;
 
-use pallas::ledger::primitives::conway as primitives;
+use pallas::{codec::utils::Int, ledger::primitives::conway as primitives};
 use tx3_lang::ir;
 
 use crate::{Error, Network};
@@ -42,6 +42,26 @@ pub fn expr_into_number(expr: &ir::Expression) -> Result<i128, Error> {
         _ => Err(Error::CoerceError(
             format!("{:?}", expr),
             "Number".to_string(),
+        )),
+    }
+}
+
+pub fn expr_into_metadatum(
+    expr: &ir::Expression,
+) -> Result<pallas::ledger::primitives::alonzo::Metadatum, Error> {
+    match expr {
+        ir::Expression::Number(x) => Ok(pallas::ledger::primitives::alonzo::Metadatum::Int(
+            Int::from(*x as i64),
+        )),
+        ir::Expression::String(x) => Ok(pallas::ledger::primitives::alonzo::Metadatum::Text(
+            x.clone(),
+        )),
+        ir::Expression::Bytes(x) => Ok(pallas::ledger::primitives::alonzo::Metadatum::Bytes(
+            primitives::Bytes::from(x.clone()),
+        )),
+        _ => Err(Error::CoerceError(
+            format!("{:?}", expr),
+            "Metadatum".to_string(),
         )),
     }
 }
