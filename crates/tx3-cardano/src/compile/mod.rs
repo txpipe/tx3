@@ -2,9 +2,12 @@ use std::collections::BTreeMap;
 
 use pallas::{
     codec::utils::{KeepRaw, MaybeIndefArray},
-    ledger::primitives::{
-        conway::{self as primitives, NonEmptySet, Redeemers},
-        TransactionInput,
+    ledger::{
+        primitives::{
+            conway::{self as primitives, NonEmptySet, Redeemers},
+            TransactionInput,
+        },
+        traverse::ComputeHash,
     },
 };
 
@@ -559,12 +562,14 @@ pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'stat
     transaction_body.script_data_hash =
         compute_script_data_hash(&transaction_body, &transaction_witness_set, pparams);
 
-    let tx = primitives::Tx {
+    transaction_body.auxiliary_data_hash = auxiliary_data
+        .as_ref()
+        .map(|x| primitives::Bytes::from(x.compute_hash().to_vec()));
+
+    Ok(primitives::Tx {
         transaction_body: transaction_body.into(),
         transaction_witness_set: transaction_witness_set.into(),
         auxiliary_data: primitives::Nullable::from(auxiliary_data.map(KeepRaw::from)),
         success: true,
-    };
-
-    Ok(tx)
+    })
 }

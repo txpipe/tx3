@@ -886,7 +886,6 @@ static ADA: std::sync::LazyLock<AssetDef> = std::sync::LazyLock::new(|| AssetDef
 
 impl Analyzable for Program {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
-        println!("PROGRAM ANALYZE");
         let mut scope = Scope::new(parent);
 
         for party in self.parties.iter() {
