@@ -329,7 +329,7 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::None => ir::Expression::None,
             ast::DataExpr::Number(x) => Self::Output::Number(*x as i128),
             ast::DataExpr::Bool(x) => ir::Expression::Bool(*x),
-            ast::DataExpr::String(x) => ir::Expression::Bytes(x.value.as_bytes().to_vec()),
+            ast::DataExpr::String(x) => ir::Expression::String(x.value.clone()),
             ast::DataExpr::HexString(x) => ir::Expression::Bytes(hex::decode(&x.value)?),
             ast::DataExpr::StructConstructor(x) => ir::Expression::Struct(x.into_lower()?),
             ast::DataExpr::ListConstructor(x) => ir::Expression::List(x.into_lower()?),

@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, str::FromStr as _};
+use std::str::FromStr as _;
 
 use pallas::{codec::utils::Int, ledger::primitives::conway as primitives};
 use tx3_lang::ir;
@@ -55,6 +55,9 @@ pub fn expr_into_metadatum(
         )),
         ir::Expression::String(x) => Ok(pallas::ledger::primitives::alonzo::Metadatum::Text(
             x.clone(),
+        )),
+        ir::Expression::Bytes(x) => Ok(pallas::ledger::primitives::alonzo::Metadatum::Bytes(
+            primitives::Bytes::from(x.clone()),
         )),
         _ => Err(Error::CoerceError(
             format!("{:?}", expr),
