@@ -805,7 +805,9 @@
           "end": 99
         }
       },
-      "asset_name": "FUEL",
+      "asset_name": {
+        "Ascii": "FUEL"
+      },
       "span": {
         "dummy": false,
         "start": 28,
@@ -822,7 +824,9 @@
           "end": 178
         }
       },
-      "asset_name": "SHIP",
+      "asset_name": {
+        "Ascii": "SHIP"
+      },
       "span": {
         "dummy": false,
         "start": 107,
@@ -839,7 +843,9 @@
           "end": 258
         }
       },
-      "asset_name": "PILOT",
+      "asset_name": {
+        "Ascii": "PILOT"
+      },
       "span": {
         "dummy": false,
         "start": 186,

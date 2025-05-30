@@ -1300,7 +1300,14 @@ impl AstNode for AssetDef {
 
         let identifier = inner.next().unwrap().as_str().to_string();
         let policy = HexStringLiteral::parse(inner.next().unwrap())?;
-        let asset_name = inner.next().unwrap().as_str().to_string();
+        let asset_name = inner.next().unwrap();
+
+        let asset_name = match asset_name.as_rule() {
+            Rule::ascii_text => AssetName::Ascii(asset_name.as_str().to_string()),
+            Rule::string => AssetName::String(StringLiteral::parse(asset_name)?),
+            Rule::hex_string => AssetName::HexString(HexStringLiteral::parse(asset_name)?),
+            x => unreachable!("Unexpected rule in asset_def: {:?}", x),
+        };
 
         Ok(AssetDef {
             name: identifier,
@@ -1662,7 +1669,9 @@ mod tests {
             policy: Some(HexStringLiteral::new(
                 "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
             )),
-            asset_name: Some("0xef7a1ceb".to_string()),
+            asset_name: Some(AssetName::HexString(HexStringLiteral::new(
+                "ef7a1ceb".to_string()
+            ))),
             span: Span::DUMMY,
         }
     );
@@ -1676,7 +1685,21 @@ mod tests {
             policy: Some(HexStringLiteral::new(
                 "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
             )),
-            asset_name: Some("MYTOKEN".to_string()),
+            asset_name: Some(AssetName::Ascii("MYTOKEN".to_string())),
+            span: Span::DUMMY,
+        }
+    );
+
+    input_to_ast_check!(
+        AssetDef,
+        "hex_string",
+        "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.\"MY TOKEN\";",
+        AssetDef {
+            name: "MyToken".to_string(),
+            policy: Some(HexStringLiteral::new(
+                "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
+            )),
+            asset_name: Some(AssetName::String(StringLiteral::new("MY TOKEN".to_string()))),
             span: Span::DUMMY,
         }
     );

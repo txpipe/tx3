@@ -226,7 +226,9 @@
           "end": 159
         }
       },
-      "asset_name": "MYTOKEN",
+      "asset_name": {
+        "Ascii": "MYTOKEN"
+      },
       "span": {
         "dummy": false,
         "start": 85,
