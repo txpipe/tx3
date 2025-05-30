@@ -356,7 +356,7 @@ impl IntoLower for ast::StaticAssetConstructor {
         };
 
         let asset_name = match asset_def.asset_name {
-            Some(x) => ir::Expression::Bytes(x.as_bytes().to_vec()),
+            Some(x) => x.into_lower()?,
             None => ir::Expression::None,
         };
 
@@ -401,6 +401,18 @@ impl IntoLower for ast::AssetBinaryOp {
                 ast::BinaryOperator::Subtract => ir::BinaryOpKind::Sub,
             },
         })
+    }
+}
+
+impl IntoLower for ast::AssetName {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::AssetName::Ascii(x) => Ok(ir::Expression::Bytes(x.as_bytes().to_vec())),
+            ast::AssetName::String(x) => Ok(ir::Expression::Bytes(x.value.as_bytes().to_vec())),
+            ast::AssetName::HexString(x) => Ok(ir::Expression::Bytes(hex::decode(&x.value)?)),
+        }
     }
 }
 

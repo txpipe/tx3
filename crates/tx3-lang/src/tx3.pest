@@ -38,7 +38,7 @@ parameter_list = { "(" ~ (parameter ~ ("," ~ parameter)* ~ ","?)? ~ ")" }
 
 // Asset definitions
 asset_def = {
-    "asset" ~ identifier ~ "=" ~ hex_string ~ "." ~ ascii_text ~ ";"
+    "asset" ~ identifier ~ "=" ~ hex_string ~ "." ~ (hex_string | ascii_text | string) ~ ";"
 }
 
 // Party definitions
