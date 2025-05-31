@@ -80,6 +80,25 @@ fn coerce_identifier_into_asset_expr(
     }
 }
 
+fn lower_into_req_signers_expr(identifier: &ast::Identifier) -> Result<ir::Expression, Error> {
+    match identifier.try_symbol()? {
+        ast::Symbol::ParamVar(name, ty) => match ty.deref() {
+            ast::Type::Bytes => Ok(ir::Expression::EvalParameter(
+                name.to_lowercase().clone(),
+                ir::Type::Bytes,
+            )),
+            _ => Err(Error::InvalidSymbolType(
+                identifier.value.clone(),
+                "ReqSignersExpr",
+            )),
+        },
+        _ => Err(Error::InvalidSymbol(
+            identifier.value.clone(),
+            "ReqSignersExpr",
+        )),
+    }
+}
+
 fn lower_into_address_expr(identifier: &ast::Identifier) -> Result<ir::Expression, Error> {
     match identifier.try_symbol()? {
         ast::Symbol::PolicyDef(x) => Ok(x.into_lower()?.hash),
@@ -93,7 +112,6 @@ fn lower_into_address_expr(identifier: &ast::Identifier) -> Result<ir::Expressio
         )),
     }
 }
-
 pub(crate) trait IntoLower {
     type Output;
 
@@ -576,6 +594,27 @@ impl IntoLower for ast::CollateralBlock {
     }
 }
 
+impl IntoLower for ast::ReqSignersExpr {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::ReqSignersExpr::Identifier(x) => lower_into_req_signers_expr(x),
+            ast::ReqSignersExpr::ListConstructor(x) => Ok(ir::Expression::List(x.into_lower()?)),
+        }
+    }
+}
+
+impl IntoLower for ast::ReqSignersBlock {
+    type Output = ir::ReqSigners;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        Ok(ir::ReqSigners {
+            pub_keys: Some(self.pub_keys.into_lower()?),
+        })
+    }
+}
+
 pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
     let ir = ir::Tx {
         references: ast
@@ -606,6 +645,11 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
         fees: ir::Expression::FeeQuery,
         collateral: ast
             .collateral
+            .iter()
+            .map(|x| x.into_lower())
+            .collect::<Result<Vec<_>, _>>()?,
+        req_signers: ast
+            .req_signers
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,

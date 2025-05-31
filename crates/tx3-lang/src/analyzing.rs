@@ -755,6 +755,33 @@ impl Analyzable for MintBlock {
     }
 }
 
+impl Analyzable for ReqSignersExpr {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        match self {
+            ReqSignersExpr::Identifier(x) => x.analyze(parent),
+            // TODO: verify this list types are hashes (maybe parties could be added)
+            ReqSignersExpr::ListConstructor(x) => x.analyze(parent),
+        }
+    }
+
+    fn is_resolved(&self) -> bool {
+        match self {
+            ReqSignersExpr::Identifier(x) => x.is_resolved(),
+            ReqSignersExpr::ListConstructor(x) => x.is_resolved(),
+        }
+    }
+}
+
+impl Analyzable for ReqSignersBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.pub_keys.analyze(parent)
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.pub_keys.is_resolved()
+    }
+}
+
 impl Analyzable for ChainSpecificBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
