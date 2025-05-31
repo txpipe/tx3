@@ -26,7 +26,7 @@ primitive_type = {
 custom_type = { identifier }
 list_type = { "List<" ~ type ~ ">" }
 
-type = { 
+type = {
     primitive_type |
     list_type |
     custom_type
@@ -182,6 +182,11 @@ address_expr = {
     string
 }
 
+req_signers_expr = {
+    identifier |
+    list_constructor
+}
+
 // input block
 
 input_block_from = { "from" ~ ":" ~ address_expr }
@@ -258,6 +263,10 @@ burn_block = {
     "}"
 }
 
+req_signers_block = {
+    "req_signers" ~ (identifier)? ~ ":" ~ req_signers_expr
+}
+
 cardano_stake_delegation_certificate = {
     "stake_delegation_certificate" ~ "{" ~
     (record_constructor_field ~ ",")* ~
@@ -291,7 +300,8 @@ tx_body_block = _{
     burn_block |
     mint_block |
     output_block |
-    chain_specific_block
+    chain_specific_block |
+    req_signers_block
 }
 
 // Transaction definition
