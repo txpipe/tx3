@@ -176,6 +176,7 @@ pub struct TxDef {
     pub outputs: Vec<OutputBlock>,
     pub burn: Option<BurnBlock>,
     pub mints: Vec<MintBlock>,
+    pub req_signers: Vec<ReqSignersBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
     pub span: Span,
     pub collateral: Vec<CollateralBlock>,
@@ -388,6 +389,13 @@ impl MintBlockField {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MintBlock {
     pub fields: Vec<MintBlockField>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ReqSignersBlock {
+    pub name: Option<String>,
+    pub pub_keys: Box<ReqSignersExpr>,
     pub span: Span,
 }
 
@@ -619,6 +627,12 @@ impl DataExpr {
             _ => None,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ReqSignersExpr {
+    ListConstructor(ListConstructor),
+    Identifier(Identifier),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

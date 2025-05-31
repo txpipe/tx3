@@ -151,6 +151,7 @@ impl AstNode for TxDef {
         let mut mints = Vec::new();
         let mut adhoc = Vec::new();
         let mut collateral = Vec::new();
+        let mut req_signers = Vec::new();
 
         for item in inner {
             match item.as_rule() {
@@ -161,6 +162,7 @@ impl AstNode for TxDef {
                 Rule::mint_block => mints.push(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
                 Rule::collateral_block => collateral.push(CollateralBlock::parse(item)?),
+                Rule::req_signers_block => req_signers.push(ReqSignersBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
         }
@@ -173,6 +175,7 @@ impl AstNode for TxDef {
             outputs,
             burn,
             mints,
+            req_signers,
             adhoc,
             scope: None,
             span,
@@ -481,6 +484,59 @@ impl AstNode for MintBlockField {
             Self::Amount(x) => x.span(),
             Self::Redeemer(x) => x.span(),
         }
+    }
+}
+
+impl AstNode for ReqSignersExpr {
+    const RULE: Rule = Rule::req_signers_expr;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let mut inner = pair.into_inner();
+
+        let value = inner.next().unwrap();
+
+        match value.as_rule() {
+            Rule::identifier => Ok(ReqSignersExpr::Identifier(Identifier::parse(value)?)),
+            Rule::list_constructor => Ok(ReqSignersExpr::ListConstructor(ListConstructor::parse(
+                value,
+            )?)),
+            x => unreachable!("Unexpected rule in req_signers_expr: {:?}", x),
+        }
+    }
+
+    fn span(&self) -> &Span {
+        match self {
+            Self::Identifier(x) => x.span(),
+            Self::ListConstructor(x) => x.span(),
+        }
+    }
+}
+
+impl AstNode for ReqSignersBlock {
+    const RULE: Rule = Rule::req_signers_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let mut inner = pair.into_inner();
+
+        let has_name = inner
+            .peek()
+            .map(|x| x.as_rule() == Rule::identifier)
+            .unwrap_or_default();
+
+        let name = has_name.then(|| inner.next().unwrap().as_str().to_string());
+
+        let pub_keys = ReqSignersExpr::parse(inner.next().unwrap())?;
+
+        Ok(ReqSignersBlock {
+            name,
+            pub_keys: Box::new(pub_keys),
+            span,
+        })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
