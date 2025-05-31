@@ -306,6 +306,20 @@ fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
         .flatten()
 }
 
+fn compile_required_signers(tx: &ir::Tx) -> Result<Option<primitives::RequiredSigners>, Error> {
+    let exprs = tx
+        .req_signers
+        .iter()
+        .filter_map(|x| x.pub_keys.clone())
+        .map(|x| coercion::expr_into_bytes(&x))
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .map(|x| primitives::AddrKeyhash::from(x.as_slice()))
+        .collect::<Vec<_>>();
+
+    Ok(primitives::RequiredSigners::from_vec(exprs))
+}
+
 fn compile_tx_body(
     tx: &ir::Tx,
     network: Network,
@@ -324,7 +338,7 @@ fn compile_tx_body(
         auxiliary_data_hash: None,
         script_data_hash: None,
         collateral: compile_collateral(tx),
-        required_signers: None,
+        required_signers: compile_required_signers(tx)?,
         collateral_return: None,
         total_collateral: None,
         voting_procedures: None,
