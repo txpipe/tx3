@@ -514,14 +514,14 @@ impl AstNode for ValidityBlockField {
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         match pair.as_rule() {
-            Rule::validity_since => {
+            Rule::validity_since_slot => {
                 let pair = pair.into_inner().next().unwrap();
-                let x = ValidityBlockField::ValidSince(DataExpr::parse(pair)?.into());
+                let x = ValidityBlockField::SinceSlot(DataExpr::parse(pair)?.into());
                 Ok(x)
             }
-            Rule::validity_until => {
+            Rule::validity_until_slot => {
                 let pair = pair.into_inner().next().unwrap();
-                let x = ValidityBlockField::ValidUntil(DataExpr::parse(pair)?.into());
+                let x = ValidityBlockField::UntilSlot(DataExpr::parse(pair)?.into());
                 Ok(x)
             }
             x => unreachable!("Unexpected rule in validity_block: {:?}", x),
@@ -530,8 +530,8 @@ impl AstNode for ValidityBlockField {
 
     fn span(&self) -> &Span {
         match self {
-            Self::ValidUntil(x) => x.span(),
-            Self::ValidSince(x) => x.span(),
+            Self::UntilSlot(x) => x.span(),
+            Self::SinceSlot(x) => x.span(),
         }
     }
 }
@@ -1917,7 +1917,7 @@ mod tests {
     #[test]
     fn test_spans_are_respected() {
         let program = parse_well_known_example("lang_tour");
-        assert_eq!(program.span, Span::new(0, 1322));
+        assert_eq!(program.span, Span::new(0, 1320));
 
         assert_eq!(program.parties[0].span, Span::new(0, 14));
 

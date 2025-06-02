@@ -387,15 +387,15 @@ impl OutputBlock {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ValidityBlockField {
-    ValidUntil(Box<DataExpr>),
-    ValidSince(Box<DataExpr>),
+    UntilSlot(Box<DataExpr>),
+    SinceSlot(Box<DataExpr>),
 }
 
 impl ValidityBlockField {
     fn key(&self) -> &str {
         match self {
-            ValidityBlockField::ValidUntil(_) => "valid_until",
-            ValidityBlockField::ValidSince(_) => "valid_since",
+            ValidityBlockField::UntilSlot(_) => "until_slot",
+            ValidityBlockField::SinceSlot(_) => "since_slot",
         }
     }
 }

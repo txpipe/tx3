@@ -693,14 +693,14 @@ impl Analyzable for MetadataBlock {
 impl Analyzable for ValidityBlockField {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
-            ValidityBlockField::ValidSince(x) => x.analyze(parent),
-            ValidityBlockField::ValidUntil(x) => x.analyze(parent),
+            ValidityBlockField::SinceSlot(x) => x.analyze(parent),
+            ValidityBlockField::UntilSlot(x) => x.analyze(parent),
         }
     }
     fn is_resolved(&self) -> bool {
         match self {
-            ValidityBlockField::ValidSince(x) => x.is_resolved(),
-            ValidityBlockField::ValidUntil(x) => x.is_resolved(),
+            ValidityBlockField::SinceSlot(x) => x.is_resolved(),
+            ValidityBlockField::UntilSlot(x) => x.is_resolved(),
         }
     }
 }

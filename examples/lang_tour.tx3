@@ -64,8 +64,8 @@ tx my_tx(
     }
 
     validity {
-        valid_since: 1735700400000,
-        valid_until: validUntil,
+        since_slot: 1735700400000,
+        until_slot: validUntil,
     }
 
     metadata {

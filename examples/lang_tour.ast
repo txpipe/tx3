@@ -495,18 +495,18 @@
       "validity": {
         "fields": [
           {
-            "ValidSince": {
+            "SinceSlot": {
               "Number": 1735700400000
             }
           },
           {
-            "ValidUntil": {
+            "UntilSlot": {
               "Identifier": {
                 "value": "validUntil",
                 "span": {
                   "dummy": false,
-                  "start": 1259,
-                  "end": 1269
+                  "start": 1257,
+                  "end": 1267
                 }
               }
             }
@@ -515,7 +515,7 @@
         "span": {
           "dummy": false,
           "start": 1191,
-          "end": 1276
+          "end": 1274
         }
       },
       "burn": null,
@@ -605,7 +605,7 @@
       "span": {
         "dummy": false,
         "start": 414,
-        "end": 1321
+        "end": 1319
       },
       "collateral": [],
       "metadata": {
@@ -619,22 +619,22 @@
                 "value": "metadata",
                 "span": {
                   "dummy": false,
-                  "start": 1304,
-                  "end": 1312
+                  "start": 1302,
+                  "end": 1310
                 }
               }
             },
             "span": {
               "dummy": false,
-              "start": 1301,
-              "end": 1312
+              "start": 1299,
+              "end": 1310
             }
           }
         ],
         "span": {
           "dummy": false,
-          "start": 1282,
-          "end": 1319
+          "start": 1280,
+          "end": 1317
         }
       }
     }
@@ -862,6 +862,6 @@
   "span": {
     "dummy": false,
     "start": 0,
-    "end": 1322
+    "end": 1320
   }
 }

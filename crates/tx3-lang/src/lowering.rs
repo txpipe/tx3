@@ -509,8 +509,8 @@ impl IntoLower for ast::ValidityBlockField {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         match self {
-            ast::ValidityBlockField::ValidSince(x) => x.into_lower(),
-            ast::ValidityBlockField::ValidUntil(x) => x.into_lower(),
+            ast::ValidityBlockField::SinceSlot(x) => x.into_lower(),
+            ast::ValidityBlockField::UntilSlot(x) => x.into_lower(),
         }
     }
 }
