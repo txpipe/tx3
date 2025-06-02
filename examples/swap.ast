@@ -535,6 +535,7 @@
       ],
       "burn": null,
       "mints": [],
+      "req_signers": [],
       "adhoc": [],
       "span": {
         "dummy": false,

@@ -567,11 +567,42 @@
           }
         }
       ],
+      "req_signers": [
+        {
+          "name": null,
+          "pub_keys": {
+            "ListConstructor": {
+              "elements": [
+                {
+                  "HexString": {
+                    "value": "0F5B22E57FEEB5B4FD1D501B007A427C56A76884D4978FAFEF979D9C",
+                    "span": {
+                      "dummy": false,
+                      "start": 1162,
+                      "end": 1220
+                    }
+                  }
+                }
+              ],
+              "span": {
+                "dummy": false,
+                "start": 1161,
+                "end": 1221
+              }
+            }
+          },
+          "span": {
+            "dummy": false,
+            "start": 1148,
+            "end": 1221
+          }
+        }
+      ],
       "adhoc": [],
       "span": {
         "dummy": false,
         "start": 414,
-        "end": 1144
+        "end": 1223
       },
       "collateral": []
     }
@@ -799,6 +830,6 @@
   "span": {
     "dummy": false,
     "start": 0,
-    "end": 1145
+    "end": 1224
   }
 }

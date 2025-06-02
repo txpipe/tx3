@@ -96,5 +96,6 @@
   ],
   "mints": [],
   "adhoc": [],
-  "collateral": []
+  "collateral": [],
+  "req_signers": []
 }
