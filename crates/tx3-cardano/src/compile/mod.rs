@@ -307,17 +307,25 @@ fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
 }
 
 fn compile_required_signers(tx: &ir::Tx) -> Result<Option<primitives::RequiredSigners>, Error> {
-    let exprs = tx
-        .req_signers
-        .iter()
-        .filter_map(|x| x.pub_keys.clone())
-        .map(|x| coercion::expr_into_bytes(&x))
-        .collect::<Result<Vec<_>, _>>()?
-        .into_iter()
-        .map(|x| primitives::AddrKeyhash::from(x.as_slice()))
-        .collect::<Vec<_>>();
-
-    Ok(primitives::RequiredSigners::from_vec(exprs))
+    let mut keyhashes = Vec::new();
+    for req in &tx.req_signers {
+        if let Some(expr) = &req.pub_keys {
+            let exprs = match expr {
+                ir::Expression::List(list) => list,
+                _ => {
+                    return Err(Error::CoerceError(
+                        format!("{:?}", expr),
+                        "RequiredSigners".to_string(),
+                    ))
+                }
+            };
+            for item in exprs {
+                let bytes = coercion::expr_into_bytes(item)?;
+                keyhashes.push(primitives::AddrKeyhash::from(bytes.as_slice()));
+            }
+        }
+    }
+    Ok(primitives::RequiredSigners::from_vec(keyhashes))
 }
 
 fn compile_tx_body(
