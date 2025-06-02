@@ -514,14 +514,14 @@ impl AstNode for ValidityBlockField {
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         match pair.as_rule() {
-            Rule::validity_since => {
+            Rule::validity_since_slot => {
                 let pair = pair.into_inner().next().unwrap();
-                let x = ValidityBlockField::ValidSince(DataExpr::parse(pair)?.into());
+                let x = ValidityBlockField::SinceSlot(DataExpr::parse(pair)?.into());
                 Ok(x)
             }
-            Rule::validity_until => {
+            Rule::validity_until_slot => {
                 let pair = pair.into_inner().next().unwrap();
-                let x = ValidityBlockField::ValidUntil(DataExpr::parse(pair)?.into());
+                let x = ValidityBlockField::UntilSlot(DataExpr::parse(pair)?.into());
                 Ok(x)
             }
             x => unreachable!("Unexpected rule in validity_block: {:?}", x),
@@ -530,8 +530,8 @@ impl AstNode for ValidityBlockField {
 
     fn span(&self) -> &Span {
         match self {
-            Self::ValidUntil(x) => x.span(),
-            Self::ValidSince(x) => x.span(),
+            Self::UntilSlot(x) => x.span(),
+            Self::SinceSlot(x) => x.span(),
         }
     }
 }

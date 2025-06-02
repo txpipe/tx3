@@ -238,12 +238,12 @@ output_block = {
     "}"
 }
 
-validity_until = {"valid_until" ~ ":" ~ data_expr}
-validity_since = {"valid_since" ~ ":" ~ data_expr}
+validity_until_slot = {"until_slot" ~ ":" ~ data_expr}
+validity_since_slot = {"since_slot" ~ ":" ~ data_expr}
 
 validity_block_field = _{
-    validity_until |
-    validity_since
+    validity_until_slot |
+    validity_since_slot
 }
 
 validity_block = {
