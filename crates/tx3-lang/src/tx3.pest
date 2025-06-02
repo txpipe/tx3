@@ -238,6 +238,20 @@ output_block = {
     "}"
 }
 
+validity_until = {"valid_until" ~ ":" ~ data_expr}
+validity_since = {"valid_since" ~ ":" ~ data_expr}
+
+validity_block_field = _{
+    validity_until |
+    validity_since
+}
+
+validity_block = {
+    "validity" ~ "{" ~
+    (validity_block_field ~ ",")* ~
+    "}"
+}
+
 mint_block_amount = { "amount" ~ ":" ~ asset_expr }
 mint_block_redeemer = { "redeemer" ~ ":" ~ data_expr }
 
@@ -284,6 +298,14 @@ chain_specific_block = {
     bitcoin_block
 }
 
+metadata_block_field = {
+    data_expr ~ ":" ~ data_expr
+}
+
+metadata_block = {
+    "metadata" ~ "{" ~  (metadata_block_field ~ ",")+ ~ "}"
+}
+
 tx_body_block = _{
     reference_block |
     input_block |
@@ -291,7 +313,9 @@ tx_body_block = _{
     burn_block |
     mint_block |
     output_block |
-    chain_specific_block
+    chain_specific_block | 
+    metadata_block |
+    validity_block
 }
 
 // Transaction definition

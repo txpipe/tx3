@@ -2,13 +2,18 @@ use std::collections::BTreeMap;
 
 use pallas::{
     codec::utils::{KeepRaw, MaybeIndefArray},
-    ledger::primitives::{
-        conway::{self as primitives, NonEmptySet, Redeemers},
-        TransactionInput,
+    ledger::{
+        primitives::{
+            conway::{self as primitives, NonEmptySet, Redeemers},
+            TransactionInput,
+        },
+        traverse::ComputeHash,
     },
 };
 
 use tx3_lang::ir;
+
+use crate::coercion::{expr_into_metadatum, expr_into_number};
 
 use super::*;
 
@@ -306,10 +311,26 @@ fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
         .flatten()
 }
 
+fn compile_validity(validity: Option<&ir::Validity>) -> Result<(Option<u64>, Option<u64>), Error> {
+    let since = validity
+        .and_then(|v| v.since.as_ref())
+        .map(|expr| coercion::expr_into_number(expr).map(|n| n as u64))
+        .transpose()?;
+
+    let until = validity
+        .and_then(|v| v.until.as_ref())
+        .map(|expr| coercion::expr_into_number(expr).map(|n| n as u64))
+        .transpose()?;
+
+    Ok((since, until))
+}
+
 fn compile_tx_body(
     tx: &ir::Tx,
     network: Network,
 ) -> Result<primitives::TransactionBody<'static>, Error> {
+    let (since, until) = compile_validity(tx.validity.as_ref())?;
+
     let out = primitives::TransactionBody {
         inputs: compile_inputs(tx)?.into(),
         outputs: compile_outputs(tx, network)?,
@@ -318,8 +339,8 @@ fn compile_tx_body(
         mint: compile_mint_block(tx)?,
         reference_inputs: primitives::NonEmptySet::from_vec(compile_reference_inputs(tx)?),
         network_id: Some(network),
-        ttl: None,
-        validity_interval_start: None,
+        ttl: until,
+        validity_interval_start: since,
         withdrawals: None,
         auxiliary_data_hash: None,
         script_data_hash: None,
@@ -336,16 +357,37 @@ fn compile_tx_body(
     Ok(out)
 }
 
-fn compile_auxiliary_data(_tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryData>, Error> {
-    // Ok(Some(primitives::AuxiliaryData::PostAlonzo(
-    //     pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
-    //         metadata: None,
-    //         native_scripts: None,
-    //         plutus_scripts: None,
-    //     },
-    // )))
+fn compile_auxiliary_data(tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryData>, Error> {
+    let metadata_kv = tx
+        .clone()
+        .metadata
+        .into_iter()
+        .map(|x| {
+            let key = expr_into_number(&x.key)? as u64;
+            let value = expr_into_metadatum(&x.value)?;
+            Ok((key, value))
+        })
+        .collect::<Result<Vec<_>, _>>();
 
-    Ok(None)
+    match metadata_kv {
+        Ok(key_values) => {
+            let metadata_tree = pallas::ledger::primitives::alonzo::Metadata::from_iter(key_values);
+            let metadata = if metadata_tree.is_empty() {
+                None
+            } else {
+                Some(metadata_tree)
+            };
+
+            Ok(Some(primitives::AuxiliaryData::PostAlonzo(
+                pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
+                    metadata,
+                    native_scripts: None,
+                    plutus_scripts: None,
+                },
+            )))
+        }
+        Err(err) => Err(err),
+    }
 }
 
 fn utxo_ref_matches(ref1: &tx3_lang::UtxoRef, ref2: &primitives::TransactionInput) -> bool {
@@ -520,12 +562,14 @@ pub fn compile_tx(tx: &ir::Tx, pparams: &PParams) -> Result<primitives::Tx<'stat
     transaction_body.script_data_hash =
         compute_script_data_hash(&transaction_body, &transaction_witness_set, pparams);
 
-    let tx = primitives::Tx {
+    transaction_body.auxiliary_data_hash = auxiliary_data
+        .as_ref()
+        .map(|x| primitives::Bytes::from(x.compute_hash().to_vec()));
+
+    Ok(primitives::Tx {
         transaction_body: transaction_body.into(),
         transaction_witness_set: transaction_witness_set.into(),
         auxiliary_data: primitives::Nullable::from(auxiliary_data.map(KeepRaw::from)),
         success: true,
-    };
-
-    Ok(tx)
+    })
 }
