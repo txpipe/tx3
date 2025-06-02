@@ -1,0 +1,34 @@
+
+party Alice;
+party Bob;
+
+policy SharedVault = cardano::nativescript! {
+    any {
+        sig(@Alice),
+        all {
+            sig(@Bob),
+            after(@now + 2000)
+        }
+    }
+}
+
+party Receiver;
+
+tx payment_from_vault(
+    quantity: Int
+) {
+    input source {
+        from: SharedVault,
+        min_amount: lovelace(quantity),
+    }
+    
+    output {
+        to: Receiver,
+        amount: lovelace(quantity),
+    }
+
+    output {
+        to: SharedVault,
+        amount: source - lovelace(quantity) - fees,
+    }
+}
