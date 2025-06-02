@@ -150,6 +150,7 @@
           }
         }
       ],
+      "validity": null,
       "burn": null,
       "mints": [
         {
@@ -210,7 +211,8 @@
         "start": 188,
         "end": 523
       },
-      "collateral": []
+      "collateral": [],
+      "metadata": null
     }
   ],
   "types": [],

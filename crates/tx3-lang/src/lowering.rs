@@ -347,7 +347,7 @@ impl IntoLower for ast::DataExpr {
             ast::DataExpr::None => ir::Expression::None,
             ast::DataExpr::Number(x) => Self::Output::Number(*x as i128),
             ast::DataExpr::Bool(x) => ir::Expression::Bool(*x),
-            ast::DataExpr::String(x) => ir::Expression::Bytes(x.value.as_bytes().to_vec()),
+            ast::DataExpr::String(x) => ir::Expression::String(x.value.clone()),
             ast::DataExpr::HexString(x) => ir::Expression::Bytes(hex::decode(&x.value)?),
             ast::DataExpr::StructConstructor(x) => ir::Expression::Struct(x.into_lower()?),
             ast::DataExpr::ListConstructor(x) => ir::Expression::List(x.into_lower()?),
@@ -522,6 +522,28 @@ impl IntoLower for ast::OutputBlock {
     }
 }
 
+impl IntoLower for ast::ValidityBlockField {
+    type Output = ir::Expression;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        match self {
+            ast::ValidityBlockField::SinceSlot(x) => x.into_lower(),
+            ast::ValidityBlockField::UntilSlot(x) => x.into_lower(),
+        }
+    }
+}
+
+impl IntoLower for ast::ValidityBlock {
+    type Output = ir::Validity;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        Ok(ir::Validity {
+            since: self.find("valid_since").into_lower()?,
+            until: self.find("valid_until").into_lower()?,
+        })
+    }
+}
+
 impl IntoLower for ast::MintBlockField {
     type Output = ir::Expression;
 
@@ -541,6 +563,29 @@ impl IntoLower for ast::MintBlock {
             amount: self.find("amount").into_lower()?,
             redeemer: self.find("redeemer").into_lower()?,
         })
+    }
+}
+impl IntoLower for ast::MetadataBlockField {
+    type Output = ir::Metadata;
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        Ok(ir::Metadata {
+            key: self.key.into_lower()?,
+            value: self.value.into_lower()?,
+        })
+    }
+}
+
+impl IntoLower for ast::MetadataBlock {
+    type Output = Vec<ir::Metadata>;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        let fields = self
+            .fields
+            .iter()
+            .map(|metadata_field| metadata_field.into_lower())
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(fields)
     }
 }
 
@@ -632,6 +677,7 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
+        validity: ast.validity.as_ref().map(|x| x.into_lower()).transpose()?,
         mints: ast
             .mints
             .iter()
@@ -653,6 +699,12 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
+        metadata: ast
+            .metadata
+            .as_ref()
+            .map(|x| x.into_lower())
+            .transpose()?
+            .unwrap_or(vec![]),
     };
 
     Ok(ir)

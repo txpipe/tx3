@@ -155,6 +155,10 @@
       }
     }
   ],
+  "validity": {
+    "since": null,
+    "until": null
+  },
   "mints": [
     {
       "amount": {
@@ -207,19 +211,7 @@
               ]
             },
             "asset_name": {
-              "Bytes": [
-                79,
-                84,
-                72,
-                69,
-                82,
-                95,
-                84,
-                79,
-                75,
-                69,
-                78
-              ]
+              "String": "OTHER_TOKEN"
             },
             "amount": {
               "Number": 10
@@ -273,6 +265,19 @@
               156
             ]
           }
+        ]
+      }
+    }
+  ],
+  "metadata": [
+    {
+      "key": {
+        "Number": 1
+      },
+      "value": {
+        "EvalParameter": [
+          "metadata",
+          "Bytes"
         ]
       }
     }

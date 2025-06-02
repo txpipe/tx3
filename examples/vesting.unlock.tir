@@ -134,8 +134,10 @@
       }
     }
   ],
+  "validity": null,
   "mints": [],
   "adhoc": [],
   "collateral": [],
-  "req_signers": []
+  "req_signers": [],
+  "metadata": []
 }

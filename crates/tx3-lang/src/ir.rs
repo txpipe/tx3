@@ -113,6 +113,7 @@ pub struct PropertyAccess {
 pub enum Expression {
     None,
     List(Vec<Expression>),
+    Tuple(Box<(Expression, Expression)>),
     Struct(StructExpr),
     Bytes(Vec<u8>),
     Number(i128),
@@ -167,6 +168,12 @@ pub struct Output {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Validity {
+    pub since: Option<Expression>,
+    pub until: Option<Expression>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mint {
     pub amount: Option<Expression>,
     pub redeemer: Option<Expression>,
@@ -175,6 +182,11 @@ pub struct Mint {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Collateral {
     pub query: InputQuery,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Metadata {
+    pub key: Expression,
+    pub value: Expression,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -188,8 +200,10 @@ pub struct Tx {
     pub references: Vec<Expression>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
+    pub validity: Option<Validity>,
     pub mints: Vec<Mint>,
     pub adhoc: Vec<AdHocDirective>,
     pub collateral: Vec<Collateral>,
     pub req_signers: Vec<ReqSigners>,
+    pub metadata: Vec<Metadata>,
 }

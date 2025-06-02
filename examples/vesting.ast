@@ -330,6 +330,7 @@
           }
         }
       ],
+      "validity": null,
       "burn": null,
       "mints": [],
       "req_signers": [],
@@ -339,7 +340,8 @@
         "start": 186,
         "end": 614
       },
-      "collateral": []
+      "collateral": [],
+      "metadata": null
     },
     {
       "name": "unlock",
@@ -508,6 +510,7 @@
           }
         }
       ],
+      "validity": null,
       "burn": null,
       "mints": [],
       "req_signers": [],
@@ -517,7 +520,8 @@
         "start": 616,
         "end": 919
       },
-      "collateral": []
+      "collateral": [],
+      "metadata": null
     }
   ],
   "types": [

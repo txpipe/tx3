@@ -71,4 +71,7 @@ tx new_order() {
             },
         },
     }
+    metadata {
+        674: "SOME METADATA",
+    }
 }

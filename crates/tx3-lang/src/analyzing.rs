@@ -671,6 +671,49 @@ impl Analyzable for InputBlock {
     }
 }
 
+impl Analyzable for MetadataBlockField {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        // TODO: check keys are actually numbers
+        self.key.analyze(parent.clone()) + self.value.analyze(parent.clone())
+    }
+    fn is_resolved(&self) -> bool {
+        self.key.is_resolved() && self.value.is_resolved()
+    }
+}
+
+impl Analyzable for MetadataBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields.analyze(parent)
+    }
+    fn is_resolved(&self) -> bool {
+        self.fields.is_resolved()
+    }
+}
+
+impl Analyzable for ValidityBlockField {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        match self {
+            ValidityBlockField::SinceSlot(x) => x.analyze(parent),
+            ValidityBlockField::UntilSlot(x) => x.analyze(parent),
+        }
+    }
+    fn is_resolved(&self) -> bool {
+        match self {
+            ValidityBlockField::SinceSlot(x) => x.is_resolved(),
+            ValidityBlockField::UntilSlot(x) => x.is_resolved(),
+        }
+    }
+}
+
+impl Analyzable for ValidityBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.fields.analyze(parent)
+    }
+    fn is_resolved(&self) -> bool {
+        self.fields.is_resolved()
+    }
+}
+
 impl Analyzable for OutputBlockField {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
@@ -846,7 +889,13 @@ impl Analyzable for TxDef {
 
         let adhoc = self.adhoc.analyze(self.scope.clone());
 
-        params + input_types + inputs + outputs + mints + adhoc
+        let validity = self.validity.analyze(self.scope.clone());
+
+        let metadata = self.metadata.analyze(self.scope.clone());
+
+        let req_signers = self.req_signers.analyze(self.scope.clone());
+
+        params + input_types + inputs + outputs + mints + adhoc + validity + metadata + req_signers
     }
 
     fn is_resolved(&self) -> bool {

@@ -533,6 +533,7 @@
           }
         }
       ],
+      "validity": null,
       "burn": null,
       "mints": [],
       "req_signers": [],
@@ -542,7 +543,8 @@
         "start": 161,
         "end": 767
       },
-      "collateral": []
+      "collateral": [],
+      "metadata": null
     }
   ],
   "types": [
