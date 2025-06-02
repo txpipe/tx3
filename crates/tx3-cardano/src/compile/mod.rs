@@ -372,19 +372,17 @@ fn compile_auxiliary_data(tx: &ir::Tx) -> Result<Option<primitives::AuxiliaryDat
     match metadata_kv {
         Ok(key_values) => {
             let metadata_tree = pallas::ledger::primitives::alonzo::Metadata::from_iter(key_values);
-            let metadata = if metadata_tree.is_empty() {
-                None
+            if metadata_tree.is_empty() {
+                Ok(None)
             } else {
-                Some(metadata_tree)
-            };
-
-            Ok(Some(primitives::AuxiliaryData::PostAlonzo(
-                pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
-                    metadata,
-                    native_scripts: None,
-                    plutus_scripts: None,
-                },
-            )))
+                Ok(Some(primitives::AuxiliaryData::PostAlonzo(
+                    pallas::ledger::primitives::alonzo::PostAlonzoAuxiliaryData {
+                        metadata: Some(metadata_tree),
+                        native_scripts: None,
+                        plutus_scripts: None,
+                    },
+                )))
+            }
         }
         Err(err) => Err(err),
     }
