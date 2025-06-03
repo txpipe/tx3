@@ -174,15 +174,7 @@
               ]
             },
             "asset_name": {
-              "Bytes": [
-                77,
-                89,
-                84,
-                79,
-                75,
-                69,
-                78
-              ]
+              "String": "MYTOKEN"
             },
             "amount": {
               "Number": 100

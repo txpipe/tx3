@@ -741,18 +741,11 @@ impl VariantCase {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub enum AssetName {
-    Ascii(String),
-    String(StringLiteral),
-    HexString(HexStringLiteral),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct AssetDef {
     pub name: String,
-    pub policy: Option<HexStringLiteral>,
-    pub asset_name: Option<AssetName>,
+    pub policy: Option<DataExpr>,
+    pub asset_name: Option<DataExpr>,
     pub span: Span,
 }
 

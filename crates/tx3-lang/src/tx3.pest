@@ -3,7 +3,6 @@ COMMENT = _{ "//" ~ (!"\n" ~ ANY)* | "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
 
 // Identifiers and basic types
 identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
-ascii_text = @{ ASCII_ALPHANUMERIC+ }
 number = @{ "-"? ~ ASCII_DIGIT+ }
 string = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 bool = @{ "true" | "false" }
@@ -38,7 +37,7 @@ parameter_list = { "(" ~ (parameter ~ ("," ~ parameter)* ~ ","?)? ~ ")" }
 
 // Asset definitions
 asset_def = {
-    "asset" ~ identifier ~ "=" ~ hex_string ~ "." ~ (hex_string | ascii_text | string) ~ ";"
+    "asset" ~ identifier ~ "=" ~ data_expr ~ "." ~ data_expr ~ ";"
 }
 
 // Party definitions

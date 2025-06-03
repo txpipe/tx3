@@ -6,7 +6,7 @@
 use std::{collections::HashMap, rc::Rc};
 use thiserror::Error;
 
-use crate::ast::*;
+use crate::{ast::*, parsing::AstNode};
 
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 #[error("not in scope: {name}")]
@@ -35,6 +35,21 @@ pub struct InvalidSymbolError {
     span: Span,
 }
 
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[error("invalid type ({type}) for {name}, expected: {expected}")]
+#[diagnostic(code(tx3::invalid_type))]
+pub struct InvalidTypeError {
+    pub name: String,
+    pub r#type: String,
+    pub expected: String,
+
+    #[source_code]
+    src: Option<String>,
+
+    #[label]
+    span: Span,
+}
+
 #[derive(Error, Debug, miette::Diagnostic)]
 pub enum Error {
     #[error("duplicate definition: {0}")]
@@ -52,6 +67,11 @@ pub enum Error {
     #[error(transparent)]
     #[diagnostic(transparent)]
     InvalidSymbol(#[from] InvalidSymbolError),
+
+    // Invalid type for extension
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    InvalidType(#[from] InvalidTypeError),
 }
 
 impl Error {
@@ -89,6 +109,40 @@ impl Error {
             src: None,
             span: ast.span().clone(),
         })
+    }
+
+    pub fn invalid_type(
+        name: String,
+        r#type: String,
+        expected: String,
+        ast: &impl crate::parsing::AstNode
+    ) -> Self {
+        Self::InvalidType(InvalidTypeError {
+            name,
+            r#type,
+            expected,
+            src: None,
+            span: ast.span().clone(),
+        })
+    }
+}
+
+impl DataExpr {
+    pub fn display_type(&self) -> String {
+        match self {
+            DataExpr::None => "None".to_string(),
+            DataExpr::Unit => "Unit".to_string(),
+            DataExpr::Number(i64) => format!("Number({})", i64),
+            DataExpr::Bool(bool) => format!("Bool({})", bool),
+            DataExpr::String(st) => format!("String({})", st.value),
+            DataExpr::HexString(hs) => format!("HexString({})", hs.value),
+            DataExpr::StructConstructor(_) => "StructConstructor".to_string(),
+            DataExpr::ListConstructor(_) => "ListConstructor".to_string(),
+            DataExpr::Identifier(id) => format!("Identifier({})", id.value),
+            DataExpr::PropertyAccess(_) => "PropertyAccess".to_string(),
+            DataExpr::BinaryOp(_) => "BinaryOp".to_string(),
+            DataExpr::UtxoRef(_) => "UtxoRef".to_string(),
+        }
     }
 }
 
@@ -603,6 +657,43 @@ impl Analyzable for AddressExpr {
         }
     }
 }
+
+fn dataexpr_to_bytes(val: &Option<DataExpr>, name: String) -> AnalyzeReport {
+    match val {
+        Some(DataExpr::String(_)) => AnalyzeReport::default(),
+        Some(DataExpr::HexString(_)) => AnalyzeReport::default(),
+        Some(other) => bail_report!(Error::InvalidType(InvalidTypeError {
+            name,
+            r#type: other.display_type(),
+            src: None,
+            expected: "String or Hex".to_string(),
+            span: other.span().clone(),
+        })),
+        None => AnalyzeReport::default(),
+    }
+}
+
+impl Analyzable for AssetDef {
+    fn analyze(&mut self, _: Option<Rc<Scope>>) -> AnalyzeReport {
+        let policy = dataexpr_to_bytes(
+            &self.policy,
+            "Asset.Policy".to_string(),
+        );
+
+        let asset_name = dataexpr_to_bytes(
+            &self.asset_name, 
+            "Asset.Name".to_string(),
+        );
+
+        policy + asset_name
+        // policy + asset_name
+    }
+
+    fn is_resolved(&self) -> bool {
+        true
+    }
+}
+
 impl Analyzable for Identifier {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         let symbol = parent.and_then(|p| p.resolve(&self.value));
@@ -877,12 +968,14 @@ impl Analyzable for TxDef {
     }
 }
 
-static ADA: std::sync::LazyLock<AssetDef> = std::sync::LazyLock::new(|| AssetDef {
-    name: "Ada".to_string(),
-    policy: None,
-    asset_name: None,
-    span: Span::DUMMY,
-});
+fn ada_asset_def() -> AssetDef {
+    AssetDef {
+        name: "Ada".to_string(),
+        policy: None,
+        asset_name: None,
+        span: Span::DUMMY,
+    }
+}
 
 impl Analyzable for Program {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
@@ -896,7 +989,7 @@ impl Analyzable for Program {
             scope.track_policy_def(policy);
         }
 
-        scope.track_asset_def(&ADA);
+        scope.track_asset_def(&ada_asset_def());
 
         for asset in self.assets.iter() {
             scope.track_asset_def(asset);
@@ -913,18 +1006,17 @@ impl Analyzable for Program {
 
         let policies = self.policies.analyze(self.scope.clone());
 
-        // TODO: Add assets
-        // let assets = self.assets.analyze(self.scope.clone());
+        let assets = self.assets.analyze(self.scope.clone());
 
         let types = self.types.analyze(self.scope.clone());
 
         let txs = self.txs.analyze(self.scope.clone());
 
-        policies + types + txs
+        policies + types + txs + assets
     }
 
     fn is_resolved(&self) -> bool {
-        self.policies.is_resolved() && self.types.is_resolved() && self.txs.is_resolved()
+        self.policies.is_resolved() && self.types.is_resolved() && self.txs.is_resolved() && self.assets.is_resolved()
     }
 }
 
