@@ -79,6 +79,7 @@ impl Error {
         match self {
             Self::NotInScope(x) => &x.span,
             Self::InvalidSymbol(x) => &x.span,
+            Self::InvalidType(x) => &x.span,
             _ => &Span::DUMMY,
         }
     }
