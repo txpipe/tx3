@@ -639,23 +639,12 @@ impl IntoLower for ast::CollateralBlock {
     }
 }
 
-impl IntoLower for ast::ReqSignersExpr {
-    type Output = ir::Expression;
+impl IntoLower for ast::SignersBlock {
+    type Output = ir::Signers;
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
-        match self {
-            ast::ReqSignersExpr::Identifier(x) => lower_into_req_signers_expr(x),
-            ast::ReqSignersExpr::ListConstructor(x) => Ok(ir::Expression::List(x.into_lower()?)),
-        }
-    }
-}
-
-impl IntoLower for ast::ReqSignersBlock {
-    type Output = ir::ReqSigners;
-
-    fn into_lower(&self) -> Result<Self::Output, Error> {
-        Ok(ir::ReqSigners {
-            pub_keys: Some(self.pub_keys.into_lower()?),
+        Ok(ir::Signers {
+            parties: self.parties.iter().map(|x| x.into_lower()).collect::<Result<Vec<_>, _>>()?,
         })
     }
 }
@@ -694,11 +683,11 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
-        req_signers: ast
-            .req_signers
-            .iter()
+        signers: ast
+            .signers
+            .as_ref()
             .map(|x| x.into_lower())
-            .collect::<Result<Vec<_>, _>>()?,
+            .transpose()?,
         metadata: ast
             .metadata
             .as_ref()

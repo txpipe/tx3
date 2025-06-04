@@ -152,7 +152,7 @@ impl AstNode for TxDef {
         let mut mints = Vec::new();
         let mut adhoc = Vec::new();
         let mut collateral = Vec::new();
-        let mut req_signers = Vec::new();
+        let mut signers = None;
         let mut metadata = None;
 
         for item in inner {
@@ -165,7 +165,7 @@ impl AstNode for TxDef {
                 Rule::mint_block => mints.push(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
                 Rule::collateral_block => collateral.push(CollateralBlock::parse(item)?),
-                Rule::req_signers_block => req_signers.push(ReqSignersBlock::parse(item)?),
+                Rule::signers_block => signers = Some(SignersBlock::parse(item)?),
                 Rule::metadata_block => metadata = Some(MetadataBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
@@ -180,7 +180,7 @@ impl AstNode for TxDef {
             validity,
             burn,
             mints,
-            req_signers,
+            signers,
             adhoc,
             scope: None,
             span,
@@ -583,52 +583,18 @@ impl AstNode for MintBlockField {
     }
 }
 
-impl AstNode for ReqSignersExpr {
-    const RULE: Rule = Rule::req_signers_expr;
-
-    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
-        let mut inner = pair.into_inner();
-
-        let value = inner.next().unwrap();
-
-        match value.as_rule() {
-            Rule::identifier => Ok(ReqSignersExpr::Identifier(Identifier::parse(value)?)),
-            Rule::list_constructor => Ok(ReqSignersExpr::ListConstructor(ListConstructor::parse(
-                value,
-            )?)),
-            x => unreachable!("Unexpected rule in req_signers_expr: {:?}", x),
-        }
-    }
-
-    fn span(&self) -> &Span {
-        match self {
-            Self::Identifier(x) => x.span(),
-            Self::ListConstructor(x) => x.span(),
-        }
-    }
-}
-
-impl AstNode for ReqSignersBlock {
-    const RULE: Rule = Rule::req_signers_block;
+impl AstNode for SignersBlock {
+    const RULE: Rule = Rule::signers_block;
 
     fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
         let span = pair.as_span().into();
-        let mut inner = pair.into_inner();
+        let inner = pair.into_inner();
 
-        let has_name = inner
-            .peek()
-            .map(|x| x.as_rule() == Rule::identifier)
-            .unwrap_or_default();
+        let parties = inner
+            .map(|x| Identifier::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
 
-        let name = has_name.then(|| inner.next().unwrap().as_str().to_string());
-
-        let pub_keys = ReqSignersExpr::parse(inner.next().unwrap())?;
-
-        Ok(ReqSignersBlock {
-            name,
-            pub_keys: Box::new(pub_keys),
-            span,
-        })
+        Ok(SignersBlock { parties, span })
     }
 
     fn span(&self) -> &Span {
@@ -1971,11 +1937,11 @@ mod tests {
     #[test]
     fn test_spans_are_respected() {
         let program = parse_well_known_example("lang_tour");
-        assert_eq!(program.span, Span::new(0, 1399));
+        assert_eq!(program.span, Span::new(0, 1396));
 
         assert_eq!(program.parties[0].span, Span::new(0, 14));
 
-        assert_eq!(program.types[0].span, Span::new(16, 111));
+        assert_eq!(program.types[0].span, Span::new(34, 129));
     }
 
     fn make_snapshot_if_missing(example: &str, program: &Program) {

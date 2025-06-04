@@ -229,46 +229,22 @@
   ],
   "adhoc": [],
   "collateral": [],
-  "req_signers": [
-    {
-      "pub_keys": {
-        "List": [
-          {
-            "Bytes": [
-              15,
-              91,
-              34,
-              229,
-              127,
-              238,
-              181,
-              180,
-              253,
-              29,
-              80,
-              27,
-              0,
-              122,
-              66,
-              124,
-              86,
-              167,
-              104,
-              132,
-              212,
-              151,
-              143,
-              175,
-              239,
-              151,
-              157,
-              156
-            ]
-          }
+  "signers": {
+    "parties": [
+      {
+        "EvalParameter": [
+          "myparty",
+          "Address"
+        ]
+      },
+      {
+        "EvalParameter": [
+          "otherparty",
+          "Address"
         ]
       }
-    }
-  ],
+    ]
+  },
   "metadata": [
     {
       "key": {

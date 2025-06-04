@@ -182,11 +182,6 @@ address_expr = {
     string
 }
 
-req_signers_expr = {
-    identifier |
-    list_constructor
-}
-
 // input block
 
 input_block_from = { "from" ~ ":" ~ address_expr }
@@ -277,8 +272,10 @@ burn_block = {
     "}"
 }
 
-req_signers_block = {
-    "req_signers" ~ (identifier)? ~ ":" ~ req_signers_expr
+signers_block = {
+    "signers" ~ "{" ~
+        (identifier ~ ",")* ~
+    "}"
 }
 
 cardano_stake_delegation_certificate = {
@@ -323,7 +320,7 @@ tx_body_block = _{
     mint_block |
     output_block |
     chain_specific_block |
-    req_signers_block |
+    signers_block |
     metadata_block |
     validity_block
 }

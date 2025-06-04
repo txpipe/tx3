@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use pallas::{
     codec::utils::{KeepRaw, MaybeIndefArray},
     ledger::{
+        addresses::{Address, ShelleyPaymentPart},
         primitives::{
             conway::{self as primitives, NonEmptySet, Redeemers},
             TransactionInput,
@@ -313,23 +314,36 @@ fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
 
 fn compile_required_signers(tx: &ir::Tx) -> Result<Option<primitives::RequiredSigners>, Error> {
     let mut hashes = Vec::new();
-    for req in &tx.req_signers {
-        if let Some(expr) = &req.pub_keys {
-            let exprs = match expr {
-                ir::Expression::List(list) => list,
-                _ => {
-                    return Err(Error::CoerceError(
-                        format!("{:?}", expr),
-                        "RequiredSigners".to_string(),
-                    ))
-                }
-            };
-            for item in exprs {
-                let bytes = coercion::expr_into_bytes(item)?;
-                hashes.push(primitives::AddrKeyhash::from(bytes.as_slice()));
-            }
-        }
+    let Some(signers) = &tx.signers else {
+        return Ok(primitives::RequiredSigners::from_vec(hashes));
+    };
+
+    for signer in &signers.parties {
+        let ir::Expression::String(s) = signer else {
+            return Err(Error::CoerceError(
+                format!("{:?}", signer),
+                "Address".to_string(),
+            ));
+        };
+
+        let signer_addr = coercion::string_into_address(s)?;
+        let Address::Shelley(addr) = signer_addr else {
+            return Err(Error::CoerceError(
+                format!("{:?}", signer),
+                "Shelley address".to_string(),
+            ));
+        };
+
+        let ShelleyPaymentPart::Key(key) = addr.payment() else {
+            return Err(Error::CoerceError(
+                format!("{:?}", signer),
+                "Key payment credential".to_string(),
+            ));
+        };
+
+        hashes.push(*key);
     }
+
     Ok(primitives::RequiredSigners::from_vec(hashes))
 }
 

@@ -798,30 +798,13 @@ impl Analyzable for MintBlock {
     }
 }
 
-impl Analyzable for ReqSignersExpr {
+impl Analyzable for SignersBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
-        match self {
-            ReqSignersExpr::Identifier(x) => x.analyze(parent),
-            // TODO: verify this list types are hashes (maybe parties could be added)
-            ReqSignersExpr::ListConstructor(x) => x.analyze(parent),
-        }
+        self.parties.analyze(parent)
     }
 
     fn is_resolved(&self) -> bool {
-        match self {
-            ReqSignersExpr::Identifier(x) => x.is_resolved(),
-            ReqSignersExpr::ListConstructor(x) => x.is_resolved(),
-        }
-    }
-}
-
-impl Analyzable for ReqSignersBlock {
-    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
-        self.pub_keys.analyze(parent)
-    }
-
-    fn is_resolved(&self) -> bool {
-        self.pub_keys.is_resolved()
+        self.parties.is_resolved()
     }
 }
 
@@ -893,9 +876,9 @@ impl Analyzable for TxDef {
 
         let metadata = self.metadata.analyze(self.scope.clone());
 
-        let req_signers = self.req_signers.analyze(self.scope.clone());
+        let signers = self.signers.analyze(self.scope.clone());
 
-        params + input_types + inputs + outputs + mints + adhoc + validity + metadata + req_signers
+        params + input_types + inputs + outputs + mints + adhoc + validity + metadata + signers
     }
 
     fn is_resolved(&self) -> bool {

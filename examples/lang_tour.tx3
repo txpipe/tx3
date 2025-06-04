@@ -1,4 +1,5 @@
 party MyParty;
+party OtherParty;
 
 type MyRecord {
     field1: Int,
@@ -63,7 +64,10 @@ tx my_tx(
         amount: AnyAsset(source.field3, source.field2, source.field1) + Ada(40),
     }
 
-    req_signers: [0x0F5B22E57FEEB5B4FD1D501B007A427C56A76884D4978FAFEF979D9C]
+    signers {
+        MyParty,
+        OtherParty,
+    }
 
     validity {
         since_slot: 1735700400000,

@@ -177,7 +177,7 @@ pub struct TxDef {
     pub validity: Option<ValidityBlock>,
     pub burn: Option<BurnBlock>,
     pub mints: Vec<MintBlock>,
-    pub req_signers: Vec<ReqSignersBlock>,
+    pub signers: Option<SignersBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
     pub span: Span,
     pub collateral: Vec<CollateralBlock>,
@@ -435,9 +435,8 @@ pub struct MintBlock {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ReqSignersBlock {
-    pub name: Option<String>,
-    pub pub_keys: Box<ReqSignersExpr>,
+pub struct SignersBlock {
+    pub parties: Vec<Identifier>,
     pub span: Span,
 }
 
@@ -669,12 +668,6 @@ impl DataExpr {
             _ => None,
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ReqSignersExpr {
-    ListConstructor(ListConstructor),
-    Identifier(Identifier),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

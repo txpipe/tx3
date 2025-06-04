@@ -190,8 +190,8 @@ pub struct Metadata {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ReqSigners {
-    pub pub_keys: Option<Expression>,
+pub struct Signers {
+    pub parties: Vec<Expression>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -204,6 +204,6 @@ pub struct Tx {
     pub mints: Vec<Mint>,
     pub adhoc: Vec<AdHocDirective>,
     pub collateral: Vec<Collateral>,
-    pub req_signers: Vec<ReqSigners>,
+    pub signers: Option<Signers>,
     pub metadata: Vec<Metadata>,
 }
