@@ -4,7 +4,6 @@
 //! duplicate definitions, unknown symbols, and other semantic errors.
 
 use std::{collections::HashMap, rc::Rc};
-use thiserror::Error;
 
 use crate::{ast::*, parsing::AstNode};
 
@@ -50,7 +49,7 @@ pub struct InvalidTypeError {
     span: Span,
 }
 
-#[derive(Error, Debug, miette::Diagnostic)]
+#[derive(thiserror::Error, Debug, miette::Diagnostic)]
 pub enum Error {
     #[error("duplicate definition: {0}")]
     #[diagnostic(code(tx3::duplicate_definition))]
@@ -663,13 +662,12 @@ fn dataexpr_to_bytes(val: &Option<DataExpr>, name: String) -> AnalyzeReport {
     match val {
         Some(DataExpr::String(_)) => AnalyzeReport::default(),
         Some(DataExpr::HexString(_)) => AnalyzeReport::default(),
-        Some(other) => bail_report!(Error::InvalidType(InvalidTypeError {
+        Some(other) => bail_report!(Error::invalid_type(
             name,
-            r#type: other.display_type(),
-            src: None,
-            expected: "String or Hex".to_string(),
-            span: other.span().clone(),
-        })),
+            other.display_type(),
+            "String or Hex".to_string(),
+            other,
+        )),
         None => AnalyzeReport::default(),
     }
 }
