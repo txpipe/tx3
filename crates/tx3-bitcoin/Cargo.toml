@@ -1,0 +1,22 @@
+[package]
+name = "tx3-bitcoin"
+description = "Bitcoin compiler for tx3-lang protocols"
+publish.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+keywords.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
+
+[dependencies]
+bitcoin = "0.32.6"
+hex = "0.4.3"
+serde = "1.0.219"
+thiserror = "2.0.12"
+tokio = "1.45.1"
+trait-variant = "0.1.2"
+tx3-lang = { version = "0.5.0", path = "../tx3-lang" }

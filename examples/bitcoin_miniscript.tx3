@@ -1,0 +1,34 @@
+
+party Alice;
+party Bob;
+
+policy SharedVault = bitcoin::miniscript! {
+    or(
+        pk(@Alice),
+        and(
+            pk(@Bob),
+            older(100)
+        )
+    )
+}
+
+party Receiver;
+
+tx payment_from_vault(
+    quantity: Int
+) {
+    input source {
+        from: SharedVault,
+        min_amount: sats(quantity),
+    }
+    
+    output {
+        to: Receiver,
+        amount: sats(quantity),
+    }
+
+    output {
+        to: SharedVault,
+        amount: source - sats(quantity) - fees,
+    }
+}
