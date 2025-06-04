@@ -590,11 +590,11 @@ impl AstNode for SignersBlock {
         let span = pair.as_span().into();
         let inner = pair.into_inner();
 
-        let parties = inner
-            .map(|x| Identifier::parse(x))
+        let signers = inner
+            .map(|x| DataExpr::parse(x))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(SignersBlock { parties, span })
+        Ok(SignersBlock { signers, span })
     }
 
     fn span(&self) -> &Span {
@@ -1937,11 +1937,11 @@ mod tests {
     #[test]
     fn test_spans_are_respected() {
         let program = parse_well_known_example("lang_tour");
-        assert_eq!(program.span, Span::new(0, 1396));
+        assert_eq!(program.span, Span::new(0, 1426));
 
         assert_eq!(program.parties[0].span, Span::new(0, 14));
 
-        assert_eq!(program.types[0].span, Span::new(34, 129));
+        assert_eq!(program.types[0].span, Span::new(16, 111));
     }
 
     fn make_snapshot_if_missing(example: &str, program: &Program) {

@@ -80,25 +80,6 @@ fn coerce_identifier_into_asset_expr(
     }
 }
 
-fn lower_into_req_signers_expr(identifier: &ast::Identifier) -> Result<ir::Expression, Error> {
-    match identifier.try_symbol()? {
-        ast::Symbol::ParamVar(name, ty) => match ty.deref() {
-            ast::Type::Bytes => Ok(ir::Expression::EvalParameter(
-                name.to_lowercase().clone(),
-                ir::Type::Bytes,
-            )),
-            _ => Err(Error::InvalidSymbolType(
-                identifier.value.clone(),
-                "ReqSignersExpr",
-            )),
-        },
-        _ => Err(Error::InvalidSymbol(
-            identifier.value.clone(),
-            "ReqSignersExpr",
-        )),
-    }
-}
-
 fn lower_into_address_expr(identifier: &ast::Identifier) -> Result<ir::Expression, Error> {
     match identifier.try_symbol()? {
         ast::Symbol::PolicyDef(x) => Ok(x.into_lower()?.hash),
@@ -644,7 +625,11 @@ impl IntoLower for ast::SignersBlock {
 
     fn into_lower(&self) -> Result<Self::Output, Error> {
         Ok(ir::Signers {
-            parties: self.parties.iter().map(|x| x.into_lower()).collect::<Result<Vec<_>, _>>()?,
+            signers: self
+                .signers
+                .iter()
+                .map(|x| x.into_lower())
+                .collect::<Result<Vec<_>, _>>()?,
         })
     }
 }

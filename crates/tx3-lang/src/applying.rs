@@ -1222,28 +1222,28 @@ impl Apply for ir::AdHocDirective {
 impl Apply for ir::Signers {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         Ok(Self {
-            parties: self.parties.apply_args(args)?,
+            signers: self.signers.apply_args(args)?,
         })
     }
 
     fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
         Ok(Self {
-            parties: self.parties.apply_inputs(args)?,
+            signers: self.signers.apply_inputs(args)?,
         })
     }
     fn apply_fees(self, fees: u64) -> Result<Self, Error> {
         Ok(Self {
-            parties: self.parties.apply_fees(fees)?,
+            signers: self.signers.apply_fees(fees)?,
         })
     }
 
     fn is_constant(&self) -> bool {
-        self.parties.is_constant()
+        self.signers.is_constant()
     }
 
     fn params(&self) -> BTreeMap<String, ir::Type> {
         let mut params = BTreeMap::new();
-        params.extend(self.parties.params());
+        params.extend(self.signers.params());
         params
     }
 
@@ -1257,7 +1257,7 @@ impl Apply for ir::Signers {
 
     fn reduce_nested(self) -> Result<Self, Error> {
         Ok(Self {
-            parties: self.parties.reduce()?,
+            signers: self.signers.reduce()?,
         })
     }
 }

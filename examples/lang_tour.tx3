@@ -1,5 +1,4 @@
 party MyParty;
-party OtherParty;
 
 type MyRecord {
     field1: Int,
@@ -66,7 +65,7 @@ tx my_tx(
 
     signers {
         MyParty,
-        OtherParty,
+        0x0F5B22E57FEEB5B4FD1D501B007A427C56A76884D4978FAFEF979D9C,
     }
 
     validity {

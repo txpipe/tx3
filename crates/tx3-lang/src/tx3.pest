@@ -274,7 +274,7 @@ burn_block = {
 
 signers_block = {
     "signers" ~ "{" ~
-        (identifier ~ ",")* ~
+        (data_expr ~ ",")* ~
     "}"
 }
 

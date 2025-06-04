@@ -191,7 +191,7 @@ pub struct Metadata {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Signers {
-    pub parties: Vec<Expression>,
+    pub signers: Vec<Expression>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

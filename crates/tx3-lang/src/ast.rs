@@ -436,7 +436,7 @@ pub struct MintBlock {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SignersBlock {
-    pub parties: Vec<Identifier>,
+    pub signers: Vec<DataExpr>,
     pub span: Span,
 }
 

@@ -800,11 +800,11 @@ impl Analyzable for MintBlock {
 
 impl Analyzable for SignersBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
-        self.parties.analyze(parent)
+        self.signers.analyze(parent)
     }
 
     fn is_resolved(&self) -> bool {
-        self.parties.is_resolved()
+        self.signers.is_resolved()
     }
 }
 
