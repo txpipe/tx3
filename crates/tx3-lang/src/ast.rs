@@ -187,6 +187,7 @@ pub struct TxDef {
     pub validity: Option<ValidityBlock>,
     pub burn: Option<BurnBlock>,
     pub mints: Vec<MintBlock>,
+    pub signers: Option<SignersBlock>,
     pub adhoc: Vec<ChainSpecificBlock>,
     pub span: Span,
     pub collateral: Vec<CollateralBlock>,
@@ -440,6 +441,12 @@ impl MintBlockField {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MintBlock {
     pub fields: Vec<MintBlockField>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SignersBlock {
+    pub signers: Vec<DataExpr>,
     pub span: Span,
 }
 

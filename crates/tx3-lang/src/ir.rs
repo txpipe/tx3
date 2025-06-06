@@ -191,6 +191,11 @@ pub struct Metadata {
 }
 
 #[derive(Encode, Decode, Serialize, Deserialize, Debug, Clone)]
+pub struct Signers {
+    pub signers: Vec<Expression>,
+}
+
+#[derive(Encode, Decode, Serialize, Deserialize, Debug, Clone)]
 pub struct Tx {
     pub fees: Expression,
     pub references: Vec<Expression>,
@@ -200,5 +205,6 @@ pub struct Tx {
     pub mints: Vec<Mint>,
     pub adhoc: Vec<AdHocDirective>,
     pub collateral: Vec<Collateral>,
+    pub signers: Option<Signers>,
     pub metadata: Vec<Metadata>,
 }

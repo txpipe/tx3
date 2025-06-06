@@ -72,7 +72,6 @@ tx new_order() {
         },
     }
     metadata {
-        674: { msg: [`Wizard: create order`]}
-
+        674: "SOME METADATA",
     }
 }

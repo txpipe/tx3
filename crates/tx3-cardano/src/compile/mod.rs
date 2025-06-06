@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use pallas::{
     codec::utils::{KeepRaw, MaybeIndefArray},
     ledger::{
+        addresses::{Address, ShelleyPaymentPart},
         primitives::{
             conway::{self as primitives, NonEmptySet, Redeemers},
             TransactionInput,
@@ -311,6 +312,48 @@ fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
         .flatten()
 }
 
+fn compile_required_signers(tx: &ir::Tx) -> Result<Option<primitives::RequiredSigners>, Error> {
+    let mut hashes = Vec::new();
+    let Some(signers) = &tx.signers else {
+        return Ok(primitives::RequiredSigners::from_vec(hashes));
+    };
+    
+    for signer in &signers.signers {
+        match signer {
+            ir::Expression::String(s) => {
+                let signer_addr = coercion::string_into_address(s)?;
+                let Address::Shelley(addr) = signer_addr else {
+                    return Err(Error::CoerceError(
+                        format!("{:?}", signer),
+                        "Shelley address".to_string(),
+                    ));
+                };
+        
+                let ShelleyPaymentPart::Key(key) = addr.payment() else {
+                    return Err(Error::CoerceError(
+                        format!("{:?}", signer),
+                        "Key payment credential".to_string(),
+                    ));
+                };
+        
+                hashes.push(*key);
+            },
+            ir::Expression::Bytes(b) => {
+                let bytes = primitives::Bytes::from(b.clone());
+                hashes.push(primitives::AddrKeyhash::from(bytes.as_slice()));
+            },
+            _ => {
+                return Err(Error::CoerceError(
+                    format!("{:?}", signer),
+                    "Signer".to_string(),
+                ));
+            }
+        }
+    }
+
+    Ok(primitives::RequiredSigners::from_vec(hashes))
+}
+
 fn compile_validity(validity: Option<&ir::Validity>) -> Result<(Option<u64>, Option<u64>), Error> {
     let since = validity
         .and_then(|v| v.since.as_ref())
@@ -345,7 +388,7 @@ fn compile_tx_body(
         auxiliary_data_hash: None,
         script_data_hash: None,
         collateral: compile_collateral(tx),
-        required_signers: None,
+        required_signers: compile_required_signers(tx)?,
         collateral_return: None,
         total_collateral: None,
         voting_procedures: None,

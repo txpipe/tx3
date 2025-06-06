@@ -373,5 +373,6 @@
   "mints": [],
   "adhoc": [],
   "collateral": [],
+  "req_signers": [],
   "metadata": []
 }

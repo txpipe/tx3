@@ -2,8 +2,6 @@
 //!
 //! This module takes a string and parses it into Tx3 AST.
 
-use std::hash::Hash;
-
 use miette::SourceOffset;
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
@@ -154,6 +152,7 @@ impl AstNode for TxDef {
         let mut mints = Vec::new();
         let mut adhoc = Vec::new();
         let mut collateral = Vec::new();
+        let mut signers = None;
         let mut metadata = None;
 
         for item in inner {
@@ -166,6 +165,7 @@ impl AstNode for TxDef {
                 Rule::mint_block => mints.push(MintBlock::parse(item)?),
                 Rule::chain_specific_block => adhoc.push(ChainSpecificBlock::parse(item)?),
                 Rule::collateral_block => collateral.push(CollateralBlock::parse(item)?),
+                Rule::signers_block => signers = Some(SignersBlock::parse(item)?),
                 Rule::metadata_block => metadata = Some(MetadataBlock::parse(item)?),
                 x => unreachable!("Unexpected rule in tx_def: {:?}", x),
             }
@@ -180,6 +180,7 @@ impl AstNode for TxDef {
             validity,
             burn,
             mints,
+            signers,
             adhoc,
             scope: None,
             span,
@@ -579,6 +580,25 @@ impl AstNode for MintBlockField {
             Self::Amount(x) => x.span(),
             Self::Redeemer(x) => x.span(),
         }
+    }
+}
+
+impl AstNode for SignersBlock {
+    const RULE: Rule = Rule::signers_block;
+
+    fn parse(pair: Pair<Rule>) -> Result<Self, Error> {
+        let span = pair.as_span().into();
+        let inner = pair.into_inner();
+
+        let signers = inner
+            .map(|x| DataExpr::parse(x))
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(SignersBlock { signers, span })
+    }
+
+    fn span(&self) -> &Span {
+        &self.span
     }
 }
 
@@ -1917,7 +1937,7 @@ mod tests {
     #[test]
     fn test_spans_are_respected() {
         let program = parse_well_known_example("lang_tour");
-        assert_eq!(program.span, Span::new(0, 1322));
+        assert_eq!(program.span, Span::new(0, 1428));
 
         assert_eq!(program.parties[0].span, Span::new(0, 14));
 

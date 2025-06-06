@@ -867,6 +867,16 @@ impl Analyzable for MintBlock {
     }
 }
 
+impl Analyzable for SignersBlock {
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        self.signers.analyze(parent)
+    }
+
+    fn is_resolved(&self) -> bool {
+        self.signers.is_resolved()
+    }
+}
+
 impl Analyzable for ChainSpecificBlock {
     fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
         match self {
@@ -935,7 +945,9 @@ impl Analyzable for TxDef {
 
         let metadata = self.metadata.analyze(self.scope.clone());
 
-        params + input_types + inputs + outputs + mints + adhoc + validity + metadata
+        let signers = self.signers.analyze(self.scope.clone());
+
+        params + input_types + inputs + outputs + mints + adhoc + validity + metadata + signers
     }
 
     fn is_resolved(&self) -> bool {

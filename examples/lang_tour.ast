@@ -505,8 +505,8 @@
                 "value": "validUntil",
                 "span": {
                   "dummy": false,
-                  "start": 1259,
-                  "end": 1269
+                  "start": 1365,
+                  "end": 1375
                 }
               }
             }
@@ -514,8 +514,8 @@
         ],
         "span": {
           "dummy": false,
-          "start": 1193,
-          "end": 1276
+          "start": 1299,
+          "end": 1382
         }
       },
       "burn": null,
@@ -601,11 +601,40 @@
           }
         }
       ],
+      "signers": {
+        "signers": [
+          {
+            "Identifier": {
+              "value": "MyParty",
+              "span": {
+                "dummy": false,
+                "start": 1211,
+                "end": 1218
+              }
+            }
+          },
+          {
+            "HexString": {
+              "value": "0F5B22E57FEEB5B4FD1D501B007A427C56A76884D4978FAFEF979D9C",
+              "span": {
+                "dummy": false,
+                "start": 1228,
+                "end": 1286
+              }
+            }
+          }
+        ],
+        "span": {
+          "dummy": false,
+          "start": 1193,
+          "end": 1293
+        }
+      },
       "adhoc": [],
       "span": {
         "dummy": false,
         "start": 416,
-        "end": 1321
+        "end": 1427
       },
       "collateral": [],
       "metadata": {
@@ -619,22 +648,22 @@
                 "value": "metadata",
                 "span": {
                   "dummy": false,
-                  "start": 1304,
-                  "end": 1312
+                  "start": 1410,
+                  "end": 1418
                 }
               }
             },
             "span": {
               "dummy": false,
-              "start": 1301,
-              "end": 1312
+              "start": 1407,
+              "end": 1418
             }
           }
         ],
         "span": {
           "dummy": false,
-          "start": 1282,
-          "end": 1319
+          "start": 1388,
+          "end": 1425
         }
       }
     }
@@ -873,6 +902,6 @@
   "span": {
     "dummy": false,
     "start": 0,
-    "end": 1322
+    "end": 1428
   }
 }

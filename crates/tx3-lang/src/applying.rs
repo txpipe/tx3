@@ -1220,6 +1220,49 @@ impl Apply for ir::AdHocDirective {
     }
 }
 
+impl Apply for ir::Signers {
+    fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
+        Ok(Self {
+            signers: self.signers.apply_args(args)?,
+        })
+    }
+
+    fn apply_inputs(self, args: &BTreeMap<String, HashSet<Utxo>>) -> Result<Self, Error> {
+        Ok(Self {
+            signers: self.signers.apply_inputs(args)?,
+        })
+    }
+    fn apply_fees(self, fees: u64) -> Result<Self, Error> {
+        Ok(Self {
+            signers: self.signers.apply_fees(fees)?,
+        })
+    }
+
+    fn is_constant(&self) -> bool {
+        self.signers.is_constant()
+    }
+
+    fn params(&self) -> BTreeMap<String, ir::Type> {
+        let mut params = BTreeMap::new();
+        params.extend(self.signers.params());
+        params
+    }
+
+    fn queries(&self) -> BTreeMap<String, ir::InputQuery> {
+        BTreeMap::new()
+    }
+
+    fn reduce_self(self) -> Result<Self, Error> {
+        Ok(self)
+    }
+
+    fn reduce_nested(self) -> Result<Self, Error> {
+        Ok(Self {
+            signers: self.signers.reduce()?,
+        })
+    }
+}
+
 impl Apply for ir::Collateral {
     fn apply_args(self, args: &BTreeMap<String, ArgValue>) -> Result<Self, Error> {
         Ok(Self {
@@ -1378,6 +1421,7 @@ impl Apply for ir::Tx {
             fees: self.fees.apply_args(args)?,
             adhoc: self.adhoc.apply_args(args)?,
             collateral: self.collateral.apply_args(args)?,
+            signers: self.signers.apply_args(args)?,
             metadata: self.metadata.apply_args(args)?,
         };
 
@@ -1394,6 +1438,7 @@ impl Apply for ir::Tx {
             fees: self.fees.apply_inputs(args)?,
             adhoc: self.adhoc.apply_inputs(args)?,
             collateral: self.collateral.apply_inputs(args)?,
+            signers: self.signers.apply_inputs(args)?,
             metadata: self.metadata.apply_inputs(args)?,
         })
     }
@@ -1408,6 +1453,7 @@ impl Apply for ir::Tx {
             fees: self.fees.apply_fees(fees)?,
             adhoc: self.adhoc.apply_fees(fees)?,
             collateral: self.collateral.apply_fees(fees)?,
+            signers: self.signers.apply_fees(fees)?,
             metadata: self.metadata.apply_fees(fees)?,
         })
     }
@@ -1420,6 +1466,7 @@ impl Apply for ir::Tx {
             && self.metadata.is_constant()
             && self.validity.is_constant()
             && self.adhoc.iter().all(|x| x.is_constant())
+            && self.signers.is_constant()
     }
 
     fn params(&self) -> BTreeMap<String, ir::Type> {
@@ -1430,6 +1477,7 @@ impl Apply for ir::Tx {
         params.extend(self.mints.params());
         params.extend(self.fees.params());
         params.extend(self.adhoc.params());
+        params.extend(self.signers.params());
         params.extend(self.validity.params());
         params.extend(self.metadata.params());
         params
@@ -1443,6 +1491,7 @@ impl Apply for ir::Tx {
         queries.extend(self.mints.queries());
         queries.extend(self.fees.queries());
         queries.extend(self.adhoc.queries());
+        queries.extend(self.signers.queries());
         queries.extend(self.validity.queries());
         queries.extend(self.metadata.queries());
         queries
@@ -1462,6 +1511,7 @@ impl Apply for ir::Tx {
             fees: self.fees.reduce()?,
             adhoc: self.adhoc.reduce()?,
             collateral: self.collateral.reduce()?,
+            signers: self.signers.reduce()?,
             metadata: self.metadata.reduce()?,
         })
     }

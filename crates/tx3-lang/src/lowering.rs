@@ -93,7 +93,6 @@ fn lower_into_address_expr(identifier: &ast::Identifier) -> Result<ir::Expressio
         )),
     }
 }
-
 pub(crate) trait IntoLower {
     type Output;
 
@@ -614,6 +613,20 @@ impl IntoLower for ast::CollateralBlock {
     }
 }
 
+impl IntoLower for ast::SignersBlock {
+    type Output = ir::Signers;
+
+    fn into_lower(&self) -> Result<Self::Output, Error> {
+        Ok(ir::Signers {
+            signers: self
+                .signers
+                .iter()
+                .map(|x| x.into_lower())
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+}
+
 pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
     let ir = ir::Tx {
         references: ast
@@ -648,6 +661,11 @@ pub fn lower_tx(ast: &ast::TxDef) -> Result<ir::Tx, Error> {
             .iter()
             .map(|x| x.into_lower())
             .collect::<Result<Vec<_>, _>>()?,
+        signers: ast
+            .signers
+            .as_ref()
+            .map(|x| x.into_lower())
+            .transpose()?,
         metadata: ast
             .metadata
             .as_ref()
