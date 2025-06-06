@@ -350,15 +350,8 @@ impl IntoLower for ast::StaticAssetConstructor {
     fn into_lower(&self) -> Result<Self::Output, Error> {
         let asset_def = coerce_identifier_into_asset_def(&self.r#type)?;
 
-        let policy = match asset_def.policy {
-            Some(x) => ir::Expression::Bytes(hex::decode(&x.value)?),
-            None => ir::Expression::None,
-        };
-
-        let asset_name = match asset_def.asset_name {
-            Some(x) => ir::Expression::Bytes(x.as_bytes().to_vec()),
-            None => ir::Expression::None,
-        };
+        let policy = asset_def.policy.into_lower()?;
+        let asset_name = asset_def.asset_name.into_lower()?;
 
         let amount = self.amount.into_lower()?;
 
