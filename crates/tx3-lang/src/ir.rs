@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Utxo, UtxoRef};
 
-pub const IR_VERSION: &str = "v1alpha4";
+pub const IR_VERSION: &str = "v1alpha5";
 
 #[derive(Encode, Decode, Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct StructExpr {
@@ -190,7 +190,7 @@ pub struct Metadata {
     pub value: Expression,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Encode, Decode, Serialize, Deserialize, Debug, Clone)]
 pub struct Signers {
     pub signers: Vec<Expression>,
 }

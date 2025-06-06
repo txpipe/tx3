@@ -727,6 +727,7 @@ impl ir::AssetExpr {
         match &self.asset_name {
             ir::Expression::None => None,
             ir::Expression::Bytes(x) => Some(x.as_slice()),
+            ir::Expression::String(x) => Some(x.as_bytes()),
             _ => None,
         }
     }

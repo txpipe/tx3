@@ -1319,13 +1319,13 @@ impl AstNode for AssetDef {
         let mut inner = pair.into_inner();
 
         let identifier = inner.next().unwrap().as_str().to_string();
-        let policy = HexStringLiteral::parse(inner.next().unwrap())?;
-        let asset_name = inner.next().unwrap().as_str().to_string();
+        let policy = DataExpr::parse(inner.next().unwrap())?;
+        let asset_name = DataExpr::parse(inner.next().unwrap())?;
 
         Ok(AssetDef {
             name: identifier,
-            policy: Some(policy),
-            asset_name: Some(asset_name),
+            policy,
+            asset_name,
             span,
         })
     }
@@ -1679,24 +1679,24 @@ mod tests {
         "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.0xef7a1ceb;",
         AssetDef {
             name: "MyToken".to_string(),
-            policy: Some(HexStringLiteral::new(
+            policy: DataExpr::HexString(HexStringLiteral::new(
                 "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
             )),
-            asset_name: Some("0xef7a1ceb".to_string()),
+            asset_name: DataExpr::HexString(HexStringLiteral::new("ef7a1ceb".to_string())),
             span: Span::DUMMY,
         }
     );
 
     input_to_ast_check!(
         AssetDef,
-        "hex_ascii",
-        "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.MYTOKEN;",
+        "hex_string",
+        "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.\"MY TOKEN\";",
         AssetDef {
             name: "MyToken".to_string(),
-            policy: Some(HexStringLiteral::new(
+            policy: DataExpr::HexString(HexStringLiteral::new(
                 "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
             )),
-            asset_name: Some("MYTOKEN".to_string()),
+            asset_name: DataExpr::String(StringLiteral::new("MY TOKEN".to_string())),
             span: Span::DUMMY,
         }
     );
@@ -1937,7 +1937,7 @@ mod tests {
     #[test]
     fn test_spans_are_respected() {
         let program = parse_well_known_example("lang_tour");
-        assert_eq!(program.span, Span::new(0, 1426));
+        assert_eq!(program.span, Span::new(0, 1428));
 
         assert_eq!(program.parties[0].span, Span::new(0, 14));
 
