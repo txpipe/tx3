@@ -1304,8 +1304,8 @@ impl AstNode for AssetDef {
 
         Ok(AssetDef {
             name: identifier,
-            policy: Some(policy),
-            asset_name: Some(asset_name),
+            policy,
+            asset_name,
             span,
         })
     }
@@ -1659,16 +1659,10 @@ mod tests {
         "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.0xef7a1ceb;",
         AssetDef {
             name: "MyToken".to_string(),
-            policy: Some(DataExpr::HexString(
-                HexStringLiteral::new(
-                    "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
-                )
+            policy: DataExpr::HexString(HexStringLiteral::new(
+                "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
             )),
-            asset_name: Some(DataExpr::HexString(
-                HexStringLiteral::new(
-                    "ef7a1ceb".to_string()
-                )
-            )),
+            asset_name: DataExpr::HexString(HexStringLiteral::new("ef7a1ceb".to_string())),
             span: Span::DUMMY,
         }
     );
@@ -1679,14 +1673,10 @@ mod tests {
         "asset MyToken = 0xef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe.\"MY TOKEN\";",
         AssetDef {
             name: "MyToken".to_string(),
-            policy: Some(DataExpr::HexString(
-                HexStringLiteral::new(
-                    "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
-                )
+            policy: DataExpr::HexString(HexStringLiteral::new(
+                "ef7a1cebb2dc7de884ddf82f8fcbc91fe9750dcd8c12ec7643a99bbe".to_string()
             )),
-            asset_name: Some(DataExpr::String(
-                StringLiteral::new("MY TOKEN".to_string())
-            )),
+            asset_name: DataExpr::String(StringLiteral::new("MY TOKEN".to_string())),
             span: Span::DUMMY,
         }
     );

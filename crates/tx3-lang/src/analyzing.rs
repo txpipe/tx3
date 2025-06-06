@@ -7,7 +7,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use crate::{ast::*, parsing::AstNode};
 
-#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic, PartialEq, Eq)]
 #[error("not in scope: {name}")]
 #[diagnostic(code(tx3::not_in_scope))]
 pub struct NotInScopeError {
@@ -20,7 +20,7 @@ pub struct NotInScopeError {
     span: Span,
 }
 
-#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic, PartialEq, Eq)]
 #[error("invalid symbol, expected {expected}, got {got}")]
 #[diagnostic(code(tx3::invalid_symbol))]
 pub struct InvalidSymbolError {
@@ -34,13 +34,12 @@ pub struct InvalidSymbolError {
     span: Span,
 }
 
-#[derive(Debug, thiserror::Error, miette::Diagnostic)]
-#[error("invalid type ({type}) for {name}, expected: {expected}")]
+#[derive(Debug, thiserror::Error, miette::Diagnostic, PartialEq, Eq)]
+#[error("invalid type ({got}), expected: {expected}")]
 #[diagnostic(code(tx3::invalid_type))]
-pub struct InvalidTypeError {
-    pub name: String,
-    pub r#type: String,
-    pub expected: String,
+pub struct InvalidTargetTypeError {
+    pub expected: &'static str,
+    pub got: String,
 
     #[source_code]
     src: Option<String>,
@@ -49,7 +48,7 @@ pub struct InvalidTypeError {
     span: Span,
 }
 
-#[derive(thiserror::Error, Debug, miette::Diagnostic)]
+#[derive(thiserror::Error, Debug, miette::Diagnostic, PartialEq, Eq)]
 pub enum Error {
     #[error("duplicate definition: {0}")]
     #[diagnostic(code(tx3::duplicate_definition))]
@@ -70,7 +69,7 @@ pub enum Error {
     // Invalid type for extension
     #[error(transparent)]
     #[diagnostic(transparent)]
-    InvalidType(#[from] InvalidTypeError),
+    InvalidTargetType(#[from] InvalidTargetTypeError),
 }
 
 impl Error {
@@ -78,7 +77,7 @@ impl Error {
         match self {
             Self::NotInScope(x) => &x.span,
             Self::InvalidSymbol(x) => &x.span,
-            Self::InvalidType(x) => &x.span,
+            Self::InvalidTargetType(x) => &x.span,
             _ => &Span::DUMMY,
         }
     }
@@ -111,38 +110,17 @@ impl Error {
         })
     }
 
-    pub fn invalid_type(
-        name: String,
-        r#type: String,
-        expected: String,
-        ast: &impl crate::parsing::AstNode
+    pub fn invalid_target_type(
+        expected: &'static str,
+        got: &Type,
+        ast: &impl crate::parsing::AstNode,
     ) -> Self {
-        Self::InvalidType(InvalidTypeError {
-            name,
-            r#type,
+        Self::InvalidTargetType(InvalidTargetTypeError {
             expected,
+            got: format!("{:?}", got),
             src: None,
             span: ast.span().clone(),
         })
-    }
-}
-
-impl DataExpr {
-    pub fn display_type(&self) -> String {
-        match self {
-            DataExpr::None => "None".to_string(),
-            DataExpr::Unit => "Unit".to_string(),
-            DataExpr::Number(i64) => format!("Number({})", i64),
-            DataExpr::Bool(bool) => format!("Bool({})", bool),
-            DataExpr::String(st) => format!("String({})", st.value),
-            DataExpr::HexString(hs) => format!("HexString({})", hs.value),
-            DataExpr::StructConstructor(_) => "StructConstructor".to_string(),
-            DataExpr::ListConstructor(_) => "ListConstructor".to_string(),
-            DataExpr::Identifier(id) => format!("Identifier({})", id.value),
-            DataExpr::PropertyAccess(_) => "PropertyAccess".to_string(),
-            DataExpr::BinaryOp(_) => "BinaryOp".to_string(),
-            DataExpr::UtxoRef(_) => "UtxoRef".to_string(),
-        }
     }
 }
 
@@ -658,38 +636,39 @@ impl Analyzable for AddressExpr {
     }
 }
 
-fn dataexpr_to_bytes(val: &Option<DataExpr>, name: String) -> AnalyzeReport {
-    match val {
-        Some(DataExpr::String(_)) => AnalyzeReport::default(),
-        Some(DataExpr::HexString(_)) => AnalyzeReport::default(),
-        Some(other) => bail_report!(Error::invalid_type(
-            name,
-            other.display_type(),
-            "String or Hex".to_string(),
-            other,
-        )),
-        None => AnalyzeReport::default(),
-    }
-}
-
 impl Analyzable for AssetDef {
-    fn analyze(&mut self, _: Option<Rc<Scope>>) -> AnalyzeReport {
-        let policy = dataexpr_to_bytes(
-            &self.policy,
-            "Asset.Policy".to_string(),
-        );
+    fn analyze(&mut self, parent: Option<Rc<Scope>>) -> AnalyzeReport {
+        let policy = self.policy.analyze(parent.clone());
+        let asset_name = self.asset_name.analyze(parent.clone());
 
-        let asset_name = dataexpr_to_bytes(
-            &self.asset_name, 
-            "Asset.Name".to_string(),
-        );
+        let policy_type = self.policy.target_type();
+        let asset_name_type = self.asset_name.target_type();
 
-        policy + asset_name
-        // policy + asset_name
+        let policy_type = if policy_type != Some(Type::Bytes) {
+            AnalyzeReport::from(Error::invalid_target_type(
+                "Bytes",
+                policy_type.as_ref().unwrap_or(&Type::Undefined),
+                &self.policy,
+            ))
+        } else {
+            AnalyzeReport::default()
+        };
+
+        let asset_name_type = if asset_name_type != Some(Type::Bytes) {
+            AnalyzeReport::from(Error::invalid_target_type(
+                "Bytes",
+                asset_name_type.as_ref().unwrap_or(&Type::Undefined),
+                &self.asset_name,
+            ))
+        } else {
+            AnalyzeReport::default()
+        };
+
+        policy + asset_name + policy_type + asset_name_type
     }
 
     fn is_resolved(&self) -> bool {
-        true
+        self.policy.is_resolved() && self.asset_name.is_resolved()
     }
 }
 
@@ -970,8 +949,8 @@ impl Analyzable for TxDef {
 fn ada_asset_def() -> AssetDef {
     AssetDef {
         name: "Ada".to_string(),
-        policy: None,
-        asset_name: None,
+        policy: DataExpr::None,
+        asset_name: DataExpr::None,
         span: Span::DUMMY,
     }
 }
@@ -1015,7 +994,10 @@ impl Analyzable for Program {
     }
 
     fn is_resolved(&self) -> bool {
-        self.policies.is_resolved() && self.types.is_resolved() && self.txs.is_resolved() && self.assets.is_resolved()
+        self.policies.is_resolved()
+            && self.types.is_resolved()
+            && self.txs.is_resolved()
+            && self.assets.is_resolved()
     }
 }
 
@@ -1034,4 +1016,49 @@ impl Analyzable for Program {
 /// * `AnalyzeReport` of the analysis. Empty if no errors are found.
 pub fn analyze(ast: &mut Program) -> AnalyzeReport {
     ast.analyze(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parsing::parse_well_known_example;
+
+    use super::*;
+
+    #[test]
+    fn test_program_with_semantic_errors() {
+        let mut ast = parse_well_known_example("semantic_errors");
+
+        let report = analyze(&mut ast);
+
+        assert_eq!(report.errors.len(), 3);
+
+        assert_eq!(
+            report.errors[0],
+            Error::NotInScope(NotInScopeError {
+                name: "missing_symbol".to_string(),
+                src: None,
+                span: Span::DUMMY,
+            })
+        );
+
+        assert_eq!(
+            report.errors[1],
+            Error::InvalidTargetType(InvalidTargetTypeError {
+                expected: "Bytes",
+                got: "Int".to_string(),
+                src: None,
+                span: Span::DUMMY,
+            })
+        );
+
+        assert_eq!(
+            report.errors[2],
+            Error::InvalidTargetType(InvalidTargetTypeError {
+                expected: "Bytes",
+                got: "Int".to_string(),
+                src: None,
+                span: Span::DUMMY,
+            })
+        );
+    }
 }
