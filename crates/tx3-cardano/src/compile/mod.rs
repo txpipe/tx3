@@ -5,7 +5,7 @@ use pallas::{
     ledger::{
         addresses::{Address, ShelleyPaymentPart},
         primitives::{
-            conway::{self as primitives, NonEmptySet, Redeemers},
+            conway::{self as primitives, Redeemers},
             TransactionInput,
         },
         traverse::ComputeHash,
@@ -293,36 +293,18 @@ fn compile_reference_inputs(tx: &ir::Tx) -> Result<Vec<primitives::TransactionIn
     Ok(refs)
 }
 
-fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
-    tx.collateral
+fn compile_collateral(tx: &ir::Tx) -> Result<Vec<TransactionInput>, Error> {
+    Ok(tx
+        .collateral
         .iter()
         .filter_map(|collateral| collateral.query.r#ref.as_ref())
-        .find_map(|r#ref| match r#ref {
-            ir::Expression::UtxoRefs(refs) => refs.first().map(|utxo_ref| {
-                let index = utxo_ref.index;
-                let hash = primitives::Hash::from(utxo_ref.txid.as_slice());
-
-                NonEmptySet::from_vec(vec![TransactionInput {
-                    transaction_id: hash,
-                    index: index as u64,
-                }])
-            }),
-            ir::Expression::String(x) => {
-                let (raw_txid, raw_output_ix) = x.split_once("#").expect("Invalid utxo ref");
-                let transaction_id = primitives::Hash::<32>::from(
-                    hex::decode(raw_txid)
-                        .expect("Invalid hex transaction id")
-                        .as_slice(),
-                );
-                let index = raw_output_ix.parse().expect("Invalid output index");
-                Some(NonEmptySet::from_vec(vec![TransactionInput {
-                    transaction_id,
-                    index,
-                }]))
-            }
-            _ => None,
-        })
+        .flat_map(|expr| coercion::expr_into_utxo_refs(expr))
         .flatten()
+        .map(|x| primitives::TransactionInput {
+            transaction_id: x.txid.as_slice().into(),
+            index: x.index as u64,
+        })
+        .collect())
 }
 
 fn compile_required_signers(tx: &ir::Tx) -> Result<Option<primitives::RequiredSigners>, Error> {
@@ -400,7 +382,7 @@ fn compile_tx_body(
         withdrawals: None,
         auxiliary_data_hash: None,
         script_data_hash: None,
-        collateral: compile_collateral(tx),
+        collateral: primitives::NonEmptySet::from_vec(compile_collateral(tx)?),
         required_signers: compile_required_signers(tx)?,
         collateral_return: None,
         total_collateral: None,
