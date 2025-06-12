@@ -307,6 +307,19 @@ fn compile_collateral(tx: &ir::Tx) -> Option<NonEmptySet<TransactionInput>> {
                     index: index as u64,
                 }])
             }),
+            ir::Expression::String(x) => {
+                let (raw_txid, raw_output_ix) = x.split_once("#").expect("Invalid utxo ref");
+                let transaction_id = primitives::Hash::<32>::from(
+                    hex::decode(raw_txid)
+                        .expect("Invalid hex transaction id")
+                        .as_slice(),
+                );
+                let index = raw_output_ix.parse().expect("Invalid output index");
+                Some(NonEmptySet::from_vec(vec![TransactionInput {
+                    transaction_id,
+                    index,
+                }]))
+            }
             _ => None,
         })
         .flatten()
